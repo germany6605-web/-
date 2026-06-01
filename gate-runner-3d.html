@@ -142,6 +142,9 @@ let effPopT = 0;
 let winTriggered = false, shopOpened = false;
 let bullets = [], runFireT = 0;
 let ownedWeapons = new Set([1]), activeWeapon = 1;
+// Run-phase power-ups (reset each level)
+let tripleShot = false, dmgX2 = false, moneyX2 = false;
+let lootPlatforms = [], pickups = [];
 
 // ─── INPUT ───
 const keys = {};
@@ -222,7 +225,7 @@ const WEPS=[null,
      shots:1, spread:0,    dmgMult:6,  bScale:1.8, bColor:0x44DDFF, pierce:true},
 ];
 const W=()=>WEPS[wepLv];
-const effDmg=()=>Math.max(1, 1 + upgDmg + permDmg);
+const effDmg=()=>Math.max(1, 1 + upgDmg + permDmg) * (dmgX2 ? 2 : 1);
 const effCD=()=>W().cd*(.9**upgRate);
 
 // ─── PLAYER MESH (weapon only) ───
@@ -294,8 +297,10 @@ const BULL_SPD = 38;
 
 function fireBulletRun(){
     const w=W();
-    for(let i=0;i<w.shots;i++){
-        const angle = w.shots>1 ? ((i-(w.shots-1)/2)*w.spread) + (Math.random()-.5)*w.spread*.3 : 0;
+    const shots = tripleShot ? Math.max(w.shots, 3) : w.shots;
+    const spread = tripleShot && shots>w.shots ? Math.max(w.spread, 0.12) : w.spread;
+    for(let i=0;i<shots;i++){
+        const angle = shots>1 ? ((i-(shots-1)/2)*spread) + (Math.random()-.5)*spread*.3 : 0;
         const geo = w.bScale===1.0 ? BULL_GEO : new THREE.SphereGeometry(.055*w.bScale,5,4);
         const mat = new THREE.MeshBasicMaterial({color:w.bColor});
         const b = new THREE.Mesh(geo, mat);
@@ -340,7 +345,20 @@ function updateBullets(dt){
                 if(m.dead||m.removed) continue;
                 if(Math.abs(bz-m.g.position.z)<0.55 && Math.abs(bx-m.g.position.x)<0.42){
                     m.hp -= effDmg()*(b.dmgMult||1); m.hitT=.12; drawMobHP(m);
-                    if(m.hp<=0&&!m.dead){ m.dead=true; coins+=m.reward; refreshHUD(); }
+                    if(m.hp<=0&&!m.dead){ m.dead=true; coins+=m.reward*(moneyX2?2:1); refreshHUD(); }
+                    if(!b.pierce) hit=true;
+                    break;
+                }
+            }
+        }
+
+        // RUN: bullet hits loot platforms
+        if(GS==='RUN' && !hit){
+            for(const lp of lootPlatforms){
+                if(lp.dead||lp.removed) continue;
+                if(Math.abs(bz-lp.g.position.z)<0.65 && Math.abs(bx-lp.g.position.x)<0.65){
+                    lp.hp -= effDmg()*(b.dmgMult||1); lp.rimT=0.15; drawLootHP(lp);
+                    if(lp.hp<=0&&!lp.dead) killLootPlatform(lp);
                     if(!b.pierce) hit=true;
                     break;
                 }
@@ -543,7 +561,21 @@ function spawnMob(x, z){
     const mob = {g, hpCv, hpCtx, hpTex, hpSpr,
         maxHp, hp:maxHp, dead:false, deadT:0, removed:false, hitT:0,
         reward, idleT:Math.random()*Math.PI*2};
-    drawMobHP(mob); mobs.push(mob);
+    drawMobHP(mob);
+
+    // Coin reward label above mob
+    const labelCv=document.createElement('canvas'); labelCv.width=128; labelCv.height=40;
+    const lCtx=labelCv.getContext('2d');
+    lCtx.font='bold 28px Arial'; lCtx.textAlign='center'; lCtx.textBaseline='middle';
+    lCtx.fillStyle='#FFD700'; lCtx.shadowColor='rgba(0,0,0,.8)'; lCtx.shadowBlur=6;
+    lCtx.fillText('🪙 '+reward, 64, 20);
+    const labelTex=new THREE.CanvasTexture(labelCv);
+    labelTex.anisotropy=renderer.capabilities.getMaxAnisotropy();
+    const labelSpr=new THREE.Sprite(new THREE.SpriteMaterial({map:labelTex,depthTest:false,transparent:true}));
+    labelSpr.position.set(0, 2.55, 0); labelSpr.scale.set(1.6, 0.5, 1);
+    g.add(labelSpr); mob.labelSpr=labelSpr;
+
+    mobs.push(mob);
 }
 
 function drawMobHP(m){
@@ -552,6 +584,115 @@ function drawMobHP(m){
     const r=Math.max(0,m.hp/m.maxHp);
     x.fillStyle=r>.5?'#33cc33':r>.25?'#ffaa00':'#ff3333';
     x.fillRect(1,3,62*r,6); m.hpTex.needsUpdate=true;
+}
+
+// ─── LOOT PLATFORMS ───
+const LOOT_TYPES=[
+    {id:'triple',  label:'3× ВЫСТРЕЛ', icon:'💥', color:'#FF8800', good:true},
+    {id:'dmgx2',   label:'×2 УРОН',    icon:'⚔️',  color:'#FF2222', good:true},
+    {id:'moneyx2', label:'×2 ДЕНЬГИ',  icon:'💰',  color:'#FFD700', good:true},
+    {id:'coins',   label:'💵 ДЕНЬГИ',  icon:'💵',  color:'#44FF88', good:true},
+];
+
+function makeLootPlatTex(loot){
+    const S=256;
+    const cv=document.createElement('canvas'); cv.width=S; cv.height=S;
+    const ctx=cv.getContext('2d');
+    // Glowing background
+    const g=ctx.createRadialGradient(S/2,S/2,0,S/2,S/2,S/2);
+    g.addColorStop(0,'#2a1a00'); g.addColorStop(1,'#0a0500');
+    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(S/2,S/2,S/2,0,Math.PI*2); ctx.fill();
+    // Glow ring
+    ctx.strokeStyle=loot.color; ctx.lineWidth=12;
+    ctx.beginPath(); ctx.arc(S/2,S/2,S/2-8,0,Math.PI*2); ctx.stroke();
+    // Icon
+    ctx.font='bold 100px Arial'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(loot.icon, S/2, S/2-10);
+    // Label
+    ctx.font='bold 32px Arial'; ctx.fillStyle=loot.color;
+    ctx.shadowColor='rgba(0,0,0,.9)'; ctx.shadowBlur=6;
+    ctx.fillText(loot.label, S/2, S/2+70);
+    const t=new THREE.CanvasTexture(cv);
+    t.anisotropy=renderer.capabilities.getMaxAnisotropy(); return t;
+}
+
+function spawnLootPlatform(x, z){
+    const loot=LOOT_TYPES[Math.floor(Math.random()*LOOT_TYPES.length)];
+    const g=new THREE.Group();
+    const R=0.65, h=0.45;
+
+    // Hex base
+    const stoneTex=makeStoneSideTex();
+    const base=new THREE.Mesh(new THREE.CylinderGeometry(R,R*1.08,h,6),
+        new THREE.MeshLambertMaterial({map:stoneTex}));
+    base.position.y=h/2; base.castShadow=true; g.add(base);
+
+    // Top face with loot icon
+    const top=new THREE.Mesh(new THREE.CylinderGeometry(R*0.9,R,0.12,6),
+        [new THREE.MeshLambertMaterial({map:stoneTex}),
+         new THREE.MeshLambertMaterial({map:makeLootPlatTex(loot)}),
+         new THREE.MeshLambertMaterial({map:stoneTex})]);
+    top.position.y=h+0.06; g.add(top);
+
+    // Glowing rim
+    const rimMat=new THREE.MeshBasicMaterial({color:new THREE.Color(loot.color)});
+    const rim=new THREE.Mesh(new THREE.TorusGeometry(R*0.91,0.04,4,6),rimMat);
+    rim.rotation.x=Math.PI/2; rim.position.y=h+0.12; g.add(rim);
+
+    // HP bar
+    const hpCv=document.createElement('canvas'); hpCv.width=96; hpCv.height=14;
+    const hpCtx=hpCv.getContext('2d');
+    const hpTex=new THREE.CanvasTexture(hpCv);
+    const hpSpr=new THREE.Sprite(new THREE.SpriteMaterial({map:hpTex,depthTest:false,transparent:true}));
+    hpSpr.position.set(0, h+0.72, 0); hpSpr.scale.set(1.4, 0.2, 1); g.add(hpSpr);
+
+    g.position.set(x,0,z); scene.add(g);
+
+    const maxHp=Math.max(3, level*3);
+    const lp={g,hpCv,hpCtx,hpTex,hpSpr,loot,maxHp,hp:maxHp,dead:false,deadT:0,removed:false,rimMat,rimT:0};
+    drawLootHP(lp); lootPlatforms.push(lp);
+}
+
+function drawLootHP(lp){
+    const c=lp.hpCv, x=lp.hpCtx; c.width=96;
+    x.fillStyle='#222'; x.fillRect(0,2,96,10);
+    const r=Math.max(0,lp.hp/lp.maxHp);
+    x.fillStyle=r>.5?'#33cc33':r>.25?'#ffaa00':'#ff3333';
+    x.fillRect(1,3,94*r,8); lp.hpTex.needsUpdate=true;
+}
+
+function killLootPlatform(lp){
+    lp.dead=true;
+    // Spawn pickup orb
+    const col=new THREE.Color(lp.loot.color);
+    const orb=new THREE.Mesh(
+        new THREE.SphereGeometry(0.22,10,8),
+        new THREE.MeshBasicMaterial({color:col, transparent:true, opacity:0.92})
+    );
+    orb.position.copy(lp.g.position); orb.position.y=0.5;
+    scene.add(orb);
+    // Label sprite on orb
+    const lCv=document.createElement('canvas'); lCv.width=160; lCv.height=48;
+    const lx=lCv.getContext('2d');
+    lx.font='bold 26px Arial'; lx.textAlign='center'; lx.textBaseline='middle';
+    lx.fillStyle=lp.loot.color; lx.shadowColor='rgba(0,0,0,.9)'; lx.shadowBlur=6;
+    lx.fillText(lp.loot.icon+' '+lp.loot.label, 80, 24);
+    const lTex=new THREE.CanvasTexture(lCv); lTex.anisotropy=renderer.capabilities.getMaxAnisotropy();
+    const lSpr=new THREE.Sprite(new THREE.SpriteMaterial({map:lTex,depthTest:false,transparent:true}));
+    lSpr.position.set(0,0.7,0); lSpr.scale.set(2.2,0.66,1);
+    orb.add(lSpr);
+    pickups.push({mesh:orb,loot:lp.loot,bobT:Math.random()*Math.PI*2,collected:false});
+}
+
+function applyPickup(loot){
+    switch(loot.id){
+        case 'triple':  tripleShot=true; break;
+        case 'dmgx2':   dmgX2=true; break;
+        case 'moneyx2': moneyX2=true; break;
+        case 'coins':   coins+=Math.floor(40+level*20)*(moneyX2?2:1); break;
+    }
+    showEffPop({label:loot.label, good:true});
+    refreshHUD();
 }
 
 // ─── TARGETS (combat) ───
@@ -723,7 +864,9 @@ function refreshHUD(){
     document.getElementById('lv-d').textContent=`Уровень ${level}`;
     document.getElementById('coins-d').textContent=`🪙 ${coins}`;
     document.getElementById('wep-name').textContent=W().name;
-    document.getElementById('dmg-d').textContent=`УРН: ${effDmg()} ×${W().shots}`;
+    const shots = tripleShot ? Math.max(W().shots,3) : W().shots;
+    document.getElementById('dmg-d').textContent=`УРН: ${effDmg()} ×${shots}`
+        +(tripleShot?' 💥':'')+(dmgX2?' ⚔️':'')+(moneyX2?' 💰':'');
 }
 
 // ─── SHOP ───
@@ -820,25 +963,35 @@ function startLevel(){
     px=0; pz=0; pvx=0; camPx=0; camPz=-7;
     permDmg=0; wepLv=activeWeapon; spd=FWD_SPEED; coinsX=1;
     plyWalkT=0; gunFlash=0; effPopT=0; runFireT=0;
+    tripleShot=false; dmgX2=false; moneyX2=false;
 
     bullets.forEach(b=>scene.remove(b.mesh)); bullets=[];
     enemies.forEach(e=>scene.remove(e.g)); enemies=[];
     mobs.forEach(m=>scene.remove(m.g)); mobs=[];
+    lootPlatforms.forEach(lp=>scene.remove(lp.g)); lootPlatforms=[];
+    pickups.forEach(p=>scene.remove(p.mesh)); pickups=[];
     while(gateGrp.children.length) gateGrp.remove(gateGrp.children[0]);
     gates=[];
 
-    // Each slot is either a gate or an enemy (≈35% chance of mob, at least 1 mob, at least 4 gates)
-    const mobSlots = new Set();
-    while(mobSlots.size < Math.max(1, Math.min(4, Math.round(GATES_PER_LEVEL*0.35)))){
-        mobSlots.add(1 + Math.floor(Math.random()*(GATES_PER_LEVEL-1))); // never replace slot 0
-    }
+    // Slot types: 0=gate, 1=mob, 2=loot. Slot 0 always a gate.
+    // ~30% mobs, ~20% loot, rest gates
+    const slotType=Array.from({length:GATES_PER_LEVEL},(_,i)=>{
+        if(i===0) return 0;
+        const r=Math.random();
+        return r<0.30 ? 1 : r<0.50 ? 2 : 0;
+    });
+    // Guarantee at least 1 mob and 1 loot
+    if(!slotType.includes(1)){ const i=1+Math.floor(Math.random()*(GATES_PER_LEVEL-1)); slotType[i]=1; }
+    if(!slotType.includes(2)){ const i=1+Math.floor(Math.random()*(GATES_PER_LEVEL-1)); slotType[i]=2; }
+
     for(let i=0;i<GATES_PER_LEVEL;i++){
         const z = 20 + i*GATE_SPACING;
-        if(mobSlots.has(i)){
-            // 1–3 mobs spread across road width at this z
+        if(slotType[i]===1){
             const count = 1 + Math.floor(Math.random()*3);
             const xs = count===1 ? [0] : count===2 ? [-1.8,1.8] : [-2.8,0,2.8];
             xs.forEach(x => spawnMob(x, z));
+        } else if(slotType[i]===2){
+            spawnLootPlatform((Math.random()-.5)*3.2, z);
         } else {
             spawnGate(z);
         }
@@ -948,6 +1101,33 @@ function tickRun(dt){
         // Player collides with mob → game over
         if(Math.abs(pz-m.g.position.z)<0.55 && Math.abs(px-m.g.position.x)<0.45){
             playerDie(); return;
+        }
+    }
+
+    // Update loot platforms
+    for(const lp of lootPlatforms){
+        if(lp.removed) continue;
+        if(lp.dead){
+            lp.deadT=(lp.deadT||0)+dt;
+            if(lp.deadT<0.3){ lp.g.position.y=-lp.deadT*3; }
+            else { scene.remove(lp.g); lp.removed=true; }
+            continue;
+        }
+        // Rim pulse
+        if(lp.rimT>0){ lp.rimT-=dt; const s=1+lp.rimT*2; lp.rimMat.color.setHex(0xFFFFFF); }
+        else { lp.rimMat.color.set(lp.loot.color); }
+    }
+
+    // Update pickups + player collision
+    for(const p of pickups){
+        if(p.collected) continue;
+        p.bobT+=dt*3;
+        p.mesh.position.y=0.5+Math.sin(p.bobT)*0.18;
+        p.mesh.rotation.y+=dt*2;
+        if(Math.abs(pz-p.mesh.position.z)<0.9 && Math.abs(px-p.mesh.position.x)<0.9){
+            p.collected=true;
+            scene.remove(p.mesh);
+            applyPickup(p.loot);
         }
     }
 
