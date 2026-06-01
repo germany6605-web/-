@@ -135,7 +135,7 @@ scene.add(sun);
 const ROAD_W = 8, ROAD_HALF = ROAD_W/2;
 const GATE_SPACING = 20, GATES_PER_LEVEL = 9;
 const COMBAT_DIST = GATE_SPACING * GATES_PER_LEVEL + 15;
-const FWD_SPEED = 10, X_LIMIT = 3.0, X_ACCEL = 22;
+const FWD_SPEED = 6, X_LIMIT = 3.0, X_ACCEL = 22;
 
 // ─── STATE ───
 let GS = 'START', level = 1, coins = 0;
@@ -219,7 +219,7 @@ const WEPS=[null,
     {name:'Снайперка', dmg:110,cd:.92, col:0x1A2A3A, barrel:.90, grip:.18, wide:.06},
 ];
 const W=()=>WEPS[wepLv];
-const effDmg=()=>Math.max(5, W().dmg + (permDmg-10) + upgDmg*10);
+const effDmg=()=>Math.max(1, 1 + upgDmg + permDmg);
 const effCD=()=>W().cd*(.9**upgRate);
 
 // ─── PLAYER MESH (weapon only) ───
@@ -356,8 +356,8 @@ function randomEff(){ return EFFS[Math.floor(Math.random()*EFFS.length)]; }
 // Negative effects shrink toward zero then flip positive.
 function effAtCharge(base, charge){
     switch(base.id){
-        case 'hp-':{ const v=-25+charge*9;  return {id:'hp_val', val:v, label:(v>=0?'+':'')+v+' HP',   good:v>=0}; }
-        case 'dmg-':{ const v=-8+charge*3;  return {id:'dmg_val',val:v, label:(v>=0?'+':'')+v+' УРН', good:v>=0}; }
+        case 'hp-':{ const v=-25+charge*9;  return {id:'hp_val', val:v, label:(v>=0?'+':'')+Math.round(v)+' HP',   good:v>=0}; }
+        case 'dmg-':{ const v=-1+charge;    return {id:'dmg_val',val:v, label:(v>=0?'+':'')+v+' УРН', good:v>=0}; }
         case 'wep-': return charge>=2
             ? {id:'wep+',label:'⬆ ОРУЖИЕ', good:true}
             : {id:'wep-',label:'⬇ ОРУЖИЕ', good:false};
@@ -367,7 +367,7 @@ function effAtCharge(base, charge){
         // Positive effects grow with charge
         case 'hp+':{ const v=30+charge*15; return {id:'hp_val', val:v, label:'+'+v+' HP',   good:true}; }
         case 'hp2':{ const v=50+charge*20; return {id:'hp_val', val:v, label:'+'+v+' HP',   good:true}; }
-        case 'dmg+':{ const v=10+charge*5; return {id:'dmg_val',val:v, label:'+'+v+' УРН', good:true}; }
+        case 'dmg+':{ const v=2+charge;    return {id:'dmg_val',val:v, label:'+'+v+' УРН', good:true}; }
         case 'spd':{ const v=2+charge;     return {id:'spd_val',val:v, label:'+'+v+' СКР', good:true}; }
         default: return base; // heal, coins, wep+, x2 — unchanged
     }
@@ -424,14 +424,14 @@ function spawnGate(z){
 
 function applyEff(eff){
     switch(eff.id){
-        case 'hp_val':  hp=Math.min(maxHp, hp+eff.val); break;
-        case 'dmg_val': permDmg=Math.max(1, permDmg+eff.val); break;
+        case 'hp_val':  hp=Math.min(maxHp, Math.max(1, hp+eff.val)); break;
+        case 'dmg_val': permDmg=Math.max(-upgDmg, permDmg+eff.val); break;
         case 'spd_val': spd=Math.min(18, spd+eff.val); break;
         case 'hp+':  hp=Math.min(maxHp,hp+30); break;
         case 'hp2':  hp=Math.min(maxHp,hp+50); break;
         case 'hp-':  hp=Math.max(5,hp-25); break;
-        case 'dmg+': permDmg+=10; break;
-        case 'dmg-': permDmg=Math.max(5,permDmg-8); break;
+        case 'dmg+': permDmg+=2; break;
+        case 'dmg-': permDmg=Math.max(-upgDmg, permDmg-1); break;
         case 'wep+': wepLv=Math.min(5,wepLv+1); buildPlayer(); break;
         case 'wep-': wepLv=Math.max(1,wepLv-1); buildPlayer(); break;
         case 'spd':  spd=Math.min(spd+2,18); break;
@@ -463,37 +463,48 @@ function showEffPop(eff){
     el.style.opacity='1';
 }
 
-// ─── ENEMIES (combat) ───
+// ─── TARGETS (combat) ───
 let enemies=[], combatFT=0;
-const EC=[0xCC2200,0xCC5500,0xAA0044,0x882200];
 
-function spawnEnemy(x,z){
-    const hp2=(25+level*20)*(1+Math.random()*.3);
-    const spd2=2.0+level*.26+Math.random()*.3;
-    const col=EC[Math.floor(Math.random()*EC.length)];
+function makeTargetTex(sc){
+    const sz=128; const cv=document.createElement('canvas'); cv.width=sz; cv.height=sz;
+    const x=cv.getContext('2d');
+    const cx=sz/2, cy=sz/2;
+    const rings=[{r:60,c:'#CC2200'},{r:44,c:'#FFFFFF'},{r:30,c:'#CC2200'},{r:16,c:'#FFFFFF'},{r:6,c:'#CC2200'}];
+    for(const rg of rings){ x.beginPath(); x.arc(cx,cy,rg.r,0,Math.PI*2); x.fillStyle=rg.c; x.fill(); }
+    return new THREE.CanvasTexture(cv);
+}
+
+function spawnTarget(x, z, hp, sc){
     const g=new THREE.Group();
-    const mat=new THREE.MeshLambertMaterial({color:col});
-    const sMat=new THREE.MeshLambertMaterial({color:0xDDAA80});
-    const lG=new THREE.BoxGeometry(.22,.7,.22);
-    const lL=new THREE.Mesh(lG,mat); lL.position.set(-.16,.35,0);
-    const lR=new THREE.Mesh(lG,mat); lR.position.set(.16,.35,0);
-    const body=new THREE.Mesh(new THREE.BoxGeometry(.64,.84,.37),mat);
-    body.position.set(0,1.08,0); body.castShadow=true;
-    const aG=new THREE.BoxGeometry(.18,.60,.18);
-    const aL=new THREE.Mesh(aG,mat); aL.position.set(-.44,1.05,0);
-    const aR=aL.clone(); aR.position.x=.44;
-    const head=new THREE.Mesh(new THREE.SphereGeometry(.26,8,6),sMat);
-    head.position.set(0,1.74,0); head.castShadow=true;
-    [lL,lR,body,aL,aR,head].forEach(m=>g.add(m));
+    const poleMat=new THREE.MeshLambertMaterial({color:0x8B6914});
+    const pole=new THREE.Mesh(new THREE.CylinderGeometry(.05*sc,.07*sc,2.2*sc,7),poleMat);
+    pole.position.y=1.1*sc; pole.castShadow=true; g.add(pole);
+
+    // Target face (bullseye disc)
+    const faceGeo=new THREE.CylinderGeometry(.55*sc,.55*sc,.06*sc,18);
+    const faceMat=new THREE.MeshBasicMaterial({map:makeTargetTex(sc),side:THREE.FrontSide});
+    const face=new THREE.Mesh(faceGeo,faceMat);
+    face.rotation.x=Math.PI/2;
+    face.position.y=2.4*sc; face.castShadow=true; g.add(face);
+    // Back plate
+    const back=new THREE.Mesh(new THREE.CylinderGeometry(.55*sc,.55*sc,.04*sc,18),
+        new THREE.MeshLambertMaterial({color:0x553311}));
+    back.rotation.x=Math.PI/2; back.position.y=2.4*sc; g.add(back);
+
+    // HP bar
     const hpCv=document.createElement('canvas'); hpCv.width=128; hpCv.height=18;
     const hpCtx=hpCv.getContext('2d');
     const hpTex=new THREE.CanvasTexture(hpCv);
     const hpSpr=new THREE.Sprite(new THREE.SpriteMaterial({map:hpTex,depthTest:false,transparent:true}));
-    hpSpr.position.set(0,2.35,0); hpSpr.scale.set(1.4,.22,1); g.add(hpSpr);
+    hpSpr.position.set(0,(3.2+sc*0.5),0); hpSpr.scale.set(1.6*sc,.22*sc+.18,1); g.add(hpSpr);
+
     g.position.set(x,0,z); scene.add(g);
-    const e={g,body,head,lL,lR,aL,aR,mat,sMat,col,hpCv,hpCtx,hpTex,hpSpr,
-        maxHp:hp2,hp:hp2,spd:spd2,dead:false,deadT:0,removed:false,
-        hitT:0,atkT:0,walkT:0,reward:Math.floor(hp2/2)*coinsX};
+    const col=0xCC2200;
+    const mat=new THREE.MeshLambertMaterial({color:col});
+    const e={g,face,faceMat,mat,hpCv,hpCtx,hpTex,hpSpr,
+        maxHp:hp,hp,spd:0,col,dead:false,deadT:0,removed:false,
+        hitT:0,atkT:Infinity,walkT:0,reward:Math.ceil(hp)*coinsX, isTarget:true};
     drawEHP(e); enemies.push(e);
 }
 
@@ -509,12 +520,16 @@ function killEnemy(e){
     e.dead=true; coins+=e.reward; refreshHUD();
 }
 
+// 3 columns × 15 rows, each row 3× more HP than the previous, 3× bigger visually
 function spawnWave(){
-    const n=2+level;
-    for(let i=0;i<n;i++){
-        const x=(Math.random()-.5)*5.5;
-        const z=pz+16+i*4+Math.random()*3;
-        spawnEnemy(x,z);
+    const ROWS=15, COLS=3;
+    const colX=[-1.6, 0, 1.6];
+    for(let r=0;r<ROWS;r++){
+        const hp=Math.max(1, Math.round(level * Math.pow(3, r)));
+        const sc=Math.min(0.35+r*0.14, 2.2);
+        for(let c=0;c<COLS;c++){
+            spawnTarget(colX[c], pz+10+r*5, hp, sc);
+        }
     }
 }
 
@@ -536,7 +551,7 @@ function openShop(){
     document.getElementById('shop-sub').textContent=`Уровень ${level} пройден!`;
     document.getElementById('shop-coins').textContent=`🪙 ${coins} монет`;
     const upgs=[
-        {k:'dmg', name:'🔥 Урон',          desc:`+10 урона\nУр.: ${upgDmg}`,  cur:upgDmg,  cost:80+upgDmg*35},
+        {k:'dmg', name:'🔥 Урон',          desc:`+1 к урону\nУр.: ${upgDmg}`,  cur:upgDmg,  cost:80+upgDmg*35},
         {k:'rate',name:'⚡ Скорострельность',desc:`−10% задержки\nУр.: ${upgRate}`,cur:upgRate,cost:80+upgRate*35},
         {k:'hp',  name:'❤️ Здоровье',       desc:`+25 макс. HP\nУр.: ${upgMaxHp}`,cur:upgMaxHp,cost:100+upgMaxHp*45},
     ];
@@ -576,7 +591,7 @@ function startGame(){
 function startLevel(){
     GS='RUN'; winTriggered=false; shopOpened=false;
     px=0; pz=0; pvx=0; camPx=0; camPz=-7;
-    hp=maxHp; permDmg=10; wepLv=1; spd=FWD_SPEED; coinsX=1;
+    hp=maxHp; permDmg=0; wepLv=1; spd=FWD_SPEED; coinsX=1;
     combatFT=0; plyWalkT=0; gunFlash=0; dmgA=0; effPopT=0; runFireT=0;
 
     bullets.forEach(b=>scene.remove(b.mesh)); bullets=[];
@@ -723,24 +738,19 @@ function tickCombat(dt){
         }
     }
 
-    // Update enemies
+    // Update targets
     for(const e of enemies){
         if(e.removed) continue;
         if(e.dead){
             e.deadT+=dt;
-            if(e.deadT<.5){ e.g.rotation.x=e.deadT*2.8; e.g.position.y=-e.deadT*.7; e.hpSpr.visible=false; }
-            else{ scene.remove(e.g); e.removed=true; }
+            if(e.deadT<.4){
+                e.g.rotation.z=e.deadT*4;
+                e.g.position.y=-e.deadT*1.5;
+                e.hpSpr.visible=false;
+            } else { scene.remove(e.g); e.removed=true; }
             continue;
         }
-        const dx=px-e.g.position.x, dz=pz-e.g.position.z;
-        const dist=Math.hypot(dx,dz);
-        e.g.rotation.y=Math.atan2(dx,dz);
-        if(dist>1.2){ e.g.position.x+=dx/dist*e.spd*dt; e.g.position.z+=dz/dist*e.spd*dt; }
-        e.walkT+=dt*5;
-        e.lL.rotation.x= Math.sin(e.walkT)*.4;
-        e.lR.rotation.x=-Math.sin(e.walkT)*.4;
-        if(e.hitT>0){ e.hitT-=dt; const f=e.hitT>0; e.mat.color.setHex(f?0xFFFFFF:e.col); e.sMat.color.setHex(f?0xFFFFFF:0xDDAA80); }
-        if(dist<1.3){ e.atkT-=dt; if(e.atkT<=0){ e.atkT=.9; hp-=5+level*1.5; dmgA=1; refreshHUD(); if(hp<=0){hp=0;playerDie();} } }
+        if(e.hitT>0){ e.hitT-=dt; }
     }
 
     // Win: all enemies cleared
