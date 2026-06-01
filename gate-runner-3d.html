@@ -146,6 +146,7 @@ let permDmg = 10, wepLv = 1, spd = FWD_SPEED, coinsX = 1;
 let camPx = 0, camPz = -7;
 let dmgA = 0, effPopT = 0;
 let winTriggered = false, shopOpened = false;
+let bullets = [], runFireT = 0;
 
 // ─── INPUT ───
 const keys = {};
@@ -283,6 +284,61 @@ function buildPlayer(){
     scene.add(plyGrp);
 }
 
+// ─── BULLETS ───
+const BULL_GEO = new THREE.SphereGeometry(.055, 5, 4);
+const BULL_MAT = new THREE.MeshBasicMaterial({color:0xFFEE44});
+const BULL_SPD = 38;
+
+function fireBulletRun(){
+    const b = new THREE.Mesh(BULL_GEO, BULL_MAT);
+    b.position.set(px + .18, 1.1, pz + .6 + W().barrel + .1);
+    scene.add(b);
+    bullets.push({mesh:b, life:2.5});
+    gunFlash = .12;
+}
+
+function updateBullets(dt){
+    for(let i=bullets.length-1; i>=0; i--){
+        const b = bullets[i];
+        b.mesh.position.z += BULL_SPD * dt;
+        b.life -= dt;
+
+        let hit = false;
+        // Check gate collision
+        if(GS==='RUN'){
+            const bx=b.mesh.position.x, bz=b.mesh.position.z;
+            for(const gate of gates){
+                if(Math.abs(bz - gate.z) > 1.2) continue;
+                // Left panel: x from -3.8 to -0.2
+                if(bx < -0.1 && bx > -3.9 && gate.coolL<=0){
+                    gate.coolL = 0.3;
+                    gate.hitsL++;
+                    applyEff(gate.eL);
+                    gate.pL.material.map.dispose();
+                    gate.pL.material.map = makeGateTex(gate.eL.label, gate.eL.good, gate.hitsL);
+                    gate.pL.material.needsUpdate = true;
+                    hit = true; break;
+                }
+                // Right panel: x from 0.2 to 3.8
+                if(bx > 0.1 && bx < 3.9 && gate.coolR<=0){
+                    gate.coolR = 0.3;
+                    gate.hitsR++;
+                    applyEff(gate.eR);
+                    gate.pR.material.map.dispose();
+                    gate.pR.material.map = makeGateTex(gate.eR.label, gate.eR.good, gate.hitsR);
+                    gate.pR.material.needsUpdate = true;
+                    hit = true; break;
+                }
+            }
+        }
+
+        if(hit || b.life<=0){
+            scene.remove(b.mesh);
+            bullets.splice(i,1);
+        }
+    }
+}
+
 // ─── GATES ───
 let gates=[], gateGrp=new THREE.Group(); scene.add(gateGrp);
 
@@ -295,7 +351,7 @@ const EFFS=[
     {id:'wep-',  label:'⬇ ОРУЖИЕ',    good:false},
     {id:'spd',   label:'+СКОРОСТЬ',   good:true },
     {id:'heal',  label:'ПОЛНОЕ HP',   good:true },
-    {id:'x2',    label:'×2 МОНЕТЫ',   good:true },
+    {id:'coins', label:'💰 МОНЕТЫ',    good:true },
     {id:'hp2',   label:'+50 HP',      good:true },
     {id:'slow',  label:'−СКОРОСТЬ',   good:false},
 ];
@@ -371,6 +427,7 @@ function applyEff(eff){
         case 'slow': spd=Math.max(spd-2,6); break;
         case 'heal': hp=maxHp; break;
         case 'x2':   coinsX*=2; break;
+        case 'coins': coins+=Math.floor(20+level*10); break;
     }
     showEffPop(eff);
     refreshHUD();
@@ -498,8 +555,9 @@ function startLevel(){
     GS='RUN'; winTriggered=false; shopOpened=false;
     px=0; pz=0; pvx=0; camPx=0; camPz=-7;
     hp=maxHp; permDmg=10; wepLv=1; spd=FWD_SPEED; coinsX=1;
-    combatFT=0; plyWalkT=0; gunFlash=0; dmgA=0; effPopT=0;
+    combatFT=0; plyWalkT=0; gunFlash=0; dmgA=0; effPopT=0; runFireT=0;
 
+    bullets.forEach(b=>scene.remove(b.mesh)); bullets=[];
     enemies.forEach(e=>scene.remove(e.g)); enemies=[];
     while(gateGrp.children.length) gateGrp.remove(gateGrp.children[0]);
     gates=[];
@@ -565,6 +623,11 @@ function tickRun(dt){
     cam.position.set(camPx, 4.2, camPz);
     cam.lookAt(camPx*.4+px*.6, .8, pz+7);
 
+    // Auto-fire while running
+    runFireT = Math.max(0, runFireT - dt);
+    if(runFireT <= 0){ runFireT = effCD(); fireBulletRun(); }
+    updateBullets(dt);
+
     // Gate collision — multiple hits allowed, each upgrades the barrier
     for(const gate of gates){
         gate.coolL=Math.max(0,gate.coolL-dt);
@@ -613,6 +676,8 @@ function tickCombat(dt){
     cam.position.set(camPx,4.2,camPz);
     cam.lookAt(camPx*.3+px*.7,.8,pz+7);
     camPx+=(px-camPx)*Math.min(1,dt*6);
+
+    updateBullets(dt);
 
     // Auto-fire at nearest enemy
     combatFT=Math.max(0,combatFT-dt);
