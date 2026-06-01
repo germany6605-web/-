@@ -279,7 +279,7 @@ function buildPlayer(){
         new THREE.MeshBasicMaterial({color:0xFFEE44,transparent:true,opacity:0}));
     fl.position.set(0, 0, bl+wd*.5); fl.userData.flash=true; plyGrp.add(fl);
 
-    // Position: floating just above road, tilted slightly
+    plyGrp.scale.setScalar(2.2);
     plyGrp.rotation.x = -0.18;
     scene.add(plyGrp);
 }
@@ -645,11 +645,11 @@ function tickRun(dt){
         plyGrp.rotation.y = sway;
     }
 
-    // Camera smooth follow
+    // Camera smooth follow (closer)
     camPx += (px - camPx) * Math.min(1, dt*8);
-    camPz += (pz - 7 - camPz) * Math.min(1, dt*6);
-    cam.position.set(camPx, 4.2, camPz);
-    cam.lookAt(camPx*.4+px*.6, .8, pz+7);
+    camPz += (pz - 4 - camPz) * Math.min(1, dt*6);
+    cam.position.set(camPx, 2.6, camPz);
+    cam.lookAt(camPx*.4+px*.6, 1.0, pz+6);
 
     // Auto-fire while running
     runFireT = Math.max(0, runFireT - dt);
@@ -686,55 +686,42 @@ function tickRun(dt){
         }
     }
 
-    // Combat zone
+    // Combat zone — spawn targets, keep running
     if(pz >= COMBAT_DIST && !winTriggered){
         winTriggered=true;
         GS='COMBAT';
-        combatMoving=true;   // weapon keeps running forward until it hits a target
         spawnWave();
     }
 }
 
 function tickCombat(dt){
+    // Same horizontal steering as run phase
     const left  = keys['ArrowLeft'] ||keys['KeyA'];
     const right = keys['ArrowRight']||keys['KeyD'];
-    if(left)  pvx=Math.min(pvx+X_ACCEL*dt, spd*0.6||4);
-    else if(right) pvx=Math.max(pvx-X_ACCEL*dt,-(spd*0.6||4));
-    else pvx*=(1-dt*12);
+    if(left)  pvx=Math.min(pvx+X_ACCEL*dt, spd*0.6);
+    else if(right) pvx=Math.max(pvx-X_ACCEL*dt,-spd*0.6);
+    else pvx*=(1-dt*14);
     px=Math.max(-X_LIMIT,Math.min(X_LIMIT,px+pvx*dt));
 
-    if(combatMoving){
-        pz += spd * dt;
-        // Walk anim while moving
-        plyWalkT += dt*6;
-        const bob = Math.sin(plyWalkT)*.055;
-        if(plyGrp) plyGrp.position.set(px+.18, 1.05+bob, pz+.6);
-        // Stop when close enough to any live target
-        const alive=enemies.filter(e=>!e.dead&&!e.removed);
-        for(const e of alive){
-            if(Math.abs(e.g.position.z - pz) < 1.6){
-                combatMoving=false; spd=0;
-                if(!shopOpened){ shopOpened=true; setTimeout(()=>openShop(),800); }
-                break;
-            }
-        }
-    } else {
-        if(plyGrp) plyGrp.position.set(px+.18, 1.05, pz+.6);
-    }
+    // Weapon keeps moving forward
+    pz += spd * dt;
+    plyWalkT += dt*6;
+    const bob = Math.sin(plyWalkT)*.055;
+    const sway = Math.sin(plyWalkT*.5)*.03;
+    if(plyGrp){ plyGrp.position.set(px+.18, 1.05+bob, pz+.6); plyGrp.rotation.y=sway; }
 
-    camPx+=(px-camPx)*Math.min(1,dt*6);
-    camPz+=(pz-7-camPz)*Math.min(1,dt*6);
-    cam.position.set(camPx,4.2,camPz);
-    cam.lookAt(camPx*.4+px*.6,.8,pz+7);
+    camPx+=(px-camPx)*Math.min(1,dt*8);
+    camPz+=(pz-4-camPz)*Math.min(1,dt*6);
+    cam.position.set(camPx, 2.6, camPz);
+    cam.lookAt(camPx*.4+px*.6, 1.0, pz+6);
 
     updateBullets(dt);
 
-    // Auto-fire at nearest enemy
+    // Auto-fire only at targets AHEAD of weapon
     combatFT=Math.max(0,combatFT-dt);
-    const alive=enemies.filter(e=>!e.dead&&!e.removed);
+    const alive=enemies.filter(e=>!e.dead&&!e.removed && e.g.position.z >= pz-0.5);
     if(combatFT<=0 && alive.length>0){
         combatFT=effCD();
-        // Find nearest
         let nearest=null, nd=Infinity;
         for(const e of alive){
             const d=Math.hypot(e.g.position.x-px, e.g.position.z-pz);
@@ -746,6 +733,12 @@ function tickCombat(dt){
             gunFlash=.15;
             if(nearest.hp<=0&&!nearest.dead) killEnemy(nearest);
         }
+    }
+
+    // Level ends when weapon has passed all targets
+    if(!shopOpened && enemies.length>0 && enemies.every(e=>e.g.position.z < pz-1)){
+        shopOpened=true;
+        setTimeout(()=>openShop(),600);
     }
 
     // Update targets
