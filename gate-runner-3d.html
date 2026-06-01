@@ -324,13 +324,13 @@ function updateBullets(dt){
         if(GS==='RUN'){
             for(const gate of gates){
                 if(gate.removed || Math.abs(bz - gate.z) > 1.2) continue;
-                if(bx < -0.1 && bx > -3.9 && gate.coolL<=0){
+                if(bx < -0.1 && bx > -3.9 && gate.coolL<=0 && gate.pL){
                     gate.coolL=0.25; gate.hitsL++;
                     const dyn=updateGatePanel(gate,'L');
                     if(dyn.good) applyEff(dyn);
                     hit=true; break;
                 }
-                if(bx > 0.1 && bx < 3.9 && gate.coolR<=0){
+                if(bx > 0.1 && bx < 3.9 && gate.coolR<=0 && gate.pR){
                     gate.coolR=0.25; gate.hitsR++;
                     const dyn=updateGatePanel(gate,'R');
                     if(dyn.good) applyEff(dyn);
@@ -365,14 +365,13 @@ function updateBullets(dt){
             }
         }
 
-        // Combat: bullet hits the specific target it flies into
+        // Combat: bullet hits loot platforms
         if(GS==='COMBAT' && !hit){
-            for(const e of enemies){
-                if(e.dead||e.removed) continue;
-                const tx=e.g.position.x, tz=e.g.position.z;
-                if(Math.abs(bz-tz)<0.65 && Math.abs(bx-tx)<HEX_R*0.85){
-                    e.hp-=effDmg()*(b.dmgMult||1); e.hitT=.1; drawEHP(e); gunFlash=.12;
-                    if(e.hp<=0&&!e.dead) killEnemy(e);
+            for(const lp of lootPlatforms){
+                if(!lp.isCombat||lp.dead||lp.removed) continue;
+                if(Math.abs(bz-lp.g.position.z)<lp.R*0.9 && Math.abs(bx-lp.g.position.x)<lp.R*0.9){
+                    lp.hp-=effDmg()*(b.dmgMult||1); lp.rimT=.1; drawLootHP(lp); gunFlash=.12;
+                    if(lp.hp<=0&&!lp.dead){ lp.dead=true; applyPickup(lp.loot); }
                     if(!b.pierce) hit=true;
                     break;
                 }
@@ -483,6 +482,71 @@ function spawnGate(z){
     gates.push({z,eL,eR,pL,pR,meshes, hitsL:0,hitsR:0, coolL:0,coolR:0, passed:false,removed:false});
 }
 
+// Half-gate: single panel on left OR right side only
+function spawnGateSide(side, z, eff){
+    const isL = side==='L';
+    const cx = isL ? -2 : 2;                     // panel centre x
+    const outerPole = isL ? -3.9 : 3.9;          // road-edge pole
+    const innerPole = isL ? -0.15 : 0.15;        // centre-line pole
+    const meshes=[];
+    const dyn = effAtCharge(eff, 0);
+
+    const panel=new THREE.Mesh(
+        new THREE.PlaneGeometry(3.6,4.1),
+        new THREE.MeshBasicMaterial({map:makeGateTex(dyn),transparent:true,side:THREE.DoubleSide})
+    );
+    panel.rotation.y=Math.PI;
+    panel.position.set(cx,2.05,z); gateGrp.add(panel); meshes.push(panel);
+
+    const mkPole=(x)=>{
+        const m=new THREE.Mesh(POLE_GEO,new THREE.MeshLambertMaterial({color:eff.good?0x00AA44:0xAA2200}));
+        m.position.set(x,2.2,z); gateGrp.add(m); meshes.push(m);
+    };
+    mkPole(outerPole); mkPole(innerPole);
+
+    const bar=new THREE.Mesh(new THREE.BoxGeometry(3.8,.12,.12),
+        new THREE.MeshLambertMaterial({color:eff.good?0x00AA44:0xAA2200}));
+    bar.position.set(cx,4.35,z); gateGrp.add(bar); meshes.push(bar);
+
+    const gate={z, meshes, passed:false, removed:false, coolL:0, coolR:0, hitsL:0, hitsR:0};
+    if(isL){ gate.eL=eff; gate.pL=panel; gate.eR=null; gate.pR=null; gate.rightOnly=false; gate.leftOnly=true; }
+    else   { gate.eR=eff; gate.pR=panel; gate.eL=null; gate.pL=null; gate.rightOnly=true; gate.leftOnly=false; }
+    gates.push(gate);
+}
+
+// Spawn one row combining any mix of gates, mobs, loot platforms
+function spawnRow(z){
+    // Weighted row configs: L and R slot types
+    const cfgs=[
+        {L:'gate', R:'gate',  w:2.5},
+        {L:'gate', R:'mob',   w:1.5},
+        {L:'mob',  R:'gate',  w:1.5},
+        {L:'gate', R:'loot',  w:1.2},
+        {L:'loot', R:'gate',  w:1.2},
+        {L:'mob',  R:'loot',  w:1.0},
+        {L:'loot', R:'mob',   w:1.0},
+        {L:'mob',  R:'mob',   w:0.8},
+        {L:'loot', R:'loot',  w:0.5},
+        {L:'loot', R:'empty', w:0.4},
+        {L:'empty',R:'loot',  w:0.4},
+    ];
+    const total=cfgs.reduce((s,c)=>s+c.w,0);
+    let r=Math.random()*total, cfg=cfgs[0];
+    for(const c of cfgs){ r-=c.w; if(r<=0){cfg=c;break;} }
+
+    if(cfg.L==='gate' && cfg.R==='gate'){ spawnGate(z); return; }
+
+    const doSlot=(type,side)=>{
+        const xPos = side==='L' ? -2.0 : 2.0;
+        if(type==='gate') spawnGateSide(side, z, randomEff());
+        else if(type==='mob')  spawnMob(xPos, z);
+        else if(type==='loot') spawnLootPlatform(xPos, z);
+        // 'empty': nothing
+    };
+    doSlot(cfg.L,'L');
+    doSlot(cfg.R,'R');
+}
+
 function applyEff(eff){
     switch(eff.id){
         case 'dmg_val': permDmg=Math.max(-upgDmg, permDmg+eff.val); break;
@@ -499,6 +563,7 @@ function updateGatePanel(gate, side){
     const hits = isL ? gate.hitsL : gate.hitsR;
     const base = isL ? gate.eL : gate.eR;
     const panel = isL ? gate.pL : gate.pR;
+    if(!panel || !base) return base || {id:'none',label:'',good:false};
     const dyn = effAtCharge(base, hits);
     panel.material.map.dispose();
     panel.material.map = makeGateTex(dyn);
@@ -616,40 +681,43 @@ function makeLootPlatTex(loot){
     t.anisotropy=renderer.capabilities.getMaxAnisotropy(); return t;
 }
 
-function spawnLootPlatform(x, z){
+function spawnLootPlatform(x, z, combatScale){
+    const sc = combatScale||1;
     const loot=LOOT_TYPES[Math.floor(Math.random()*LOOT_TYPES.length)];
     const g=new THREE.Group();
-    const R=0.65, h=0.45;
+    const R=0.72*sc, h=1.4*sc;   // tall platform
 
-    // Hex base
+    // Hex base (tall)
     const stoneTex=makeStoneSideTex();
     const base=new THREE.Mesh(new THREE.CylinderGeometry(R,R*1.08,h,6),
         new THREE.MeshLambertMaterial({map:stoneTex}));
     base.position.y=h/2; base.castShadow=true; g.add(base);
 
-    // Top face with loot icon
-    const top=new THREE.Mesh(new THREE.CylinderGeometry(R*0.9,R,0.12,6),
+    // Top cap with loot icon
+    const top=new THREE.Mesh(new THREE.CylinderGeometry(R*0.88,R,0.18*sc,6),
         [new THREE.MeshLambertMaterial({map:stoneTex}),
          new THREE.MeshLambertMaterial({map:makeLootPlatTex(loot)}),
          new THREE.MeshLambertMaterial({map:stoneTex})]);
-    top.position.y=h+0.06; g.add(top);
+    top.position.y=h+0.09*sc; g.add(top);
 
     // Glowing rim
     const rimMat=new THREE.MeshBasicMaterial({color:new THREE.Color(loot.color)});
-    const rim=new THREE.Mesh(new THREE.TorusGeometry(R*0.91,0.04,4,6),rimMat);
-    rim.rotation.x=Math.PI/2; rim.position.y=h+0.12; g.add(rim);
+    const rim=new THREE.Mesh(new THREE.TorusGeometry(R*0.9,0.05*sc,4,6),rimMat);
+    rim.rotation.x=Math.PI/2; rim.position.y=h+0.18*sc; g.add(rim);
 
     // HP bar
     const hpCv=document.createElement('canvas'); hpCv.width=96; hpCv.height=14;
     const hpCtx=hpCv.getContext('2d');
     const hpTex=new THREE.CanvasTexture(hpCv);
     const hpSpr=new THREE.Sprite(new THREE.SpriteMaterial({map:hpTex,depthTest:false,transparent:true}));
-    hpSpr.position.set(0, h+0.72, 0); hpSpr.scale.set(1.4, 0.2, 1); g.add(hpSpr);
+    hpSpr.position.set(0, h+0.55*sc, 0); hpSpr.scale.set(1.6*sc, 0.22*sc, 1); g.add(hpSpr);
 
     g.position.set(x,0,z); scene.add(g);
 
-    const maxHp=Math.max(3, level*3);
-    const lp={g,hpCv,hpCtx,hpTex,hpSpr,loot,maxHp,hp:maxHp,dead:false,deadT:0,removed:false,rimMat,rimT:0};
+    const maxHp=Math.max(3, Math.round(level*3*sc));
+    const lp={g,hpCv,hpCtx,hpTex,hpSpr,loot,maxHp,hp:maxHp,
+        dead:false,deadT:0,removed:false,rimMat,rimT:0,
+        R,h, isCombat:!!combatScale};
     drawLootHP(lp); lootPlatforms.push(lp);
 }
 
@@ -844,19 +912,19 @@ function killEnemy(e){
     e.dead=true; coins+=e.reward; refreshHUD();
 }
 
-// 3 columns × 15 rows, each row 3× HP, no gaps between platforms
+// Combat wave: grid of loot platforms scaling in size/HP per row
 function spawnWave(){
-    const ROWS=15, COLS=3;
-    const colSpacing = HEX_R * 2;             // columns touch side-to-side
-    const rowSpacing = HEX_R * Math.sqrt(3);  // hex flat-to-flat depth
-    const colX = [-colSpacing, 0, colSpacing];
+    const ROWS=8, COLS=3;
+    const rowSpacing = 2.2;
+    const colX = [-2.2, 0, 2.2];
     for(let r=0;r<ROWS;r++){
-        const hp = Math.max(1, Math.round(level * Math.pow(3, r)));
-        const sc = Math.min(0.4 + r*0.15, 2.4);
+        const sc = 1 + r*0.35;
         for(let c=0;c<COLS;c++){
-            spawnTarget(colX[c], pz + 10 + r*rowSpacing, hp, sc);
+            spawnLootPlatform(colX[c], pz + 8 + r*rowSpacing, sc);
         }
     }
+    // Mark all as combat
+    for(const lp of lootPlatforms) lp.isCombat=true;
 }
 
 // ─── HUD ───
@@ -973,29 +1041,10 @@ function startLevel(){
     while(gateGrp.children.length) gateGrp.remove(gateGrp.children[0]);
     gates=[];
 
-    // Slot types: 0=gate, 1=mob, 2=loot. Slot 0 always a gate.
-    // ~30% mobs, ~20% loot, rest gates
-    const slotType=Array.from({length:GATES_PER_LEVEL},(_,i)=>{
-        if(i===0) return 0;
-        const r=Math.random();
-        return r<0.30 ? 1 : r<0.50 ? 2 : 0;
-    });
-    // Guarantee at least 1 mob and 1 loot
-    if(!slotType.includes(1)){ const i=1+Math.floor(Math.random()*(GATES_PER_LEVEL-1)); slotType[i]=1; }
-    if(!slotType.includes(2)){ const i=1+Math.floor(Math.random()*(GATES_PER_LEVEL-1)); slotType[i]=2; }
-
-    for(let i=0;i<GATES_PER_LEVEL;i++){
-        const z = 20 + i*GATE_SPACING;
-        if(slotType[i]===1){
-            const count = 1 + Math.floor(Math.random()*3);
-            const xs = count===1 ? [0] : count===2 ? [-1.8,1.8] : [-2.8,0,2.8];
-            xs.forEach(x => spawnMob(x, z));
-        } else if(slotType[i]===2){
-            spawnLootPlatform((Math.random()-.5)*3.2, z);
-        } else {
-            spawnGate(z);
-        }
-    }
+    // Each slot spawns a mixed row (gate / mob / loot platform combos)
+    // First slot always a full gate
+    spawnGate(20);
+    for(let i=1;i<GATES_PER_LEVEL;i++) spawnRow(20 + i*GATE_SPACING);
 
     buildPlayer();
     refreshHUD();
@@ -1062,12 +1111,12 @@ function tickRun(dt){
 
         // Player walks through gate zone
         if(!gate.passed && pz > gate.z-1.0 && pz < gate.z+1.8){
-            if(px < 0 && gate.coolL<=0){
+            if(px < 0 && gate.coolL<=0 && gate.pL){
                 gate.coolL=0.45; gate.hitsL++;
                 const dyn=updateGatePanel(gate,'L');
                 applyEff(dyn);
             }
-            if(px >= 0 && gate.coolR<=0){
+            if(px >= 0 && gate.coolR<=0 && gate.pR){
                 gate.coolR=0.45; gate.hitsR++;
                 const dyn=updateGatePanel(gate,'R');
                 applyEff(dyn);
@@ -1165,33 +1214,28 @@ function tickCombat(dt){
     if(runFireT<=0){ runFireT=effCD(); fireBulletRun(); }
     updateBullets(dt);
 
-    // Level ends when weapon collides with any target
+    // Level ends when weapon collides with any combat loot platform
     if(!shopOpened){
-        for(const e of enemies){
-            if(e.removed||e.dead) continue;
-            const dz = e.g.position.z - pz;
-            const dx = Math.abs(e.g.position.x - px);
-            if(dz <= HEX_R && dz >= -0.4 && dx < HEX_R*1.8){
-                shopOpened=true;
-                openShop();
-                break;
+        for(const lp of lootPlatforms){
+            if(!lp.isCombat||lp.removed||lp.dead) continue;
+            const dz = lp.g.position.z - pz;
+            const dx = Math.abs(lp.g.position.x - px);
+            if(dz <= lp.R && dz >= -0.5 && dx < lp.R*1.8){
+                shopOpened=true; openShop(); break;
             }
         }
     }
 
-    // Update targets
-    for(const e of enemies){
-        if(e.removed) continue;
-        if(e.dead){
-            e.deadT+=dt;
-            if(e.deadT<.4){
-                e.g.rotation.z=e.deadT*4;
-                e.g.position.y=-e.deadT*1.5;
-                e.hpSpr.visible=false;
-            } else { scene.remove(e.g); e.removed=true; }
-            continue;
+    // Animate dead combat platforms
+    for(const lp of lootPlatforms){
+        if(!lp.isCombat||lp.removed) continue;
+        if(lp.dead){
+            lp.deadT=(lp.deadT||0)+dt;
+            if(lp.deadT<0.4){ lp.g.rotation.z=lp.deadT*5; lp.g.position.y=-lp.deadT*2; lp.hpSpr.visible=false; }
+            else { scene.remove(lp.g); lp.removed=true; }
         }
-        if(e.hitT>0){ e.hitT-=dt; }
+        if(lp.rimT>0){ lp.rimT-=dt; lp.rimMat.color.setHex(0xFFFFFF); }
+        else { lp.rimMat.color.set(lp.loot.color); }
     }
 
 }
