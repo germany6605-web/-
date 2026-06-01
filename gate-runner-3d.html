@@ -138,7 +138,7 @@ let winTriggered = false, shopOpened = false;
 let bullets = [], runFireT = 0;
 let ownedWeapons = new Set([1]), activeWeapon = 1;
 // Run-phase power-ups (reset each level)
-let tripleShot = false, dmgX2 = false, moneyX2 = false;
+let tripleShot = false, dmgX2 = 1, moneyX2 = 1;
 let lootPlatforms = [], pickups = [];
 let weaponPlatform = null, weaponUnlocked = 0;
 
@@ -216,12 +216,12 @@ const WEPS=[null,
     {name:'Пулемёт',   cd:.09, col:0x2A3A2A, barrel:.70, grip:.20, wide:.10,
      shots:1, spread:.03,  dmgMult:1,  bScale:0.6, bColor:0xFF8800},
     {name:'Дробовик',  cd:.65, col:0x553322, barrel:.36, grip:.22, wide:.14,
-     shots:6, spread:.22,  dmgMult:2,  bScale:1.1, bColor:0xFF3300},
+     shots:6, spread:.14,  dmgMult:2,  bScale:1.1, bColor:0xFF3300},
     {name:'Снайперка', cd:.85, col:0x1A2A3A, barrel:.90, grip:.18, wide:.06,
      shots:1, spread:0,    dmgMult:3,  bScale:1.8, bColor:0x44DDFF, pierce:true},
 ];
 const W=()=>WEPS[wepLv];
-const effDmg=()=>Math.max(1, 1 + upgDmg + Math.floor(permDmg/2)) * (dmgX2 ? 2 : 1);
+const effDmg=()=>Math.max(1, 1 + upgDmg + Math.floor(permDmg/2)) * dmgX2;
 const effCD=()=>W().cd*(.9**upgRate);
 
 // ─── PLAYER MESH (weapon only) ───
@@ -341,7 +341,7 @@ function updateBullets(dt){
                 if(m.dead||m.removed) continue;
                 if(Math.abs(bz-m.g.position.z)<0.55 && Math.abs(bx-m.g.position.x)<0.42){
                     m.hp -= effDmg()*(b.dmgMult||1); m.hitT=.12; drawMobHP(m);
-                    if(m.hp<=0&&!m.dead){ m.dead=true; coins+=m.reward*(moneyX2?2:1); refreshHUD(); }
+                    if(m.hp<=0&&!m.dead){ m.dead=true; coins+=m.reward*moneyX2; refreshHUD(); }
                     if(!b.pierce) hit=true;
                     break;
                 }
@@ -358,7 +358,7 @@ function updateBullets(dt){
                     if(lp.rimT!==undefined) lp.rimT=.12;
                     if(lp.topMesh) updateCombatTopTex(lp); // refresh HP number
                     if(lp.hp<=0&&!lp.dead){
-                        if(lp.isCombat){ lp.dead=true; coins+=Math.floor((lp.coinReward||30)*(moneyX2?2:1)); refreshHUD(); }
+                        if(lp.isCombat){ lp.dead=true; coins+=Math.floor((lp.coinReward||30)*moneyX2); refreshHUD(); }
                         else killLootPlatform(lp);
                     }
                     if(!b.pierce) hit=true;
@@ -642,7 +642,7 @@ function drawMobHP(m){
 
 // ─── LOOT PLATFORMS ───
 const LOOT_TYPES=[
-    {id:'triple',  label:'3× ВЫСТРЕЛ', icon:'💥', color:'#FF8800', good:true},
+    {id:'triple',  label:'ТРОЙНОЙ ВЫСТРЕЛ', icon:'💥', color:'#FF8800', good:true},
     {id:'dmgx2',   label:'×2 УРОН',    icon:'⚔️',  color:'#FF2222', good:true},
     {id:'moneyx2', label:'×2 ДЕНЬГИ',  icon:'💰',  color:'#FFD700', good:true},
     {id:'coins',   label:'💵 ДЕНЬГИ',  icon:'💵',  color:'#44FF88', good:true},
@@ -744,9 +744,9 @@ function killLootPlatform(lp){
 function applyPickup(loot){
     switch(loot.id){
         case 'triple':  tripleShot=true; break;
-        case 'dmgx2':   dmgX2=true; break;
-        case 'moneyx2': moneyX2=true; break;
-        case 'coins':   coins+=Math.floor(40+level*20)*(moneyX2?2:1); break;
+        case 'dmgx2':   dmgX2*=2; break;
+        case 'moneyx2': moneyX2*=2; break;
+        case 'coins':   coins+=Math.floor(40+level*20)*moneyX2; break;
     }
     showEffPop({label:loot.label, good:true});
     refreshHUD();
@@ -995,9 +995,9 @@ function makeCombatTopTex(label, bgColor='#FFD700', textColor='#ffffff'){
     t.anisotropy=renderer.capabilities.getMaxAnisotropy(); return t;
 }
 
-function spawnCombatPlatform(x, z, hp){
+function spawnCombatPlatform(x, z, hp, sc=1){
     const g=new THREE.Group();
-    const R=COMBAT_HEX_R, h=1.6;
+    const R=COMBAT_HEX_R*sc, h=1.6*sc;
 
     const yMat=new THREE.MeshLambertMaterial({color:0xFFE000});
     const yDarkMat=new THREE.MeshLambertMaterial({color:0xFFAA00});
@@ -1007,21 +1007,21 @@ function spawnCombatPlatform(x, z, hp){
 
     const hpLabel=hp>=1000?(hp/1000).toFixed(1)+'K':String(hp);
     const topTex=makeCombatTopTex(hpLabel);
-    const topMesh=new THREE.Mesh(new THREE.CylinderGeometry(R,R,0.1,6),
+    const topMesh=new THREE.Mesh(new THREE.CylinderGeometry(R,R,0.1*sc,6),
         [yMat, new THREE.MeshLambertMaterial({map:topTex}), yMat]);
-    topMesh.position.y=h+0.05; g.add(topMesh);
+    topMesh.position.y=h+0.05*sc; g.add(topMesh);
 
-    // Tiny bill on top
+    // Bill on top
     const billMat=new THREE.MeshLambertMaterial({color:0x2DBF4E});
-    const bill=new THREE.Mesh(new THREE.BoxGeometry(R*1.1,0.08,R*0.85),billMat);
-    bill.position.y=h+0.14; bill.rotation.y=Math.random()*0.5; g.add(bill);
+    const bill=new THREE.Mesh(new THREE.BoxGeometry(R*1.1,0.08*sc,R*0.85),billMat);
+    bill.position.y=h+0.14*sc; bill.rotation.y=Math.random()*0.5; g.add(bill);
 
     // HP bar sprite
     const hpCv=document.createElement('canvas'); hpCv.width=64; hpCv.height=8;
     const hpCtx=hpCv.getContext('2d');
     const hpTex2=new THREE.CanvasTexture(hpCv);
     const hpSpr=new THREE.Sprite(new THREE.SpriteMaterial({map:hpTex2,depthTest:false,transparent:true}));
-    hpSpr.position.set(0,h+0.55,0); hpSpr.scale.set(0.9,0.12,1); g.add(hpSpr);
+    hpSpr.position.set(0,h+0.55*sc,0); hpSpr.scale.set(0.9*sc,0.12*sc,1); g.add(hpSpr);
 
     g.position.set(x,0,z); scene.add(g);
 
@@ -1029,7 +1029,7 @@ function spawnCombatPlatform(x, z, hp){
     const lp={g,hpCv,hpCtx,hpTex:hpTex2,hpSpr,topMesh,topTex,
         loot:null, maxHp,hp,dead:false,deadT:0,removed:false,rimMat:null,rimT:0,
         R, h, isCombat:true,
-        coinReward:Math.floor(10+level*8)};
+        coinReward:Math.floor((10+level*8)*sc)};
     drawLootHP(lp); lootPlatforms.push(lp);
     return lp;
 }
@@ -1072,7 +1072,7 @@ function spawnMultiplierPlatform(x, z, mult){
     const lp={g,hpCv,hpCtx,hpTex:hpTex2,hpSpr,topMesh,topTex,
         loot:null, maxHp,hp,dead:false,deadT:0,removed:false,rimMat:null,rimT:0,
         R, h, isCombat:true, isMultiplier:true, mult,
-        coinReward:Math.floor((10+level*8)*mult)};
+        coinReward:Math.floor((10+level*8)*mult/3)};
     drawLootHP(lp); lootPlatforms.push(lp);
     return lp;
 }
@@ -1086,15 +1086,17 @@ function updateCombatTopTex(lp){
 }
 
 function spawnCombatZone(){
-    // 3 rows × 15 pillars
-    for(let r=0;r<COMBAT_ROWS;r++){
-        const hp=Math.max(10, Math.round(level*10*(1+r*0.5)));
+    // 6 rows × 15 pillars — further = bigger & more HP
+    const TOTAL_ROWS=6;
+    for(let r=0;r<TOTAL_ROWS;r++){
+        const sc=1+r*0.18;                                   // scale: 1.0 … 1.9
+        const hp=Math.max(10, Math.round(level*100*(1+r*0.5)*sc)); // HP ×10, grows with row
         for(let c=0;c<COMBAT_COL_X.length;c++){
-            spawnCombatPlatform(COMBAT_COL_X[c], COMBAT_START_Z+r*COMBAT_ROW_SPACING, hp);
+            spawnCombatPlatform(COMBAT_COL_X[c], COMBAT_START_Z+r*COMBAT_ROW_SPACING, hp, sc);
         }
     }
-    // Multiplier row (×2…×5) — 4 pillars spread across road
-    const multZ=COMBAT_START_Z+COMBAT_ROWS*COMBAT_ROW_SPACING+1.5;
+    // Multiplier row (×2…×5) — coins ÷3 vs base
+    const multZ=COMBAT_START_Z+TOTAL_ROWS*COMBAT_ROW_SPACING+1.5;
     const multCols=[-2.5,-0.9,0.9,2.5];
     const mults=[2,3,4,5];
     for(let i=0;i<multCols.length;i++){
@@ -1110,7 +1112,7 @@ function refreshHUD(){
     document.getElementById('wep-name').textContent=W().name;
     const shots = tripleShot ? Math.max(W().shots,3) : W().shots;
     document.getElementById('dmg-d').textContent=`УРН: ${effDmg()} ×${shots}`
-        +(tripleShot?' 💥':'')+(dmgX2?' ⚔️':'')+(moneyX2?' 💰':'');
+        +(tripleShot?' 💥':'')+(dmgX2>1?` ⚔️×${dmgX2}`:'')+(moneyX2>1?` 💰×${moneyX2}`:'');
 }
 
 // ─── SHOP ───
@@ -1224,7 +1226,7 @@ function startLevel(){
     GS='RUN'; winTriggered=false; shopOpened=false;
     px=0; pz=0; pvx=0; camPx=0; camPz=-7;
     // Reset ALL run-phase gains — only shop upgrades (upgDmg/upgRate) persist
-    permDmg=0; tripleShot=false; dmgX2=false; moneyX2=false;
+    permDmg=0; tripleShot=false; dmgX2=1; moneyX2=1;
     wepLv=activeWeapon; spd=FWD_SPEED; coinsX=1;
     plyWalkT=0; gunFlash=0; effPopT=0; runFireT=0;
     weaponUnlocked=0;
