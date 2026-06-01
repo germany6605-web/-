@@ -11,45 +11,47 @@ body { background:#000; overflow:hidden; font-family:'Segoe UI',Arial,sans-serif
 #hud { position:fixed; inset:0; pointer-events:none; }
 #tophud { display:flex; justify-content:space-between; padding:14px 20px; }
 #tleft  { font-size:14px; line-height:2; }
-#tright { font-size:15px; text-align:right; line-height:2; }
-#hp-area { position:absolute; bottom:22px; left:22px; }
-#hp-lbl  { font-size:12px; color:#aaa; margin-bottom:4px; }
-#hp-bg   { width:190px; height:13px; background:#222; border-radius:6px; border:1px solid #444; overflow:hidden; }
-#hp-fill { height:100%; background:#44cc44; border-radius:6px; }
-#wep-area { position:absolute; bottom:22px; right:22px; text-align:right; }
+#wep-area { text-align:right; }
 #wep-name { font-size:22px; font-weight:bold; color:#FFD700; text-shadow:0 0 10px rgba(255,215,0,.5); }
 #dmg-d    { font-size:13px; color:#aaa; margin-top:2px; }
 
 #effect-pop { position:absolute; top:38%; left:50%; transform:translate(-50%,-50%);
     font-size:42px; font-weight:bold; text-shadow:0 0 20px currentColor;
     opacity:0; pointer-events:none; transition:opacity .08s; }
-
-#arrow-hint { position:absolute; bottom:75px; left:50%; transform:translateX(-50%);
+#arrow-hint { position:absolute; bottom:22px; left:50%; transform:translateX(-50%);
     font-size:12px; color:rgba(255,255,255,.45); text-align:center; }
 
-#dmg-vign { position:fixed; inset:0; pointer-events:none;
-    background:radial-gradient(ellipse at center,transparent 35%,rgba(200,0,0,.7) 100%); opacity:0; }
-
 .ov { position:fixed; inset:0; display:none; flex-direction:column; align-items:center;
-    justify-content:center; background:rgba(0,0,0,.86); z-index:20; }
+    justify-content:center; background:rgba(0,0,0,.88); z-index:20; overflow-y:auto; padding:20px 0; }
 .ov.vis { display:flex; }
 .ov h1 { font-size:50px; font-weight:bold; color:#FFD700; margin-bottom:8px;
     text-shadow:0 0 22px rgba(255,215,0,.4); }
-.ov p  { font-size:16px; color:#aaa; text-align:center; line-height:1.8; margin-bottom:28px; }
+.ov p  { font-size:16px; color:#aaa; text-align:center; line-height:1.8; margin-bottom:20px; }
 .btn { padding:12px 36px; font-size:18px; font-weight:bold; background:#1a5c1a;
     border:2px solid #4CAF50; color:#fff; border-radius:8px; cursor:pointer; margin:6px; }
 .btn:hover { background:#267a26; }
 .btn-g { background:#4a3500; border-color:#FFD700; }
 .btn-g:hover { background:#6a4d00; }
 .btn-g:disabled { background:#111; border-color:#333; color:#444; cursor:not-allowed; }
-#shop-coins { font-size:19px; color:#FFD700; margin-bottom:16px; }
-.sgrid { display:flex; gap:14px; flex-wrap:wrap; justify-content:center; margin-bottom:20px; }
-.scard { background:rgba(15,30,60,.97); border:2px solid #334; border-radius:10px; padding:16px;
-    width:188px; text-align:center; }
+#shop-coins { font-size:19px; color:#FFD700; margin-bottom:12px; }
+
+/* Shop tabs */
+.tab-bar { display:flex; gap:8px; margin-bottom:16px; }
+.tab-btn { padding:9px 28px; font-size:15px; font-weight:bold; border-radius:8px 8px 0 0;
+    border:2px solid #334; border-bottom:none; background:#0a1020; color:#888; cursor:pointer; }
+.tab-btn.active { background:#152040; color:#FFD700; border-color:#FFD700; }
+.tab-pane { display:none; }
+.tab-pane.active { display:block; }
+
+.sgrid { display:flex; gap:12px; flex-wrap:wrap; justify-content:center; margin-bottom:16px;
+    padding:14px; background:#0a1020; border:2px solid #334; border-radius:0 8px 8px 8px; min-width:600px; }
+.scard { background:rgba(15,30,60,.97); border:2px solid #334; border-radius:10px; padding:14px;
+    width:170px; text-align:center; }
 .scard.ok { border-color:#FFD700; }
-.scard h3 { font-size:14px; color:#FFD700; margin-bottom:6px; }
-.scard p  { font-size:11px; color:#aaa; line-height:1.6; margin-bottom:8px; }
-.cost { font-size:14px; color:#FFD700; font-weight:bold; margin-bottom:8px; }
+.scard.active-wep { border-color:#00FF88; }
+.scard h3 { font-size:13px; color:#FFD700; margin-bottom:5px; }
+.scard p  { font-size:11px; color:#aaa; line-height:1.5; margin-bottom:7px; }
+.cost { font-size:13px; color:#FFD700; font-weight:bold; margin-bottom:7px; }
 </style>
 </head>
 <body>
@@ -61,21 +63,14 @@ body { background:#000; overflow:hidden; font-family:'Segoe UI',Arial,sans-serif
       <div id="lv-d" style="color:#FFD700;font-weight:bold">Уровень 1</div>
       <div id="coins-d">🪙 0</div>
     </div>
-    <div id="tright">
-      <div id="wep-area">
-        <div id="wep-name">Пистолет</div>
-        <div id="dmg-d">УРН: 10</div>
-      </div>
+    <div id="wep-area">
+      <div id="wep-name">Пистолет</div>
+      <div id="dmg-d">УРН: 1</div>
     </div>
-  </div>
-  <div id="hp-area">
-    <div id="hp-lbl">HP: 100 / 100</div>
-    <div id="hp-bg"><div id="hp-fill"></div></div>
   </div>
   <div id="arrow-hint">◀ A / ← — влево &nbsp;&nbsp; D / → — вправо ▶</div>
   <div id="effect-pop"></div>
 </div>
-<div id="dmg-vign"></div>
 
 <div class="ov vis" id="start-ov">
   <h1>GATE RUNNER 3D</h1>
@@ -84,16 +79,16 @@ body { background:#000; overflow:hidden; font-family:'Segoe UI',Arial,sans-serif
      A / ← и D / → для выбора направления</p>
   <button class="btn" onclick="startGame()">▶ НАЧАТЬ</button>
 </div>
-<div class="ov" id="dead-ov">
-  <h1 style="color:#ff4444">ПОГИБ</h1>
-  <p id="dead-stats"></p>
-  <button class="btn" onclick="restartGame()">↺ ЗАНОВО</button>
-</div>
 <div class="ov" id="shop-ov">
   <h1>★ МАГАЗИН ★</h1>
   <p id="shop-sub"></p>
   <div id="shop-coins">🪙 0</div>
-  <div class="sgrid" id="sgrid"></div>
+  <div class="tab-bar">
+    <button class="tab-btn active" id="tab-upg" onclick="shopTab('upg')">⚡ Улучшения</button>
+    <button class="tab-btn"        id="tab-wep" onclick="shopTab('wep')">🔫 Оружие</button>
+  </div>
+  <div class="tab-pane active" id="pane-upg"><div class="sgrid" id="sgrid-upg"></div></div>
+  <div class="tab-pane"        id="pane-wep"><div class="sgrid" id="sgrid-wep"></div></div>
   <button class="btn" onclick="nextLevel()">СЛЕДУЮЩИЙ УРОВЕНЬ ▶</button>
 </div>
 
@@ -139,13 +134,12 @@ const FWD_SPEED = 6, X_LIMIT = 3.0, X_ACCEL = 22;
 
 // ─── STATE ───
 let GS = 'START', level = 1, coins = 0;
-let upgDmg = 0, upgRate = 0, upgMaxHp = 0;
+let upgDmg = 0, upgRate = 0;
 let px = 0, pz = 0, pvx = 0;
-let hp = 100, maxHp = 100;
 let permDmg = 0, wepLv = 1, spd = FWD_SPEED, coinsX = 1;
 let camPx = 0, camPz = -7;
-let dmgA = 0, effPopT = 0;
-let winTriggered = false, shopOpened = false, combatMoving = false;
+let effPopT = 0;
+let winTriggered = false, shopOpened = false;
 let bullets = [], runFireT = 0;
 let ownedWeapons = new Set([1]), activeWeapon = 1;
 
@@ -213,12 +207,19 @@ function addTree(x,z){
 }
 
 // ─── WEAPONS ───
+// shots: number of bullets per fire, spread: angle spread (rad), dmgMult: damage per bullet
+// pierce: bullet passes through targets, bScale: bullet size, bColor: bullet colour
 const WEPS=[null,
-    {name:'Пистолет',  dmg:15, cd:.52, col:0x334455, barrel:.42, grip:.18, wide:.07},
-    {name:'Пистолет+', dmg:22, cd:.34, col:0x223344, barrel:.48, grip:.18, wide:.08},
-    {name:'Пулемёт',   dmg:10, cd:.10, col:0x2A3A2A, barrel:.70, grip:.20, wide:.10},
-    {name:'Дробовик',  dmg:70, cd:.72, col:0x553322, barrel:.36, grip:.22, wide:.14, sg:true},
-    {name:'Снайперка', dmg:110,cd:.92, col:0x1A2A3A, barrel:.90, grip:.18, wide:.06},
+    {name:'Пистолет',  cd:.52, col:0x334455, barrel:.42, grip:.18, wide:.07,
+     shots:1, spread:0,    dmgMult:1,  bScale:1.0, bColor:0xFFEE44},
+    {name:'Пистолет+', cd:.34, col:0x223344, barrel:.48, grip:.18, wide:.08,
+     shots:2, spread:.06,  dmgMult:1,  bScale:0.9, bColor:0xFFCC00},
+    {name:'Пулемёт',   cd:.09, col:0x2A3A2A, barrel:.70, grip:.20, wide:.10,
+     shots:1, spread:.03,  dmgMult:1,  bScale:0.6, bColor:0xFF8800},
+    {name:'Дробовик',  cd:.65, col:0x553322, barrel:.36, grip:.22, wide:.14,
+     shots:6, spread:.22,  dmgMult:2,  bScale:1.1, bColor:0xFF3300},
+    {name:'Снайперка', cd:.85, col:0x1A2A3A, barrel:.90, grip:.18, wide:.06,
+     shots:1, spread:0,    dmgMult:6,  bScale:1.8, bColor:0x44DDFF, pierce:true},
 ];
 const W=()=>WEPS[wepLv];
 const effDmg=()=>Math.max(1, 1 + upgDmg + permDmg);
@@ -292,17 +293,24 @@ const BULL_MAT = new THREE.MeshBasicMaterial({color:0xFFEE44});
 const BULL_SPD = 38;
 
 function fireBulletRun(){
-    const b = new THREE.Mesh(BULL_GEO, BULL_MAT);
-    b.position.set(px + .18, 1.1, pz + .6 + W().barrel + .1);
-    scene.add(b);
-    bullets.push({mesh:b, life:2.5});
-    gunFlash = .12;
+    const w=W();
+    for(let i=0;i<w.shots;i++){
+        const angle = w.shots>1 ? ((i-(w.shots-1)/2)*w.spread) + (Math.random()-.5)*w.spread*.3 : 0;
+        const geo = w.bScale===1.0 ? BULL_GEO : new THREE.SphereGeometry(.055*w.bScale,5,4);
+        const mat = new THREE.MeshBasicMaterial({color:w.bColor});
+        const b = new THREE.Mesh(geo, mat);
+        b.position.set(px+.18, 1.1, pz+.6+w.barrel+.1);
+        scene.add(b);
+        bullets.push({mesh:b, life:2.5, vx:Math.sin(angle)*BULL_SPD, dmgMult:w.dmgMult, pierce:w.pierce||false});
+    }
+    gunFlash = .15;
 }
 
 function updateBullets(dt){
     for(let i=bullets.length-1; i>=0; i--){
         const b = bullets[i];
         b.mesh.position.z += BULL_SPD * dt;
+        if(b.vx) b.mesh.position.x += b.vx * dt;
         b.life -= dt;
 
         let hit = false;
@@ -332,9 +340,10 @@ function updateBullets(dt){
                 if(e.dead||e.removed) continue;
                 const tx=e.g.position.x, tz=e.g.position.z;
                 if(Math.abs(bz-tz)<0.65 && Math.abs(bx-tx)<HEX_R*0.85){
-                    e.hp-=effDmg(); e.hitT=.1; drawEHP(e); gunFlash=.12;
+                    e.hp-=effDmg()*(b.dmgMult||1); e.hitT=.1; drawEHP(e); gunFlash=.12;
                     if(e.hp<=0&&!e.dead) killEnemy(e);
-                    hit=true; break;
+                    if(!b.pierce) hit=true;
+                    break;
                 }
             }
         }
@@ -350,24 +359,19 @@ function updateBullets(dt){
 let gates=[], gateGrp=new THREE.Group(); scene.add(gateGrp);
 
 const EFFS=[
-    {id:'hp+',   label:'+30 HP',     good:true },
-    {id:'hp-',   label:'−25 HP',     good:false},
-    {id:'dmg+',  label:'+УРН',       good:true },
-    {id:'dmg-',  label:'−УРН',       good:false},
-    {id:'heal',  label:'ПОЛНОЕ HP',  good:true },
-    {id:'money', label:'💵 ДЕНЬГИ',  good:true },
-    {id:'hp2',   label:'+50 HP',     good:true },
+    {id:'dmg+',  label:'+УРН',      good:true },
+    {id:'dmg-',  label:'−УРН',      good:false},
+    {id:'money', label:'💵 ДЕНЬГИ', good:true },
+    {id:'money', label:'💵 ДЕНЬГИ', good:true },  // doubled weight
+    {id:'dmg+',  label:'+УРН',      good:true },  // doubled weight
 ];
 
 function randomEff(){ return EFFS[Math.floor(Math.random()*EFFS.length)]; }
 
 function effAtCharge(base, charge){
     switch(base.id){
-        case 'hp-':{ const v=-25+charge*9;  return {id:'hp_val', val:v, label:(v>=0?'+':'')+Math.round(v)+' HP', good:v>=0}; }
-        case 'dmg-':{ const v=-1+charge;    return {id:'dmg_val',val:v, label:(v>=0?'+':'')+v+' УРН', good:v>=0}; }
-        case 'hp+':{ const v=30+charge*15;  return {id:'hp_val', val:v, label:'+'+v+' HP',  good:true}; }
-        case 'hp2':{ const v=50+charge*20;  return {id:'hp_val', val:v, label:'+'+v+' HP',  good:true}; }
-        case 'dmg+':{ const v=2+charge;     return {id:'dmg_val',val:v, label:'+'+v+' УРН', good:true}; }
+        case 'dmg-':{ const v=-1+charge; return {id:'dmg_val',val:v, label:(v>=0?'+':'')+v+' УРН', good:v>=0}; }
+        case 'dmg+':{ const v=2+charge;  return {id:'dmg_val',val:v, label:'+'+v+' УРН', good:true}; }
         default: return base;
     }
 }
@@ -450,14 +454,9 @@ function spawnGate(z){
 
 function applyEff(eff){
     switch(eff.id){
-        case 'hp_val':  hp=Math.min(maxHp, Math.max(1, hp+eff.val)); break;
         case 'dmg_val': permDmg=Math.max(-upgDmg, permDmg+eff.val); break;
-        case 'hp+':  hp=Math.min(maxHp,hp+30); break;
-        case 'hp2':  hp=Math.min(maxHp,hp+50); break;
-        case 'hp-':  hp=Math.max(5,hp-25); break;
         case 'dmg+': permDmg+=2; break;
         case 'dmg-': permDmg=Math.max(-upgDmg, permDmg-1); break;
-        case 'heal': hp=maxHp; break;
         case 'money': coins+=Math.floor(30+level*15); break;
     }
     showEffPop(eff);
@@ -652,36 +651,39 @@ function spawnWave(){
 function refreshHUD(){
     document.getElementById('lv-d').textContent=`Уровень ${level}`;
     document.getElementById('coins-d').textContent=`🪙 ${coins}`;
-    const r=hp/maxHp;
-    document.getElementById('hp-fill').style.width=(r*100)+'%';
-    document.getElementById('hp-fill').style.background=r>.5?'#44cc44':r>.25?'#ffaa00':'#ff3333';
-    document.getElementById('hp-lbl').textContent=`HP: ${Math.ceil(hp)} / ${maxHp}`;
     document.getElementById('wep-name').textContent=W().name;
-    document.getElementById('dmg-d').textContent=`УРН: ${effDmg()}`;
+    document.getElementById('dmg-d').textContent=`УРН: ${effDmg()} ×${W().shots}`;
 }
 
 // ─── SHOP ───
 const SHOP_WEPS=[
-    {lv:1, name:'🔫 Пистолет',   desc:'Стандарт. CD: 0.52s', cost:0},
-    {lv:2, name:'🔫 Пистолет+',  desc:'Быстрее. CD: 0.34s',  cost:120},
-    {lv:3, name:'🔫 Пулемёт',    desc:'Очень быстро. CD: 0.10s', cost:280},
-    {lv:4, name:'🔫 Дробовик',   desc:'Большой урон. CD: 0.72s', cost:420},
-    {lv:5, name:'🎯 Снайперка',  desc:'Макс. урон. CD: 0.92s',   cost:600},
+    {lv:1, name:'Пистолет',  icon:'🔫', desc:'1 пуля · CD 0.52с<br>Стандартное оружие',           cost:0},
+    {lv:2, name:'Пистолет+', icon:'🔫', desc:'2 пули · CD 0.34с<br>Двойная очередь',               cost:120},
+    {lv:3, name:'Пулемёт',   icon:'💥', desc:'1 пуля · CD 0.09с<br>Очень высокая скорострельность',cost:280},
+    {lv:4, name:'Дробовик',  icon:'🔥', desc:'6 пуль · CD 0.65с<br>Широкий разброс, ×2 урон',      cost:420},
+    {lv:5, name:'Снайперка', icon:'🎯', desc:'1 пуля · CD 0.85с<br>Пробивает насквозь, ×6 урон',   cost:600},
 ];
+let currentTab='upg';
+
+function shopTab(t){
+    currentTab=t;
+    document.getElementById('tab-upg').className='tab-btn'+(t==='upg'?' active':'');
+    document.getElementById('tab-wep').className='tab-btn'+(t==='wep'?' active':'');
+    document.getElementById('pane-upg').className='tab-pane'+(t==='upg'?' active':'');
+    document.getElementById('pane-wep').className='tab-pane'+(t==='wep'?' active':'');
+}
 
 function openShop(){
     GS='SHOP';
     document.getElementById('shop-sub').textContent=`Уровень ${level} пройден!`;
     document.getElementById('shop-coins').textContent=`🪙 ${coins} монет`;
 
+    // ── Upgrades tab ──
     const upgs=[
-        {k:'dmg', name:'🔥 Урон',             desc:`+1 к урону`,      cur:upgDmg,  cost:80+upgDmg*35},
-        {k:'rate',name:'⚡ Скорострельность',  desc:`−10% задержки`,   cur:upgRate, cost:80+upgRate*35},
-        {k:'hp',  name:'❤️ Здоровье',          desc:`+25 макс. HP`,    cur:upgMaxHp,cost:100+upgMaxHp*45},
+        {k:'dmg', name:'🔥 Урон',            desc:`+1 к урону`,    cur:upgDmg,  cost:80+upgDmg*35},
+        {k:'rate',name:'⚡ Скорострельность', desc:`−10% задержки`, cur:upgRate, cost:80+upgRate*35},
     ];
-    const g=document.getElementById('sgrid'); g.innerHTML='';
-
-    // Stat upgrades
+    const gu=document.getElementById('sgrid-upg'); gu.innerHTML='';
     for(const u of upgs){
         const ok=coins>=u.cost&&u.cur<10;
         const c=document.createElement('div'); c.className='scard'+(ok?' ok':'');
@@ -693,31 +695,30 @@ function openShop(){
             coins-=u.cost;
             if(u.k==='dmg') upgDmg++;
             if(u.k==='rate') upgRate++;
-            if(u.k==='hp'){upgMaxHp++; maxHp=100+upgMaxHp*25;}
             openShop();
         };
-        c.appendChild(b); g.appendChild(c);
+        c.appendChild(b); gu.appendChild(c);
     }
 
-    // Weapon purchases
-    const sep=document.createElement('div');
-    sep.style.cssText='width:100%;text-align:center;color:#FFD700;font-size:15px;font-weight:bold;margin:10px 0 4px';
-    sep.textContent='── ОРУЖИЕ ──'; g.appendChild(sep);
-
+    // ── Weapons tab ──
+    const gw=document.getElementById('sgrid-wep'); gw.innerHTML='';
     for(const w of SHOP_WEPS){
         const owned=ownedWeapons.has(w.lv);
         const active=activeWeapon===w.lv;
         const canBuy=!owned&&coins>=w.cost;
-        const c=document.createElement('div'); c.className='scard'+(active?' ok':'');
-        c.innerHTML=`<h3>${w.name}</h3><p>${w.desc}</p><div class="cost">${owned?'Куплено':w.cost+' 🪙'}</div>`;
+        const c=document.createElement('div');
+        c.className='scard'+(active?' active-wep':owned?' ok':'');
+        c.innerHTML=`<h3>${w.icon} ${w.name}</h3><p>${w.desc}</p><div class="cost">${owned?'Куплено':w.cost+' 🪙'}</div>`;
         const b=document.createElement('button'); b.className='btn btn-g';
         if(active){ b.textContent='✓ Активно'; b.disabled=true; }
-        else if(owned){ b.textContent='Выбрать'; b.onclick=()=>{ activeWeapon=w.lv; openShop(); }; }
+        else if(owned){ b.textContent='Выбрать';
+            b.onclick=()=>{ activeWeapon=w.lv; openShop(); shopTab('wep'); }; }
         else{ b.disabled=!canBuy; b.textContent=canBuy?'Купить':'Мало 🪙';
-            b.onclick=()=>{ if(coins<w.cost) return; coins-=w.cost; ownedWeapons.add(w.lv); activeWeapon=w.lv; openShop(); }; }
-        c.appendChild(b); g.appendChild(c);
+            b.onclick=()=>{ if(coins<w.cost) return; coins-=w.cost; ownedWeapons.add(w.lv); activeWeapon=w.lv; openShop(); shopTab('wep'); }; }
+        c.appendChild(b); gw.appendChild(c);
     }
 
+    shopTab(currentTab);
     show('shop-ov');
 }
 
@@ -729,7 +730,7 @@ const hide=id=>document.getElementById(id).classList.remove('vis');
 
 function startGame(){
     hide('start-ov');
-    level=1;coins=0;upgDmg=0;upgRate=0;upgMaxHp=0;maxHp=100;
+    level=1;coins=0;upgDmg=0;upgRate=0;
     ownedWeapons=new Set([1]); activeWeapon=1;
     buildStaticWorld();
     startLevel();
@@ -738,8 +739,8 @@ function startGame(){
 function startLevel(){
     GS='RUN'; winTriggered=false; shopOpened=false;
     px=0; pz=0; pvx=0; camPx=0; camPz=-7;
-    hp=maxHp; permDmg=0; wepLv=activeWeapon; spd=FWD_SPEED; coinsX=1;
-    combatFT=0; plyWalkT=0; gunFlash=0; dmgA=0; effPopT=0; runFireT=0; combatMoving=false;
+    permDmg=0; wepLv=activeWeapon; spd=FWD_SPEED; coinsX=1;
+    plyWalkT=0; gunFlash=0; effPopT=0; runFireT=0;
 
     bullets.forEach(b=>scene.remove(b.mesh)); bullets=[];
     enemies.forEach(e=>scene.remove(e.g)); enemies=[];
@@ -771,8 +772,6 @@ function tick(dt){
         effPopT-=dt;
         if(effPopT<=0) document.getElementById('effect-pop').style.opacity='0';
     }
-    dmgA=Math.max(0,dmgA-dt*3.5);
-    document.getElementById('dmg-vign').style.opacity=dmgA;
     gunFlash=Math.max(0,gunFlash-dt*10);
     if(plyGrp) for(const c of plyGrp.children) if(c.userData && c.userData.flash) c.material.opacity=gunFlash>.1?.9:0;
 
