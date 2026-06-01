@@ -352,9 +352,11 @@ function updateBullets(dt){
         if(!hit){
             for(const lp of lootPlatforms){
                 if(lp.dead||lp.removed) continue;
-                const r = lp.R || 0.65;
+                const r=lp.R||0.65;
                 if(Math.abs(bz-lp.g.position.z)<r*0.9 && Math.abs(bx-lp.g.position.x)<r*0.9){
-                    lp.hp-=effDmg()*(b.dmgMult||1); lp.rimT=.12; drawLootHP(lp); gunFlash=.12;
+                    lp.hp-=effDmg()*(b.dmgMult||1); drawLootHP(lp); gunFlash=.12;
+                    if(lp.rimT!==undefined) lp.rimT=.12;
+                    if(lp.topMesh) updateCombatTopTex(lp); // refresh HP number
                     if(lp.hp<=0&&!lp.dead){
                         if(lp.isCombat){ lp.dead=true; coins+=Math.floor((lp.coinReward||30)*(moneyX2?2:1)); refreshHUD(); }
                         else killLootPlatform(lp);
@@ -965,33 +967,98 @@ function killEnemy(e){
     e.dead=true; coins+=e.reward; refreshHUD();
 }
 
-// Combat zone — placed at level start at fixed Z, no dynamic spawning
-const COMBAT_LOOT = {id:'coins', label:'💵 ДЕНЬГИ', icon:'💵', color:'#44FF88', good:true};
-const COMBAT_HEX_R = 0.78;
-const COMBAT_COL_X = [-2.34, -0.78, 0.78, 2.34];
+// ─── COMBAT ZONE ───
+const COMBAT_HEX_R = 0.82;
+const COMBAT_COL_X = [-2.46, -0.82, 0.82, 2.46];  // 4 touching columns
 const COMBAT_ROWS = 7;
 const COMBAT_ROW_SPACING = COMBAT_HEX_R * Math.sqrt(3);
 const COMBAT_START_Z = GATE_SPACING * GATES_PER_LEVEL + 30;
 
+function makeCombatTopTex(hp){
+    const S=512;
+    const cv=document.createElement('canvas'); cv.width=S; cv.height=S;
+    const ctx=cv.getContext('2d');
+    // Bright yellow-gold gradient
+    const g=ctx.createRadialGradient(S/2,S/2,0,S/2,S/2,S/2);
+    g.addColorStop(0,'#FFFF44'); g.addColorStop(0.5,'#FFD700'); g.addColorStop(1,'#FFA000');
+    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(S/2,S/2,S/2,0,Math.PI*2); ctx.fill();
+    // Hex border
+    ctx.strokeStyle='rgba(0,0,0,.22)'; ctx.lineWidth=18;
+    ctx.beginPath(); ctx.arc(S/2,S/2,S/2-9,0,Math.PI*2); ctx.stroke();
+    // HP number
+    const label=hp>=1e6?(hp/1e6).toFixed(1)+'M':hp>=1000?(hp/1000).toFixed(1)+'K':String(hp);
+    ctx.font=`bold ${label.length>4?110:140}px Arial`;
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillStyle='rgba(0,0,0,.55)'; ctx.fillText(label,S/2+4,S/2+4);
+    ctx.fillStyle='#fff'; ctx.shadowColor='rgba(0,0,0,.4)'; ctx.shadowBlur=6;
+    ctx.fillText(label,S/2,S/2); ctx.shadowBlur=0;
+    const t=new THREE.CanvasTexture(cv);
+    t.anisotropy=renderer.capabilities.getMaxAnisotropy(); return t;
+}
+
+function spawnCombatPlatform(x, z, hp, sc){
+    const g=new THREE.Group();
+    const R=COMBAT_HEX_R*sc, h=1.1+sc*0.55;
+
+    // Bright yellow hex body
+    const yMat=new THREE.MeshLambertMaterial({color:0xFFD700});
+    const yDarkMat=new THREE.MeshLambertMaterial({color:0xFFA000});
+    const base=new THREE.Mesh(new THREE.CylinderGeometry(R,R*1.06,h,6),
+        [yDarkMat,yDarkMat,yDarkMat]);
+    base.position.y=h/2; base.castShadow=true; g.add(base);
+
+    // Top cap with HP number
+    const topTex=makeCombatTopTex(hp);
+    const topMesh=new THREE.Mesh(new THREE.CylinderGeometry(R*0.88,R,0.18,6),
+        [yDarkMat, new THREE.MeshLambertMaterial({map:topTex}), yDarkMat]);
+    topMesh.position.y=h+0.09; g.add(topMesh);
+
+    // Money stacks on top (green cuboids like bills)
+    const billMat=new THREE.MeshLambertMaterial({color:0x33AA44});
+    const billEdge=new THREE.MeshLambertMaterial({color:0x227733});
+    const stackPositions=sc>1.5?[[-0.22,0,0],[0.22,0,0],[0,0,-0.22],[0,0,0.22],[-0.15,0,0.18],[0.15,0,-0.18]]
+                                :[[-0.18,0,0],[0.18,0,0],[0,0,0]];
+    for(const [sx,,sz] of stackPositions){
+        const bh=0.12+Math.random()*0.14;
+        const bill=new THREE.Mesh(new THREE.BoxGeometry(0.28*sc,bh,0.22*sc),
+            Math.random()>.5?billMat:billEdge);
+        bill.position.set(sx*R*1.1, h+0.18+bh/2, sz*R*1.1);
+        bill.rotation.y=Math.random()*0.5; bill.castShadow=true; g.add(bill);
+    }
+
+    // HP label sprite
+    const hpCv=document.createElement('canvas'); hpCv.width=128; hpCv.height=16;
+    const hpCtx=hpCv.getContext('2d');
+    const hpTex=new THREE.CanvasTexture(hpCv);
+    const hpSpr=new THREE.Sprite(new THREE.SpriteMaterial({map:hpTex,depthTest:false,transparent:true}));
+    hpSpr.position.set(0,h+0.75+sc*0.3,0); hpSpr.scale.set(2.0*sc,0.28*sc,1); g.add(hpSpr);
+
+    g.position.set(x,0,z); scene.add(g);
+
+    const maxHp=hp;
+    const lp={g,hpCv,hpCtx,hpTex,hpSpr,topMesh,topTex,
+        loot:null, maxHp,hp,dead:false,deadT:0,removed:false,rimMat:null,rimT:0,
+        R:COMBAT_HEX_R, h, isCombat:true,
+        coinReward:Math.floor((25+level*20)*sc)};
+    drawLootHP(lp); lootPlatforms.push(lp);
+    return lp;
+}
+
+function updateCombatTopTex(lp){
+    lp.topTex.dispose();
+    lp.topMesh.material[1].map=makeCombatTopTex(Math.max(0,Math.ceil(lp.hp)));
+    lp.topMesh.material[1].needsUpdate=true;
+}
+
 function spawnCombatZone(){
-    const beforeCount = lootPlatforms.length;
     for(let r=0;r<COMBAT_ROWS;r++){
-        const sc = 1 + r*0.3;
+        const sc=1+r*0.35;
+        const hp=Math.max(20, Math.round(level*15*(1+r*0.35)));
         for(let c=0;c<COMBAT_COL_X.length;c++){
-            spawnLootPlatform(COMBAT_COL_X[c], COMBAT_START_Z + r*COMBAT_ROW_SPACING, sc, COMBAT_LOOT);
+            spawnCombatPlatform(COMBAT_COL_X[c], COMBAT_START_Z+r*COMBAT_ROW_SPACING, hp, sc);
         }
     }
-    for(let i=beforeCount;i<lootPlatforms.length;i++){
-        const lp=lootPlatforms[i];
-        lp.isCombat=true;
-        lp.R=COMBAT_HEX_R;
-        const row=Math.floor((i-beforeCount)/COMBAT_COL_X.length);
-        lp.maxHp=Math.max(20, Math.round(level*15*(1+row*0.3)));
-        lp.hp=lp.maxHp;
-        drawLootHP(lp);
-        lp.coinReward=Math.floor((25+level*20)*(1+row*0.6));
-    }
-    spawnWeaponPlatform(COMBAT_START_Z + COMBAT_ROWS*COMBAT_ROW_SPACING + 3);
+    spawnWeaponPlatform(COMBAT_START_Z+COMBAT_ROWS*COMBAT_ROW_SPACING+3);
 }
 
 // ─── HUD ───
@@ -1235,13 +1302,15 @@ function tickRun(dt){
         if(lp.removed) continue;
         if(lp.dead){
             lp.deadT=(lp.deadT||0)+dt;
-            if(lp.deadT<0.3){ lp.g.position.y=-lp.deadT*3; }
+            if(lp.deadT<0.35){ lp.g.rotation.z=lp.deadT*4; lp.g.position.y=-lp.deadT*2.5; lp.hpSpr.visible=false; }
             else { scene.remove(lp.g); lp.removed=true; }
             continue;
         }
-        // Rim pulse
-        if(lp.rimT>0){ lp.rimT-=dt; const s=1+lp.rimT*2; lp.rimMat.color.setHex(0xFFFFFF); }
-        else { lp.rimMat.color.set(lp.loot.color); }
+        // Rim pulse (run-phase loot platforms only)
+        if(lp.rimMat){
+            if(lp.rimT>0){ lp.rimT-=dt; lp.rimMat.color.setHex(0xFFFFFF); }
+            else { lp.rimMat.color.set(lp.loot.color); }
+        }
     }
 
     // Update pickups + player collision
@@ -1255,15 +1324,13 @@ function tickRun(dt){
         }
     }
 
-    // Combat platforms: collision kills platform and gives coins
+    // Combat platforms: COLLISION ENDS LEVEL immediately
     if(!shopOpened){
         for(const lp of lootPlatforms){
             if(!lp.isCombat||lp.removed||lp.dead) continue;
-            const dz = lp.g.position.z - pz;
-            const dx = Math.abs(lp.g.position.x - px);
-            if(dz <= lp.R*0.8 && dz >= -0.4 && dx < lp.R*1.4){
-                lp.hp=0; lp.dead=true;
-                coins+=Math.floor((lp.coinReward||30)*(moneyX2?2:1)); refreshHUD();
+            const dz=lp.g.position.z-pz, dx=Math.abs(lp.g.position.x-px);
+            if(dz<=lp.R*0.9 && dz>=-0.5 && dx<lp.R*1.5){
+                shopOpened=true; openShop(); return;
             }
         }
     }
