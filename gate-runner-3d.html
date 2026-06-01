@@ -713,7 +713,9 @@ function tickCombat(dt){
         const alive=enemies.filter(e=>!e.dead&&!e.removed);
         for(const e of alive){
             if(Math.abs(e.g.position.z - pz) < 1.6){
-                combatMoving=false; spd=0; break;
+                combatMoving=false; spd=0;
+                if(!shopOpened){ shopOpened=true; setTimeout(()=>openShop(),800); }
+                break;
             }
         }
     } else {
@@ -761,11 +763,6 @@ function tickCombat(dt){
         if(e.hitT>0){ e.hitT-=dt; }
     }
 
-    // Win: all enemies cleared
-    if(enemies.length>0&&enemies.every(e=>e.dead||e.removed)&&!shopOpened){
-        shopOpened=true;
-        setTimeout(()=>openShop(),1600);
-    }
 }
 
 // ─── RENDER LOOP ───
