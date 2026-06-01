@@ -89,7 +89,7 @@ body { background:#000; overflow:hidden; font-family:'Segoe UI',Arial,sans-serif
   </div>
   <div class="tab-pane active" id="pane-upg"><div class="sgrid" id="sgrid-upg"></div></div>
   <div class="tab-pane"        id="pane-wep"><div class="sgrid" id="sgrid-wep"></div></div>
-  <button class="btn" onclick="nextLevel()">СЛЕДУЮЩИЙ УРОВЕНЬ ▶</button>
+  <button class="btn" id="shop-next-btn" onclick="nextLevel()">СЛЕДУЮЩИЙ УРОВЕНЬ ▶</button>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
@@ -734,7 +734,7 @@ const SHOP_WEPS=[
     {lv:4, name:'Дробовик',  icon:'🔥', desc:'6 пуль · CD 0.65с<br>Широкий разброс, ×2 урон',      cost:420},
     {lv:5, name:'Снайперка', icon:'🎯', desc:'1 пуля · CD 0.85с<br>Пробивает насквозь, ×6 урон',   cost:600},
 ];
-let currentTab='upg';
+let currentTab='upg', shopDeath=false;
 
 function shopTab(t){
     currentTab=t;
@@ -744,9 +744,11 @@ function shopTab(t){
     document.getElementById('pane-wep').className='tab-pane'+(t==='wep'?' active':'');
 }
 
-function openShop(){
-    GS='SHOP';
-    document.getElementById('shop-sub').textContent=`Уровень ${level} пройден!`;
+function openShop(isDeath=false){
+    GS='SHOP'; shopDeath=isDeath;
+    document.getElementById('shop-sub').textContent=
+        isDeath ? `☠ Вы погибли на уровне ${level}. Улучшитесь и попробуйте снова!`
+                : `Уровень ${level} пройден!`;
     document.getElementById('shop-coins').textContent=`🪙 ${coins} монет`;
 
     // ── Upgrades tab ──
@@ -766,7 +768,7 @@ function openShop(){
             coins-=u.cost;
             if(u.k==='dmg') upgDmg++;
             if(u.k==='rate') upgRate++;
-            openShop();
+            openShop(shopDeath);
         };
         c.appendChild(b); gu.appendChild(c);
     }
@@ -783,17 +785,23 @@ function openShop(){
         const b=document.createElement('button'); b.className='btn btn-g';
         if(active){ b.textContent='✓ Активно'; b.disabled=true; }
         else if(owned){ b.textContent='Выбрать';
-            b.onclick=()=>{ activeWeapon=w.lv; openShop(); shopTab('wep'); }; }
+            b.onclick=()=>{ activeWeapon=w.lv; openShop(shopDeath); shopTab('wep'); }; }
         else{ b.disabled=!canBuy; b.textContent=canBuy?'Купить':'Мало 🪙';
-            b.onclick=()=>{ if(coins<w.cost) return; coins-=w.cost; ownedWeapons.add(w.lv); activeWeapon=w.lv; openShop(); shopTab('wep'); }; }
+            b.onclick=()=>{ if(coins<w.cost) return; coins-=w.cost; ownedWeapons.add(w.lv); activeWeapon=w.lv; openShop(shopDeath); shopTab('wep'); }; }
         c.appendChild(b); gw.appendChild(c);
     }
 
     shopTab(currentTab);
+    document.getElementById('shop-next-btn').textContent =
+        isDeath ? '↺ ПОВТОРИТЬ УРОВЕНЬ' : 'СЛЕДУЮЩИЙ УРОВЕНЬ ▶';
     show('shop-ov');
 }
 
-function nextLevel(){ hide('shop-ov'); level++; startLevel(); }
+function nextLevel(){
+    hide('shop-ov');
+    if(!shopDeath) level++;
+    startLevel();
+}
 
 // ─── GAME FLOW ───
 const show=id=>document.getElementById(id).classList.add('vis');
@@ -841,8 +849,7 @@ function startLevel(){
 }
 
 function playerDie(){
-    GS='START';
-    show('start-ov');
+    openShop(true);
 }
 
 // ─── UPDATE ───
