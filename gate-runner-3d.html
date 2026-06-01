@@ -836,7 +836,7 @@ function tickCombat(dt){
             const dx = Math.abs(e.g.position.x - px);
             if(dz <= HEX_R && dz >= -0.4 && dx < HEX_R*1.8){
                 shopOpened=true;
-                setTimeout(()=>openShop(), 500);
+                openShop();
                 break;
             }
         }
