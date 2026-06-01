@@ -83,12 +83,7 @@ body { background:#000; overflow:hidden; font-family:'Segoe UI',Arial,sans-serif
   <h1>★ МАГАЗИН ★</h1>
   <p id="shop-sub"></p>
   <div id="shop-coins">🪙 0</div>
-  <div class="tab-bar">
-    <button class="tab-btn active" id="tab-upg" onclick="shopTab('upg')">⚡ Улучшения</button>
-    <button class="tab-btn"        id="tab-wep" onclick="shopTab('wep')">🔫 Оружие</button>
-  </div>
-  <div class="tab-pane active" id="pane-upg"><div class="sgrid" id="sgrid-upg"></div></div>
-  <div class="tab-pane"        id="pane-wep"><div class="sgrid" id="sgrid-wep"></div></div>
+  <div class="sgrid" id="sgrid-upg"></div>
   <button class="btn" id="shop-next-btn" onclick="nextLevel()">СЛЕДУЮЩИЙ УРОВЕНЬ ▶</button>
 </div>
 
@@ -145,6 +140,7 @@ let ownedWeapons = new Set([1]), activeWeapon = 1;
 // Run-phase power-ups (reset each level)
 let tripleShot = false, dmgX2 = false, moneyX2 = false;
 let lootPlatforms = [], pickups = [];
+let weaponPlatform = null, weaponUnlocked = 0;
 
 // ─── INPUT ───
 const keys = {};
@@ -763,6 +759,72 @@ function applyPickup(loot){
     refreshHUD();
 }
 
+// ─── WEAPON PLATFORM ───
+const WEP_ICONS=['','🔫','🔫','💥','🔥','🎯'];
+
+function makeWepPlatTex(wep){
+    const S=512;
+    const cv=document.createElement('canvas'); cv.width=S; cv.height=S;
+    const ctx=cv.getContext('2d');
+    const g=ctx.createRadialGradient(S/2,S/2,0,S/2,S/2,S/2);
+    g.addColorStop(0,'#FFD700'); g.addColorStop(0.55,'#FFA500'); g.addColorStop(1,'#8B4513');
+    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(S/2,S/2,S/2,0,Math.PI*2); ctx.fill();
+    // Star burst
+    ctx.strokeStyle='rgba(255,255,200,.35)'; ctx.lineWidth=3;
+    for(let a=0;a<12;a++){
+        const ang=a/12*Math.PI*2;
+        ctx.beginPath(); ctx.moveTo(S/2,S/2);
+        ctx.lineTo(S/2+Math.cos(ang)*S/2, S/2+Math.sin(ang)*S/2); ctx.stroke();
+    }
+    ctx.font='bold 110px Arial'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillStyle='rgba(80,30,0,.7)'; ctx.fillText(WEP_ICONS[wep.lv]||'🔫', S/2, S/2-30);
+    ctx.font='bold 52px Arial'; ctx.fillStyle='#3A1A00';
+    ctx.shadowColor='rgba(255,200,0,.8)'; ctx.shadowBlur=10;
+    ctx.fillText(wep.name, S/2, S/2+90);
+    ctx.shadowBlur=0;
+    const t=new THREE.CanvasTexture(cv);
+    t.anisotropy=renderer.capabilities.getMaxAnisotropy(); return t;
+}
+
+function spawnWeaponPlatform(z){
+    const nextLv = Math.min(WEPS.length-1, level+1);
+    if(nextLv<2 || ownedWeapons.has(nextLv)){ return; } // already owns it
+    const wep = WEPS[nextLv];
+    const g = new THREE.Group();
+    const R=1.3, h=2.5;
+
+    const stoneTex = makeStoneSideTex();
+    const base=new THREE.Mesh(new THREE.CylinderGeometry(R,R*1.1,h,6),
+        new THREE.MeshLambertMaterial({map:stoneTex}));
+    base.position.y=h/2; base.castShadow=true; g.add(base);
+
+    const cap=new THREE.Mesh(new THREE.CylinderGeometry(R*0.9,R,0.22,6),
+        [new THREE.MeshLambertMaterial({map:stoneTex}),
+         new THREE.MeshLambertMaterial({map:makeWepPlatTex(wep)}),
+         new THREE.MeshLambertMaterial({map:stoneTex})]);
+    cap.position.y=h+0.11; g.add(cap);
+
+    // Pulsing golden rim
+    const rimMat=new THREE.MeshBasicMaterial({color:0xFFD700});
+    const rim=new THREE.Mesh(new THREE.TorusGeometry(R*0.91,0.07,4,6),rimMat);
+    rim.rotation.x=Math.PI/2; rim.position.y=h+0.22; g.add(rim);
+
+    // Floating label
+    const lCv=document.createElement('canvas'); lCv.width=256; lCv.height=64;
+    const lx=lCv.getContext('2d');
+    lx.font='bold 30px Arial'; lx.textAlign='center'; lx.textBaseline='middle';
+    lx.fillStyle='#FFD700'; lx.shadowColor='rgba(0,0,0,.9)'; lx.shadowBlur=8;
+    lx.fillText('🔓 НОВОЕ ОРУЖИЕ', 128, 22);
+    lx.font='bold 26px Arial'; lx.fillStyle='#FFF';
+    lx.fillText(WEP_ICONS[nextLv]+' '+wep.name, 128, 48);
+    const lTex=new THREE.CanvasTexture(lCv); lTex.anisotropy=renderer.capabilities.getMaxAnisotropy();
+    const lSpr=new THREE.Sprite(new THREE.SpriteMaterial({map:lTex,depthTest:false,transparent:true}));
+    lSpr.position.set(0,h+1.1,0); lSpr.scale.set(4.0,1.0,1); g.add(lSpr);
+
+    g.position.set(0,0,z); scene.add(g);
+    weaponPlatform={g,R,h,wepLv:nextLv,rimMat,bobT:0,reached:false};
+}
+
 // ─── TARGETS (combat) ───
 let enemies=[], combatFT=0;
 
@@ -912,19 +974,23 @@ function killEnemy(e){
     e.dead=true; coins+=e.reward; refreshHUD();
 }
 
-// Combat wave: grid of loot platforms scaling in size/HP per row
+// Combat wave: loot platform rows + weapon platform at the end
 function spawnWave(){
-    const ROWS=8, COLS=3;
-    const rowSpacing = 2.2;
+    const ROWS=5, COLS=3;
+    const rowSpacing = 2.4;
     const colX = [-2.2, 0, 2.2];
+    const beforeCount = lootPlatforms.length;
     for(let r=0;r<ROWS;r++){
-        const sc = 1 + r*0.35;
+        const sc = 1 + r*0.4;
         for(let c=0;c<COLS;c++){
             spawnLootPlatform(colX[c], pz + 8 + r*rowSpacing, sc);
         }
     }
-    // Mark all as combat
-    for(const lp of lootPlatforms) lp.isCombat=true;
+    // Mark newly spawned as combat
+    for(let i=beforeCount;i<lootPlatforms.length;i++) lootPlatforms[i].isCombat=true;
+    // Weapon platform after loot rows
+    const wepZ = pz + 8 + ROWS*rowSpacing + 2.5;
+    spawnWeaponPlatform(wepZ);
 }
 
 // ─── HUD ───
@@ -938,36 +1004,63 @@ function refreshHUD(){
 }
 
 // ─── SHOP ───
-const SHOP_WEPS=[
-    {lv:1, name:'Пистолет',  icon:'🔫', desc:'1 пуля · CD 0.52с<br>Стандартное оружие',           cost:0},
-    {lv:2, name:'Пистолет+', icon:'🔫', desc:'2 пули · CD 0.34с<br>Двойная очередь',               cost:120},
-    {lv:3, name:'Пулемёт',   icon:'💥', desc:'1 пуля · CD 0.09с<br>Очень высокая скорострельность',cost:280},
-    {lv:4, name:'Дробовик',  icon:'🔥', desc:'6 пуль · CD 0.65с<br>Широкий разброс, ×2 урон',      cost:420},
-    {lv:5, name:'Снайперка', icon:'🎯', desc:'1 пуля · CD 0.85с<br>Пробивает насквозь, ×6 урон',   cost:600},
+const SHOP_WEPS_DESC=[
+    '',
+    '1 пуля · CD 0.52с<br>Стандартное оружие',
+    '2 пули · CD 0.34с<br>Двойная очередь',
+    '1 пуля · CD 0.09с<br>Очень высокая скорострельность',
+    '6 пуль · CD 0.65с<br>Широкий разброс, ×2 урон',
+    '1 пуля · CD 0.85с<br>Пробивает насквозь, ×6 урон',
 ];
-let currentTab='upg', shopDeath=false;
-
-function shopTab(t){
-    currentTab=t;
-    document.getElementById('tab-upg').className='tab-btn'+(t==='upg'?' active':'');
-    document.getElementById('tab-wep').className='tab-btn'+(t==='wep'?' active':'');
-    document.getElementById('pane-upg').className='tab-pane'+(t==='upg'?' active':'');
-    document.getElementById('pane-wep').className='tab-pane'+(t==='wep'?' active':'');
-}
+let shopDeath=false;
 
 function openShop(isDeath=false){
     GS='SHOP'; shopDeath=isDeath;
     document.getElementById('shop-sub').textContent=
         isDeath ? `☠ Вы погибли на уровне ${level}. Улучшитесь и попробуйте снова!`
+                : weaponUnlocked ? `🔓 Новое оружие разблокировано! Уровень ${level} пройден!`
                 : `Уровень ${level} пройден!`;
     document.getElementById('shop-coins').textContent=`🪙 ${coins} монет`;
 
-    // ── Upgrades tab ──
-    const upgs=[
-        {k:'dmg', name:'🔥 Урон',            desc:`+1 к урону`,    cur:upgDmg,  cost:80+upgDmg*35},
-        {k:'rate',name:'⚡ Скорострельность', desc:`−10% задержки`, cur:upgRate, cost:80+upgRate*35},
-    ];
     const gu=document.getElementById('sgrid-upg'); gu.innerHTML='';
+
+    // ── Weapon unlock card (if just unlocked) ──
+    if(weaponUnlocked){
+        const w=WEPS[weaponUnlocked];
+        const isActive=activeWeapon===weaponUnlocked;
+        const c=document.createElement('div');
+        c.className='scard ok'; c.style.borderColor='#FFD700'; c.style.background='rgba(60,40,0,.97)';
+        c.innerHTML=`<h3 style="color:#FFD700;font-size:15px">🔓 ${WEP_ICONS[weaponUnlocked]} ${w.name}</h3>
+            <p>${SHOP_WEPS_DESC[weaponUnlocked]}</p>
+            <div class="cost" style="color:#FFD700">РАЗБЛОКИРОВАНО!</div>`;
+        const b=document.createElement('button'); b.className='btn btn-g';
+        b.style.borderColor='#FFD700';
+        if(isActive){ b.textContent='✓ Активно'; b.disabled=true; }
+        else{ b.textContent='Выбрать';
+            b.onclick=()=>{ activeWeapon=weaponUnlocked; openShop(shopDeath); }; }
+        c.appendChild(b); gu.appendChild(c);
+    }
+
+    // ── Owned weapons (can switch) ──
+    for(const lv of [...ownedWeapons].sort()){
+        if(lv===weaponUnlocked) continue; // already shown above
+        const w=WEPS[lv]; if(!w) continue;
+        const isActive=activeWeapon===lv;
+        const c=document.createElement('div');
+        c.className='scard'+(isActive?' active-wep':' ok');
+        c.innerHTML=`<h3>${WEP_ICONS[lv]} ${w.name}</h3><p>${SHOP_WEPS_DESC[lv]}</p>
+            <div class="cost">${isActive?'✓ Активно':'Куплено'}</div>`;
+        const b=document.createElement('button'); b.className='btn btn-g';
+        if(isActive){ b.textContent='✓ Активно'; b.disabled=true; }
+        else{ b.textContent='Выбрать'; b.onclick=()=>{ activeWeapon=lv; openShop(shopDeath); }; }
+        c.appendChild(b); gu.appendChild(c);
+    }
+
+    // ── Upgrades ──
+    const upgs=[
+        {k:'dmg', name:'🔥 Урон',            desc:'+1 к урону',    cur:upgDmg,  cost:80+upgDmg*35},
+        {k:'rate',name:'⚡ Скорострельность', desc:'−10% задержки', cur:upgRate, cost:80+upgRate*35},
+    ];
     for(const u of upgs){
         const ok=coins>=u.cost&&u.cur<10;
         const c=document.createElement('div'); c.className='scard'+(ok?' ok':'');
@@ -984,25 +1077,6 @@ function openShop(isDeath=false){
         c.appendChild(b); gu.appendChild(c);
     }
 
-    // ── Weapons tab ──
-    const gw=document.getElementById('sgrid-wep'); gw.innerHTML='';
-    for(const w of SHOP_WEPS){
-        const owned=ownedWeapons.has(w.lv);
-        const active=activeWeapon===w.lv;
-        const canBuy=!owned&&coins>=w.cost;
-        const c=document.createElement('div');
-        c.className='scard'+(active?' active-wep':owned?' ok':'');
-        c.innerHTML=`<h3>${w.icon} ${w.name}</h3><p>${w.desc}</p><div class="cost">${owned?'Куплено':w.cost+' 🪙'}</div>`;
-        const b=document.createElement('button'); b.className='btn btn-g';
-        if(active){ b.textContent='✓ Активно'; b.disabled=true; }
-        else if(owned){ b.textContent='Выбрать';
-            b.onclick=()=>{ activeWeapon=w.lv; openShop(shopDeath); shopTab('wep'); }; }
-        else{ b.disabled=!canBuy; b.textContent=canBuy?'Купить':'Мало 🪙';
-            b.onclick=()=>{ if(coins<w.cost) return; coins-=w.cost; ownedWeapons.add(w.lv); activeWeapon=w.lv; openShop(shopDeath); shopTab('wep'); }; }
-        c.appendChild(b); gw.appendChild(c);
-    }
-
-    shopTab(currentTab);
     document.getElementById('shop-next-btn').textContent =
         isDeath ? '↺ ПОВТОРИТЬ УРОВЕНЬ' : 'СЛЕДУЮЩИЙ УРОВЕНЬ ▶';
     show('shop-ov');
@@ -1032,6 +1106,8 @@ function startLevel(){
     permDmg=0; wepLv=activeWeapon; spd=FWD_SPEED; coinsX=1;
     plyWalkT=0; gunFlash=0; effPopT=0; runFireT=0;
     tripleShot=false; dmgX2=false; moneyX2=false;
+    weaponUnlocked=0;
+    if(weaponPlatform){ scene.remove(weaponPlatform.g); weaponPlatform=null; }
 
     bullets.forEach(b=>scene.remove(b.mesh)); bullets=[];
     enemies.forEach(e=>scene.remove(e.g)); enemies=[];
@@ -1214,15 +1290,33 @@ function tickCombat(dt){
     if(runFireT<=0){ runFireT=effCD(); fireBulletRun(); }
     updateBullets(dt);
 
-    // Level ends when weapon collides with any combat loot platform
-    if(!shopOpened){
-        for(const lp of lootPlatforms){
-            if(!lp.isCombat||lp.removed||lp.dead) continue;
-            const dz = lp.g.position.z - pz;
-            const dx = Math.abs(lp.g.position.x - px);
-            if(dz <= lp.R && dz >= -0.5 && dx < lp.R*1.8){
-                shopOpened=true; openShop(); break;
-            }
+    // Loot platforms: collision just kills the platform (not level end)
+    for(const lp of lootPlatforms){
+        if(!lp.isCombat||lp.removed||lp.dead) continue;
+        const dz = lp.g.position.z - pz;
+        const dx = Math.abs(lp.g.position.x - px);
+        if(dz <= lp.R*0.8 && dz >= -0.4 && dx < lp.R*1.4){
+            lp.hp=0; killLootPlatform(lp);
+        }
+    }
+
+    // Fallback: if no weapon platform (all weapons owned), end level when all combat platforms shot
+    if(!shopOpened && !weaponPlatform){
+        const anyAlive = lootPlatforms.some(lp=>lp.isCombat&&!lp.dead&&!lp.removed);
+        if(!anyAlive){ shopOpened=true; openShop(); }
+    }
+
+    // Weapon platform: reaching it ends the level (unlocks new weapon)
+    if(!shopOpened && weaponPlatform && !weaponPlatform.reached){
+        weaponPlatform.bobT+=dt*2;
+        weaponPlatform.rimMat.color.setHSL((weaponPlatform.bobT*0.3)%1, 1.0, 0.6);
+        const dz = weaponPlatform.g.position.z - pz;
+        const dx = Math.abs(weaponPlatform.g.position.x - px);
+        if(dz <= weaponPlatform.R && dz >= -0.5 && dx < weaponPlatform.R*2){
+            weaponPlatform.reached=true;
+            weaponUnlocked=weaponPlatform.wepLv;
+            ownedWeapons.add(weaponUnlocked);
+            shopOpened=true; openShop();
         }
     }
 
