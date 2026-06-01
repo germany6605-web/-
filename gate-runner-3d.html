@@ -348,29 +348,16 @@ function updateBullets(dt){
             }
         }
 
-        // RUN: bullet hits loot platforms
-        if(GS==='RUN' && !hit){
+        // Bullet hits any loot platform (run-phase or combat zone)
+        if(!hit){
             for(const lp of lootPlatforms){
                 if(lp.dead||lp.removed) continue;
-                if(Math.abs(bz-lp.g.position.z)<0.65 && Math.abs(bx-lp.g.position.x)<0.65){
-                    lp.hp -= effDmg()*(b.dmgMult||1); lp.rimT=0.15; drawLootHP(lp);
-                    if(lp.hp<=0&&!lp.dead) killLootPlatform(lp);
-                    if(!b.pierce) hit=true;
-                    break;
-                }
-            }
-        }
-
-        // Combat: bullet hits loot platforms
-        if(GS==='COMBAT' && !hit){
-            for(const lp of lootPlatforms){
-                if(!lp.isCombat||lp.dead||lp.removed) continue;
-                if(Math.abs(bz-lp.g.position.z)<lp.R*0.9 && Math.abs(bx-lp.g.position.x)<lp.R*0.9){
-                    lp.hp-=effDmg()*(b.dmgMult||1); lp.rimT=.1; drawLootHP(lp); gunFlash=.12;
+                const r = lp.R || 0.65;
+                if(Math.abs(bz-lp.g.position.z)<r*0.9 && Math.abs(bx-lp.g.position.x)<r*0.9){
+                    lp.hp-=effDmg()*(b.dmgMult||1); lp.rimT=.12; drawLootHP(lp); gunFlash=.12;
                     if(lp.hp<=0&&!lp.dead){
-                        lp.dead=true;
-                        if(lp.isCombat){ coins+=Math.floor((lp.coinReward||30)*(moneyX2?2:1)); refreshHUD(); }
-                        else applyPickup(lp.loot);
+                        if(lp.isCombat){ lp.dead=true; coins+=Math.floor((lp.coinReward||30)*(moneyX2?2:1)); refreshHUD(); }
+                        else killLootPlatform(lp);
                     }
                     if(!b.pierce) hit=true;
                     break;
@@ -978,35 +965,33 @@ function killEnemy(e){
     e.dead=true; coins+=e.reward; refreshHUD();
 }
 
-// Combat wave: 4 touching columns fully block the road — must shoot through to reach weapon platform
+// Combat zone — placed at level start at fixed Z, no dynamic spawning
 const COMBAT_LOOT = {id:'coins', label:'💵 ДЕНЬГИ', icon:'💵', color:'#44FF88', good:true};
-const COMBAT_HEX_R = 0.78;                      // radius so 4 cols fit inside road ±3
-const COMBAT_COL_X = [-2.34, -0.78, 0.78, 2.34]; // touching: spacing = COMBAT_HEX_R*2
+const COMBAT_HEX_R = 0.78;
+const COMBAT_COL_X = [-2.34, -0.78, 0.78, 2.34];
 const COMBAT_ROWS = 7;
-function spawnWave(){
-    const rowSpacing = COMBAT_HEX_R * Math.sqrt(3); // hex flat-to-flat ~1.35
+const COMBAT_ROW_SPACING = COMBAT_HEX_R * Math.sqrt(3);
+const COMBAT_START_Z = GATE_SPACING * GATES_PER_LEVEL + 30;
+
+function spawnCombatZone(){
     const beforeCount = lootPlatforms.length;
     for(let r=0;r<COMBAT_ROWS;r++){
         const sc = 1 + r*0.3;
         for(let c=0;c<COMBAT_COL_X.length;c++){
-            spawnLootPlatform(COMBAT_COL_X[c], pz + 6 + r*rowSpacing, sc, COMBAT_LOOT);
+            spawnLootPlatform(COMBAT_COL_X[c], COMBAT_START_Z + r*COMBAT_ROW_SPACING, sc, COMBAT_LOOT);
         }
     }
-    // Mark as combat and set HP + coin reward scaled by row
     for(let i=beforeCount;i<lootPlatforms.length;i++){
         const lp=lootPlatforms[i];
         lp.isCombat=true;
-        lp.R = COMBAT_HEX_R; // override collision radius to match column spacing
+        lp.R=COMBAT_HEX_R;
         const row=Math.floor((i-beforeCount)/COMBAT_COL_X.length);
-        // Much higher HP — hard to clear without upgrades
-        lp.maxHp = Math.max(20, Math.round(level * 15 * (1+row*0.3)));
-        lp.hp = lp.maxHp;
+        lp.maxHp=Math.max(20, Math.round(level*15*(1+row*0.3)));
+        lp.hp=lp.maxHp;
         drawLootHP(lp);
         lp.coinReward=Math.floor((25+level*20)*(1+row*0.6));
     }
-    // Weapon platform after loot rows
-    const wepZ = pz + 8 + ROWS*rowSpacing + 2.5;
-    spawnWeaponPlatform(wepZ);
+    spawnWeaponPlatform(COMBAT_START_Z + COMBAT_ROWS*COMBAT_ROW_SPACING + 3);
 }
 
 // ─── HUD ───
@@ -1134,10 +1119,10 @@ function startLevel(){
     while(gateGrp.children.length) gateGrp.remove(gateGrp.children[0]);
     gates=[];
 
-    // Each slot spawns a mixed row (gate / mob / loot platform combos)
-    // First slot always a full gate
+    // Spawn run-phase rows (gates/mobs/loot) then combat zone — all at level start
     spawnGate(20);
     for(let i=1;i<GATES_PER_LEVEL;i++) spawnRow(20 + i*GATE_SPACING);
+    spawnCombatZone();
 
     buildPlayer();
     refreshHUD();
@@ -1161,7 +1146,6 @@ function tick(dt){
     if(plyGrp) for(const c of plyGrp.children) if(c.userData && c.userData.flash) c.material.opacity=gunFlash>.1?.9:0;
 
     if(GS==='RUN') tickRun(dt);
-    else if(GS==='COMBAT') tickCombat(dt);
 }
 
 function tickRun(dt){
@@ -1267,64 +1251,24 @@ function tickRun(dt){
         p.mesh.position.y=0.5+Math.sin(p.bobT)*0.18;
         p.mesh.rotation.y+=dt*2;
         if(Math.abs(pz-p.mesh.position.z)<0.9 && Math.abs(px-p.mesh.position.x)<0.9){
-            p.collected=true;
-            scene.remove(p.mesh);
-            applyPickup(p.loot);
+            p.collected=true; scene.remove(p.mesh); applyPickup(p.loot);
         }
     }
 
-    // Combat zone — spawn targets, keep running
-    if(pz >= COMBAT_DIST && !winTriggered){
-        winTriggered=true;
-        GS='COMBAT';
-        spawnWave();
-    }
-}
-
-function tickCombat(dt){
-    // Same horizontal steering as run phase
-    const left  = keys['ArrowLeft'] ||keys['KeyA'];
-    const right = keys['ArrowRight']||keys['KeyD'];
-    if(left)  pvx=Math.min(pvx+X_ACCEL*dt, spd*0.6);
-    else if(right) pvx=Math.max(pvx-X_ACCEL*dt,-spd*0.6);
-    else pvx*=(1-dt*14);
-    px=Math.max(-X_LIMIT,Math.min(X_LIMIT,px+pvx*dt));
-
-    // Weapon keeps moving forward
-    pz += spd * dt;
-    plyWalkT += dt*6;
-    const bob = Math.sin(plyWalkT)*.055;
-    const sway = Math.sin(plyWalkT*.5)*.03;
-    if(plyGrp){ plyGrp.position.set(px+.18, 1.05+bob, pz+.6); plyGrp.rotation.y=sway; }
-
-    camPx+=(px-camPx)*Math.min(1,dt*8);
-    camPz+=(pz-4-camPz)*Math.min(1,dt*6);
-    cam.position.set(camPx, 3.4, camPz);
-    cam.lookAt(camPx*.4+px*.6, 1.0, pz+6);
-
-    // Auto-fire bullets (same timer as run phase)
-    runFireT=Math.max(0,runFireT-dt);
-    if(runFireT<=0){ runFireT=effCD(); fireBulletRun(); }
-    updateBullets(dt);
-
-    // Loot platforms: collision just kills the platform (not level end)
-    for(const lp of lootPlatforms){
-        if(!lp.isCombat||lp.removed||lp.dead) continue;
-        const dz = lp.g.position.z - pz;
-        const dx = Math.abs(lp.g.position.x - px);
-        if(dz <= lp.R*0.8 && dz >= -0.4 && dx < lp.R*1.4){
-            lp.hp=0; lp.dead=true;
-            coins+=Math.floor((lp.coinReward||30)*(moneyX2?2:1)); refreshHUD();
+    // Combat platforms: collision kills platform and gives coins
+    if(!shopOpened){
+        for(const lp of lootPlatforms){
+            if(!lp.isCombat||lp.removed||lp.dead) continue;
+            const dz = lp.g.position.z - pz;
+            const dx = Math.abs(lp.g.position.x - px);
+            if(dz <= lp.R*0.8 && dz >= -0.4 && dx < lp.R*1.4){
+                lp.hp=0; lp.dead=true;
+                coins+=Math.floor((lp.coinReward||30)*(moneyX2?2:1)); refreshHUD();
+            }
         }
     }
 
-    // Fallback: if no weapon platform (all weapons owned), end level when all combat platforms shot
-    if(!shopOpened && !weaponPlatform){
-        const anyAlive = lootPlatforms.some(lp=>lp.isCombat&&!lp.dead&&!lp.removed);
-        if(!anyAlive){ shopOpened=true; openShop(); }
-    }
-
-    // Weapon platform: reaching it ends the level (unlocks new weapon)
+    // Weapon platform: reaching it ends the level
     if(!shopOpened && weaponPlatform && !weaponPlatform.reached){
         weaponPlatform.bobT+=dt*2;
         weaponPlatform.rimMat.color.setHSL((weaponPlatform.bobT*0.3)%1, 1.0, 0.6);
@@ -1338,24 +1282,17 @@ function tickCombat(dt){
         }
     }
 
-    // Animate dead combat platforms
-    for(const lp of lootPlatforms){
-        if(!lp.isCombat||lp.removed) continue;
-        if(lp.dead){
-            lp.deadT=(lp.deadT||0)+dt;
-            if(lp.deadT<0.4){ lp.g.rotation.z=lp.deadT*5; lp.g.position.y=-lp.deadT*2; lp.hpSpr.visible=false; }
-            else { scene.remove(lp.g); lp.removed=true; }
-        }
-        if(lp.rimT>0){ lp.rimT-=dt; lp.rimMat.color.setHex(0xFFFFFF); }
-        else { lp.rimMat.color.set(lp.loot.color); }
+    // Fallback end: all weapons owned and all combat platforms cleared
+    if(!shopOpened && !weaponPlatform){
+        const anyAlive = lootPlatforms.some(lp=>lp.isCombat&&!lp.dead&&!lp.removed);
+        if(!anyAlive){ shopOpened=true; openShop(); }
     }
-
 }
 
 // ─── RENDER LOOP ───
 function frame(ts){
     const dt=Math.min((ts-lastT)/1000,.05); lastT=ts;
-    if(GS==='RUN'||GS==='COMBAT') tick(dt);
+    if(GS==='RUN') tick(dt);
     renderer.clear();
     renderer.render(scene,cam);
     requestAnimationFrame(frame);
