@@ -104,7 +104,7 @@ body { background:#000; overflow:hidden; font-family:'Segoe UI',Arial,sans-serif
 // ─── RENDERER ───
 const canvas = document.getElementById('c');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias:true });
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setPixelRatio(Math.min(devicePixelRatio, 3));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
@@ -179,6 +179,7 @@ function makeRoadTex(){
     for(let y=0;y<512;y+=80) ctx.fillRect(249,y,14,52);
     const t=new THREE.CanvasTexture(cv);
     t.wrapT=THREE.RepeatWrapping; t.repeat.set(1,28);
+    t.anisotropy=renderer.capabilities.getMaxAnisotropy();
     return t;
 }
 
@@ -368,17 +369,21 @@ function effAtCharge(base, charge){
 }
 
 function makeGateTex(eff){
-    const cv=document.createElement('canvas'); cv.width=256; cv.height=320;
+    const W=512, H=640;
+    const cv=document.createElement('canvas'); cv.width=W; cv.height=H;
     const x=cv.getContext('2d');
-    x.fillStyle=eff.good?'rgba(0,160,60,.92)':'rgba(180,22,15,.92)';
-    x.fillRect(0,0,256,320);
+    x.fillStyle=eff.good?'rgba(0,160,60,.95)':'rgba(180,22,15,.95)';
+    x.fillRect(0,0,W,H);
     const bc=eff.good?'#00FF88':'#FF4422';
-    x.strokeStyle=bc; x.lineWidth=8; x.strokeRect(4,4,248,312);
-    x.strokeStyle='rgba(255,255,255,.25)'; x.lineWidth=2; x.strokeRect(12,12,232,296);
+    x.strokeStyle=bc; x.lineWidth=14; x.strokeRect(7,7,W-14,H-14);
+    x.strokeStyle='rgba(255,255,255,.3)'; x.lineWidth=4; x.strokeRect(22,22,W-44,H-44);
     x.fillStyle='#fff'; x.textAlign='center'; x.textBaseline='middle';
-    x.font=`bold ${eff.label.length>8?40:52}px Arial`;
-    x.fillText(eff.label, 128, 160);
-    return new THREE.CanvasTexture(cv);
+    x.font=`bold ${eff.label.length>8?76:100}px Arial`;
+    x.shadowColor='rgba(0,0,0,.5)'; x.shadowBlur=8;
+    x.fillText(eff.label, W/2, H/2);
+    const t=new THREE.CanvasTexture(cv);
+    t.anisotropy=renderer.capabilities.getMaxAnisotropy();
+    return t;
 }
 
 const POLE_GEO=new THREE.BoxGeometry(.12,4.4,.12);
@@ -714,11 +719,9 @@ function tickRun(dt){
             }
         }
 
-        // Remove gate after player fully passes it
-        if(!gate.passed && pz > gate.z+2.5){
+        // Remove gate instantly as soon as player exits the zone
+        if(!gate.removed && pz > gate.z+1.8){
             gate.passed=true;
-        }
-        if(gate.passed && pz > gate.z+4 && !gate.removed){
             gate.removed=true;
             gate.meshes.forEach(m=>gateGrp.remove(m));
         }
