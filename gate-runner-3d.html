@@ -302,17 +302,24 @@ const EFFS=[
 
 function randomEff(){ return EFFS[Math.floor(Math.random()*EFFS.length)]; }
 
-function makeGateTex(label,good){
+function makeGateTex(label, good, hits){
     const cv=document.createElement('canvas'); cv.width=256; cv.height=320;
     const x=cv.getContext('2d');
-    x.fillStyle=good?'rgba(0,150,55,.88)':'rgba(170,22,15,.88)';
+    // Brighter tint on repeated hits
+    const alpha = Math.min(.88 + hits*.06, 1.0);
+    x.fillStyle=good?`rgba(0,${Math.min(150+hits*25,220)},55,${alpha})`:`rgba(${Math.min(170+hits*20,230)},22,15,${alpha})`;
     x.fillRect(0,0,256,320);
     const bc=good?'#00FF88':'#FF4422';
-    x.strokeStyle=bc; x.lineWidth=8; x.strokeRect(4,4,248,312);
+    x.strokeStyle=bc; x.lineWidth=8+hits*1.5; x.strokeRect(4,4,248,312);
     x.strokeStyle='rgba(255,255,255,.25)'; x.lineWidth=2; x.strokeRect(12,12,232,296);
     x.fillStyle='#fff'; x.textAlign='center'; x.textBaseline='middle';
-    x.font=`bold ${label.length>8?42:54}px Arial`;
-    x.fillText(label,128,160);
+    x.font=`bold ${label.length>8?40:52}px Arial`;
+    x.fillText(label, 128, hits>0?140:160);
+    if(hits>0){
+        x.font='bold 38px Arial';
+        x.fillStyle=good?'#AAFFCC':'#FFAA88';
+        x.fillText(`×${hits+1}`, 128, 240);
+    }
     return new THREE.CanvasTexture(cv);
 }
 
@@ -325,9 +332,8 @@ function spawnGate(z){
     const mkPanel=(eff,x)=>{
         const mesh=new THREE.Mesh(
             new THREE.PlaneGeometry(3.6,4.1),
-            new THREE.MeshBasicMaterial({map:makeGateTex(eff.label,eff.good),transparent:true,side:THREE.DoubleSide})
+            new THREE.MeshBasicMaterial({map:makeGateTex(eff.label,eff.good,0),transparent:true,side:THREE.DoubleSide})
         );
-        // Rotate to face -Z so text is readable from behind (camera approaches from -Z side)
         mesh.rotation.y = Math.PI;
         mesh.position.set(x,2.05,z); gateGrp.add(mesh);
         return mesh;
@@ -349,7 +355,7 @@ function spawnGate(z){
     };
     mkBar(-2,eL.good); mkBar(2,eR.good);
 
-    gates.push({z,eL,eR,pL,pR,passed:false});
+    gates.push({z,eL,eR,pL,pR, hitsL:0,hitsR:0, coolL:0,coolR:0});
 }
 
 function applyEff(eff){
@@ -536,8 +542,8 @@ function tickRun(dt){
     // Horizontal input
     const left  = keys['ArrowLeft'] ||keys['KeyA'];
     const right = keys['ArrowRight']||keys['KeyD'];
-    if(left)  pvx = Math.max(pvx - X_ACCEL*dt, -spd*0.6);
-    else if(right) pvx = Math.min(pvx + X_ACCEL*dt, spd*0.6);
+    if(left)  pvx = Math.min(pvx + X_ACCEL*dt, spd*0.6);
+    else if(right) pvx = Math.max(pvx - X_ACCEL*dt, -spd*0.6);
     else       pvx *= (1 - dt*14);
     px = Math.max(-X_LIMIT, Math.min(X_LIMIT, px + pvx*dt));
 
@@ -559,16 +565,30 @@ function tickRun(dt){
     cam.position.set(camPx, 4.2, camPz);
     cam.lookAt(camPx*.4+px*.6, .8, pz+7);
 
-    // Gate collision
+    // Gate collision — multiple hits allowed, each upgrades the barrier
     for(const gate of gates){
-        if(gate.passed) continue;
-        if(pz > gate.z-.4 && pz < gate.z+1.4){
-            gate.passed=true;
-            const eff = px < 0 ? gate.eL : gate.eR;
-            applyEff(eff);
-            // Flash gate
-            const panel = px<0 ? gate.pL : gate.pR;
-            panel.material.opacity=0.4;
+        gate.coolL=Math.max(0,gate.coolL-dt);
+        gate.coolR=Math.max(0,gate.coolR-dt);
+        if(pz > gate.z-1.0 && pz < gate.z+1.8){
+            if(px < 0 && gate.coolL<=0){
+                gate.coolL=0.45;
+                gate.hitsL++;
+                applyEff(gate.eL);
+                // Redraw panel with upgraded hit count
+                gate.pL.material.map.dispose();
+                gate.pL.material.map=makeGateTex(gate.eL.label,gate.eL.good,gate.hitsL);
+                gate.pL.material.needsUpdate=true;
+                gate.pL.material.opacity=1;
+            }
+            if(px >= 0 && gate.coolR<=0){
+                gate.coolR=0.45;
+                gate.hitsR++;
+                applyEff(gate.eR);
+                gate.pR.material.map.dispose();
+                gate.pR.material.map=makeGateTex(gate.eR.label,gate.eR.good,gate.hitsR);
+                gate.pR.material.needsUpdate=true;
+                gate.pR.material.opacity=1;
+            }
         }
     }
 
