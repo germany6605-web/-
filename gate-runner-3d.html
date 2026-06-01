@@ -329,14 +329,12 @@ function updateBullets(dt){
                 if(gate.removed || Math.abs(bz - gate.z) > 1.2) continue;
                 if(bx < -0.1 && bx > -3.9 && gate.coolL<=0 && gate.pL){
                     gate.coolL=0.25; gate.hitsL++;
-                    const dyn=updateGatePanel(gate,'L');
-                    if(dyn.good) applyEff(dyn);
+                    updateGatePanel(gate,'L'); // update display only, effect applies on walk-through
                     hit=true; break;
                 }
                 if(bx > 0.1 && bx < 3.9 && gate.coolR<=0 && gate.pR){
                     gate.coolR=0.25; gate.hitsR++;
-                    const dyn=updateGatePanel(gate,'R');
-                    if(dyn.good) applyEff(dyn);
+                    updateGatePanel(gate,'R');
                     hit=true; break;
                 }
             }
@@ -1137,10 +1135,10 @@ function updateCombatTopTex(lp){
 
 function spawnCombatZone(){
     // 3 rows × 15 pillars — bigger platforms, HP ×0.8 vs previous
-    const TOTAL_ROWS=15;
-    const ROW_SC_BASE=1.4;
+    const TOTAL_ROWS=17;  // 3 front + 14 behind
+    const ROW_SC_BASE=1.5;
     for(let r=0;r<TOTAL_ROWS;r++){
-        const sc=ROW_SC_BASE+r*0.12;                          // 1.4 … 3.1
+        const sc=ROW_SC_BASE+r*0.15;                          // 1.5 … 3.9
         const hp=Math.max(10, Math.round(level*80*(1+r*0.4)*sc));
         for(let c=0;c<COMBAT_COL_X.length;c++){
             spawnCombatPlatform(COMBAT_COL_X[c], COMBAT_START_Z+r*COMBAT_ROW_SPACING, hp, sc);
@@ -1370,16 +1368,14 @@ function tickRun(dt){
         gate.coolL=Math.max(0,gate.coolL-dt);
         gate.coolR=Math.max(0,gate.coolR-dt);
 
-        // Player walks through gate zone
-        if(!gate.passed && pz > gate.z-1.0 && pz < gate.z+1.8){
-            if(px < 0 && gate.coolL<=0 && gate.pL){
-                gate.coolL=0.45; gate.hitsL++;
-                const dyn=updateGatePanel(gate,'L');
-                applyEff(dyn);
-            }
-            if(px >= 0 && gate.coolR<=0 && gate.pR){
-                gate.coolR=0.45; gate.hitsR++;
-                const dyn=updateGatePanel(gate,'R');
+        // Player walks through gate — apply the charged effect once
+        if(!gate.passed && pz > gate.z+0.2){
+            gate.passed=true;
+            const side = px < 0 ? 'L' : 'R';
+            const base = side==='L' ? gate.eL : gate.eR;
+            const hits = side==='L' ? gate.hitsL : gate.hitsR;
+            if(base){
+                const dyn = effAtCharge(base, hits);
                 applyEff(dyn);
             }
         }
