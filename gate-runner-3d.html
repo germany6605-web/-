@@ -792,7 +792,7 @@ function makeWepPlatTex(wep){
 
 function spawnWeaponPlatform(z){
     const nextLv = Math.min(WEPS.length-1, level+1);
-    if(level < 2 || nextLv<2 || ownedWeapons.has(nextLv)){ return; } // level 1 never unlocks
+    if(nextLv<2 || ownedWeapons.has(nextLv)){ return; }
     const wep = WEPS[nextLv];
     const g = new THREE.Group();
     const R=1.3, h=2.5;
@@ -978,25 +978,31 @@ function killEnemy(e){
     e.dead=true; coins+=e.reward; refreshHUD();
 }
 
-// Combat wave: money-only loot platform rows + weapon platform at the end
+// Combat wave: 4 touching columns fully block the road — must shoot through to reach weapon platform
 const COMBAT_LOOT = {id:'coins', label:'💵 ДЕНЬГИ', icon:'💵', color:'#44FF88', good:true};
+const COMBAT_HEX_R = 0.78;                      // radius so 4 cols fit inside road ±3
+const COMBAT_COL_X = [-2.34, -0.78, 0.78, 2.34]; // touching: spacing = COMBAT_HEX_R*2
+const COMBAT_ROWS = 7;
 function spawnWave(){
-    const ROWS=5, COLS=3;
-    const rowSpacing = 2.4;
-    const colX = [-2.2, 0, 2.2];
+    const rowSpacing = COMBAT_HEX_R * Math.sqrt(3); // hex flat-to-flat ~1.35
     const beforeCount = lootPlatforms.length;
-    for(let r=0;r<ROWS;r++){
-        const sc = 1 + r*0.4;
-        for(let c=0;c<COLS;c++){
-            spawnLootPlatform(colX[c], pz + 8 + r*rowSpacing, sc, COMBAT_LOOT);
+    for(let r=0;r<COMBAT_ROWS;r++){
+        const sc = 1 + r*0.3;
+        for(let c=0;c<COMBAT_COL_X.length;c++){
+            spawnLootPlatform(COMBAT_COL_X[c], pz + 6 + r*rowSpacing, sc, COMBAT_LOOT);
         }
     }
-    // Mark newly spawned as combat and set money reward scaled by row
+    // Mark as combat and set HP + coin reward scaled by row
     for(let i=beforeCount;i<lootPlatforms.length;i++){
         const lp=lootPlatforms[i];
         lp.isCombat=true;
-        const row=Math.floor((i-beforeCount)/COLS);
-        lp.coinReward=Math.floor((20+level*15)*(1+row*0.5));
+        lp.R = COMBAT_HEX_R; // override collision radius to match column spacing
+        const row=Math.floor((i-beforeCount)/COMBAT_COL_X.length);
+        // Much higher HP — hard to clear without upgrades
+        lp.maxHp = Math.max(20, Math.round(level * 15 * (1+row*0.3)));
+        lp.hp = lp.maxHp;
+        drawLootHP(lp);
+        lp.coinReward=Math.floor((25+level*20)*(1+row*0.6));
     }
     // Weapon platform after loot rows
     const wepZ = pz + 8 + ROWS*rowSpacing + 2.5;
