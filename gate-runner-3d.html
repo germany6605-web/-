@@ -145,7 +145,7 @@ let hp = 100, maxHp = 100;
 let permDmg = 10, wepLv = 1, spd = FWD_SPEED, coinsX = 1;
 let camPx = 0, camPz = -7;
 let dmgA = 0, effPopT = 0;
-let winTriggered = false, shopOpened = false;
+let winTriggered = false, shopOpened = false, combatMoving = false;
 let bullets = [], runFireT = 0;
 
 // ─── INPUT ───
@@ -343,11 +343,9 @@ const EFFS=[
     {id:'dmg-',  label:'−8 УРН',      good:false},
     {id:'wep+',  label:'⬆ ОРУЖИЕ',    good:true },
     {id:'wep-',  label:'⬇ ОРУЖИЕ',    good:false},
-    {id:'spd',   label:'+СКОРОСТЬ',   good:true },
     {id:'heal',  label:'ПОЛНОЕ HP',   good:true },
     {id:'coins', label:'💰 МОНЕТЫ',    good:true },
     {id:'hp2',   label:'+50 HP',      good:true },
-    {id:'slow',  label:'−СКОРОСТЬ',   good:false},
 ];
 
 function randomEff(){ return EFFS[Math.floor(Math.random()*EFFS.length)]; }
@@ -361,14 +359,10 @@ function effAtCharge(base, charge){
         case 'wep-': return charge>=2
             ? {id:'wep+',label:'⬆ ОРУЖИЕ', good:true}
             : {id:'wep-',label:'⬇ ОРУЖИЕ', good:false};
-        case 'slow': return charge>=2
-            ? {id:'spd', label:'+СКОРОСТЬ', good:true}
-            : {id:'slow',label:'−СКОРОСТЬ', good:false};
         // Positive effects grow with charge
         case 'hp+':{ const v=30+charge*15; return {id:'hp_val', val:v, label:'+'+v+' HP',   good:true}; }
         case 'hp2':{ const v=50+charge*20; return {id:'hp_val', val:v, label:'+'+v+' HP',   good:true}; }
         case 'dmg+':{ const v=2+charge;    return {id:'dmg_val',val:v, label:'+'+v+' УРН', good:true}; }
-        case 'spd':{ const v=2+charge;     return {id:'spd_val',val:v, label:'+'+v+' СКР', good:true}; }
         default: return base; // heal, coins, wep+, x2 — unchanged
     }
 }
@@ -426,7 +420,6 @@ function applyEff(eff){
     switch(eff.id){
         case 'hp_val':  hp=Math.min(maxHp, Math.max(1, hp+eff.val)); break;
         case 'dmg_val': permDmg=Math.max(-upgDmg, permDmg+eff.val); break;
-        case 'spd_val': spd=Math.min(18, spd+eff.val); break;
         case 'hp+':  hp=Math.min(maxHp,hp+30); break;
         case 'hp2':  hp=Math.min(maxHp,hp+50); break;
         case 'hp-':  hp=Math.max(5,hp-25); break;
@@ -434,8 +427,6 @@ function applyEff(eff){
         case 'dmg-': permDmg=Math.max(-upgDmg, permDmg-1); break;
         case 'wep+': wepLv=Math.min(5,wepLv+1); buildPlayer(); break;
         case 'wep-': wepLv=Math.max(1,wepLv-1); buildPlayer(); break;
-        case 'spd':  spd=Math.min(spd+2,18); break;
-        case 'slow': spd=Math.max(spd-2,6); break;
         case 'heal': hp=maxHp; break;
         case 'coins': coins+=Math.floor(20+level*10); break;
     }
@@ -592,7 +583,7 @@ function startLevel(){
     GS='RUN'; winTriggered=false; shopOpened=false;
     px=0; pz=0; pvx=0; camPx=0; camPz=-7;
     hp=maxHp; permDmg=0; wepLv=1; spd=FWD_SPEED; coinsX=1;
-    combatFT=0; plyWalkT=0; gunFlash=0; dmgA=0; effPopT=0; runFireT=0;
+    combatFT=0; plyWalkT=0; gunFlash=0; dmgA=0; effPopT=0; runFireT=0; combatMoving=false;
 
     bullets.forEach(b=>scene.remove(b.mesh)); bullets=[];
     enemies.forEach(e=>scene.remove(e.g)); enemies=[];
@@ -699,23 +690,40 @@ function tickRun(dt){
     if(pz >= COMBAT_DIST && !winTriggered){
         winTriggered=true;
         GS='COMBAT';
-        spd=0;
+        combatMoving=true;   // weapon keeps running forward until it hits a target
         spawnWave();
     }
 }
 
 function tickCombat(dt){
-    // Keep player stationary, can still strafe
     const left  = keys['ArrowLeft'] ||keys['KeyA'];
     const right = keys['ArrowRight']||keys['KeyD'];
-    if(left)  pvx=Math.max(pvx-X_ACCEL*dt,-6);
-    else if(right) pvx=Math.min(pvx+X_ACCEL*dt, 6);
+    if(left)  pvx=Math.min(pvx+X_ACCEL*dt, spd*0.6||4);
+    else if(right) pvx=Math.max(pvx-X_ACCEL*dt,-(spd*0.6||4));
     else pvx*=(1-dt*12);
     px=Math.max(-X_LIMIT,Math.min(X_LIMIT,px+pvx*dt));
-    if(plyGrp) plyGrp.position.set(px+.18, 1.05, pz+.6);
-    cam.position.set(camPx,4.2,camPz);
-    cam.lookAt(camPx*.3+px*.7,.8,pz+7);
+
+    if(combatMoving){
+        pz += spd * dt;
+        // Walk anim while moving
+        plyWalkT += dt*6;
+        const bob = Math.sin(plyWalkT)*.055;
+        if(plyGrp) plyGrp.position.set(px+.18, 1.05+bob, pz+.6);
+        // Stop when close enough to any live target
+        const alive=enemies.filter(e=>!e.dead&&!e.removed);
+        for(const e of alive){
+            if(Math.abs(e.g.position.z - pz) < 1.6){
+                combatMoving=false; spd=0; break;
+            }
+        }
+    } else {
+        if(plyGrp) plyGrp.position.set(px+.18, 1.05, pz+.6);
+    }
+
     camPx+=(px-camPx)*Math.min(1,dt*6);
+    camPz+=(pz-7-camPz)*Math.min(1,dt*6);
+    cam.position.set(camPx,4.2,camPz);
+    cam.lookAt(camPx*.4+px*.6,.8,pz+7);
 
     updateBullets(dt);
 
