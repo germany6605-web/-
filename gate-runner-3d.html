@@ -367,7 +367,11 @@ function updateBullets(dt){
                 if(!lp.isCombat||lp.dead||lp.removed) continue;
                 if(Math.abs(bz-lp.g.position.z)<lp.R*0.9 && Math.abs(bx-lp.g.position.x)<lp.R*0.9){
                     lp.hp-=effDmg()*(b.dmgMult||1); lp.rimT=.1; drawLootHP(lp); gunFlash=.12;
-                    if(lp.hp<=0&&!lp.dead){ lp.dead=true; applyPickup(lp.loot); }
+                    if(lp.hp<=0&&!lp.dead){
+                        lp.dead=true;
+                        if(lp.isCombat){ coins+=Math.floor((lp.coinReward||30)*(moneyX2?2:1)); refreshHUD(); }
+                        else applyPickup(lp.loot);
+                    }
                     if(!b.pierce) hit=true;
                     break;
                 }
@@ -617,7 +621,7 @@ function spawnMob(x, z){
 
     g.position.set(x, 0, z); scene.add(g);
 
-    const maxHp = Math.max(1, 2 + level);
+    const maxHp = Math.max(1, 5 + level*3);
     const reward = 15 + level * 8;
     const mob = {g, hpCv, hpCtx, hpTex, hpSpr,
         maxHp, hp:maxHp, dead:false, deadT:0, removed:false, hitT:0,
@@ -677,9 +681,9 @@ function makeLootPlatTex(loot){
     t.anisotropy=renderer.capabilities.getMaxAnisotropy(); return t;
 }
 
-function spawnLootPlatform(x, z, combatScale){
+function spawnLootPlatform(x, z, combatScale, forceLoot){
     const sc = combatScale||1;
-    const loot=LOOT_TYPES[Math.floor(Math.random()*LOOT_TYPES.length)];
+    const loot=forceLoot||LOOT_TYPES[Math.floor(Math.random()*LOOT_TYPES.length)];
     const g=new THREE.Group();
     const R=0.72*sc, h=1.4*sc;   // tall platform
 
@@ -710,7 +714,7 @@ function spawnLootPlatform(x, z, combatScale){
 
     g.position.set(x,0,z); scene.add(g);
 
-    const maxHp=Math.max(3, Math.round(level*3*sc));
+    const maxHp=Math.max(8, Math.round(level*8*sc));
     const lp={g,hpCv,hpCtx,hpTex,hpSpr,loot,maxHp,hp:maxHp,
         dead:false,deadT:0,removed:false,rimMat,rimT:0,
         R,h, isCombat:!!combatScale};
@@ -974,7 +978,8 @@ function killEnemy(e){
     e.dead=true; coins+=e.reward; refreshHUD();
 }
 
-// Combat wave: loot platform rows + weapon platform at the end
+// Combat wave: money-only loot platform rows + weapon platform at the end
+const COMBAT_LOOT = {id:'coins', label:'💵 ДЕНЬГИ', icon:'💵', color:'#44FF88', good:true};
 function spawnWave(){
     const ROWS=5, COLS=3;
     const rowSpacing = 2.4;
@@ -983,11 +988,16 @@ function spawnWave(){
     for(let r=0;r<ROWS;r++){
         const sc = 1 + r*0.4;
         for(let c=0;c<COLS;c++){
-            spawnLootPlatform(colX[c], pz + 8 + r*rowSpacing, sc);
+            spawnLootPlatform(colX[c], pz + 8 + r*rowSpacing, sc, COMBAT_LOOT);
         }
     }
-    // Mark newly spawned as combat
-    for(let i=beforeCount;i<lootPlatforms.length;i++) lootPlatforms[i].isCombat=true;
+    // Mark newly spawned as combat and set money reward scaled by row
+    for(let i=beforeCount;i<lootPlatforms.length;i++){
+        const lp=lootPlatforms[i];
+        lp.isCombat=true;
+        const row=Math.floor((i-beforeCount)/COLS);
+        lp.coinReward=Math.floor((20+level*15)*(1+row*0.5));
+    }
     // Weapon platform after loot rows
     const wepZ = pz + 8 + ROWS*rowSpacing + 2.5;
     spawnWeaponPlatform(wepZ);
@@ -1296,7 +1306,8 @@ function tickCombat(dt){
         const dz = lp.g.position.z - pz;
         const dx = Math.abs(lp.g.position.x - px);
         if(dz <= lp.R*0.8 && dz >= -0.4 && dx < lp.R*1.4){
-            lp.hp=0; killLootPlatform(lp);
+            lp.hp=0; lp.dead=true;
+            coins+=Math.floor((lp.coinReward||30)*(moneyX2?2:1)); refreshHUD();
         }
     }
 
