@@ -305,23 +305,34 @@ function updateBullets(dt){
         b.life -= dt;
 
         let hit = false;
+        const bx=b.mesh.position.x, bz=b.mesh.position.z;
+
         if(GS==='RUN'){
-            const bx=b.mesh.position.x, bz=b.mesh.position.z;
             for(const gate of gates){
                 if(gate.removed || Math.abs(bz - gate.z) > 1.2) continue;
-                // Left panel x: -3.8 to -0.2
                 if(bx < -0.1 && bx > -3.9 && gate.coolL<=0){
                     gate.coolL=0.25; gate.hitsL++;
                     const dyn=updateGatePanel(gate,'L');
-                    // Bullets only improve — don't apply negative effects
                     if(dyn.good) applyEff(dyn);
                     hit=true; break;
                 }
-                // Right panel x: 0.2 to 3.8
                 if(bx > 0.1 && bx < 3.9 && gate.coolR<=0){
                     gate.coolR=0.25; gate.hitsR++;
                     const dyn=updateGatePanel(gate,'R');
                     if(dyn.good) applyEff(dyn);
+                    hit=true; break;
+                }
+            }
+        }
+
+        // Combat: bullet hits the specific target it flies into
+        if(GS==='COMBAT' && !hit){
+            for(const e of enemies){
+                if(e.dead||e.removed) continue;
+                const tx=e.g.position.x, tz=e.g.position.z;
+                if(Math.abs(bz-tz)<0.65 && Math.abs(bx-tx)<HEX_R*0.85){
+                    e.hp-=effDmg(); e.hitT=.1; drawEHP(e); gunFlash=.12;
+                    if(e.hp<=0&&!e.dead) killEnemy(e);
                     hit=true; break;
                 }
             }
@@ -462,9 +473,61 @@ function showEffPop(eff){
 // ─── TARGETS (combat) ───
 let enemies=[], combatFT=0;
 
-
 // Fixed footprint radius so columns touch; height grows with row
 const HEX_R = 0.92;
+
+function makeTargetTopTex(hp){
+    const S=512;
+    const cv=document.createElement('canvas'); cv.width=S; cv.height=S;
+    const ctx=cv.getContext('2d');
+    const cx=S/2, cy=S/2, r=S/2;
+    // Gold radial gradient background
+    const grad=ctx.createRadialGradient(cx,cy,0,cx,cy,r);
+    grad.addColorStop(0,'#FFE066'); grad.addColorStop(0.6,'#FFB800'); grad.addColorStop(1,'#996600');
+    ctx.fillStyle=grad; ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.fill();
+    // Concentric rings
+    const rings=[{r:r*.88,w:6,c:'rgba(0,0,0,.18)'},{r:r*.65,w:5,c:'rgba(0,0,0,.15)'},{r:r*.40,w:4,c:'rgba(0,0,0,.12)'}];
+    for(const rg of rings){
+        ctx.beginPath(); ctx.arc(cx,cy,rg.r,0,Math.PI*2);
+        ctx.strokeStyle=rg.c; ctx.lineWidth=rg.w; ctx.stroke();
+    }
+    // Coin symbols
+    ctx.font='bold 72px Arial'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillStyle='rgba(150,90,0,.55)'; ctx.fillText('🪙',cx,cy);
+    // HP label
+    const label = hp>=1e6 ? (hp/1e6).toFixed(1)+'M' : hp>=1000 ? (hp/1000).toFixed(1)+'K' : String(hp);
+    ctx.font=`bold ${label.length>5?56:72}px Arial`;
+    ctx.fillStyle='#fff'; ctx.shadowColor='rgba(0,0,0,.7)'; ctx.shadowBlur=8;
+    ctx.fillText(label, cx, cy+12);
+    ctx.shadowBlur=0;
+    const t=new THREE.CanvasTexture(cv);
+    t.anisotropy=renderer.capabilities.getMaxAnisotropy();
+    return t;
+}
+
+function makeStoneSideTex(){
+    const W=256, H=256;
+    const cv=document.createElement('canvas'); cv.width=W; cv.height=H;
+    const ctx=cv.getContext('2d');
+    // Stone gradient
+    const g=ctx.createLinearGradient(0,0,0,H);
+    g.addColorStop(0,'#B8A070'); g.addColorStop(0.5,'#8A7050'); g.addColorStop(1,'#6A5030');
+    ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+    // Horizontal mortar lines
+    ctx.strokeStyle='rgba(0,0,0,.25)'; ctx.lineWidth=3;
+    for(let y=32;y<H;y+=32){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
+    // Vertical brick joints staggered
+    for(let row=0;row<H/32;row++){
+        const offset=row%2===0?0:42;
+        for(let x=offset;x<W+42;x+=84){
+            ctx.beginPath(); ctx.moveTo(x,row*32); ctx.lineTo(x,(row+1)*32); ctx.stroke();
+        }
+    }
+    const t=new THREE.CanvasTexture(cv);
+    t.wrapS=t.wrapT=THREE.RepeatWrapping; t.repeat.set(2,1);
+    t.anisotropy=renderer.capabilities.getMaxAnisotropy();
+    return t;
+}
 
 function spawnTarget(x, z, hp, sc){
     const g=new THREE.Group();
@@ -474,16 +537,20 @@ function spawnTarget(x, z, hp, sc){
     const h2 = 0.20 + sc*0.40;   // top tier height
     const platY = h1 + h2;        // surface y
 
-    const stoneMat = new THREE.MeshLambertMaterial({color:0x8A7550});
-    const darkMat  = new THREE.MeshLambertMaterial({color:0x6A5538});
+    const sideTex  = makeStoneSideTex();
+    const stoneMat = new THREE.MeshLambertMaterial({map:sideTex});
+    const darkMat  = new THREE.MeshLambertMaterial({map:sideTex, color:0xBBAA88});
+    const topMat   = new THREE.MeshLambertMaterial({map:makeTargetTopTex(hp)});
     const rimMat   = new THREE.MeshLambertMaterial({color:0xAA9966});
 
-    // Base hex slab
-    const base = new THREE.Mesh(new THREE.CylinderGeometry(HEX_R, HEX_R*1.06, h1, 6), stoneMat);
+    // Base hex slab — top face uses gold/HP texture, sides use stone
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(HEX_R, HEX_R*1.06, h1, 6),
+        [stoneMat, stoneMat, stoneMat]);
     base.position.y = h1/2; base.castShadow=true; base.receiveShadow=true; g.add(base);
 
-    // Top tier (slightly narrower)
-    const top = new THREE.Mesh(new THREE.CylinderGeometry(HEX_R*0.82, HEX_R, h2, 6), darkMat);
+    // Top tier — top face shows HP + coins
+    const top = new THREE.Mesh(new THREE.CylinderGeometry(HEX_R*0.82, HEX_R, h2, 6),
+        [darkMat, topMat, darkMat]);
     top.position.y = h1 + h2/2; top.castShadow=true; g.add(top);
 
     // Gold rim around top surface
@@ -756,25 +823,10 @@ function tickCombat(dt){
     cam.position.set(camPx, 3.4, camPz);
     cam.lookAt(camPx*.4+px*.6, 1.0, pz+6);
 
+    // Auto-fire bullets (same timer as run phase)
+    runFireT=Math.max(0,runFireT-dt);
+    if(runFireT<=0){ runFireT=effCD(); fireBulletRun(); }
     updateBullets(dt);
-
-    // Auto-fire only at targets AHEAD of weapon
-    combatFT=Math.max(0,combatFT-dt);
-    const alive=enemies.filter(e=>!e.dead&&!e.removed && e.g.position.z >= pz-0.5);
-    if(combatFT<=0 && alive.length>0){
-        combatFT=effCD();
-        let nearest=null, nd=Infinity;
-        for(const e of alive){
-            const d=Math.hypot(e.g.position.x-px, e.g.position.z-pz);
-            if(d<nd){nd=d;nearest=e;}
-        }
-        if(nearest){
-            nearest.hp-=effDmg();
-            nearest.hitT=.12; drawEHP(nearest);
-            gunFlash=.15;
-            if(nearest.hp<=0&&!nearest.dead) killEnemy(nearest);
-        }
-    }
 
     // Level ends when weapon collides with any target
     if(!shopOpened){
