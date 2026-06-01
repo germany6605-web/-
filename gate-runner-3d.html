@@ -145,7 +145,7 @@ let hp = 100, maxHp = 100;
 let permDmg = 10, wepLv = 1, spd = FWD_SPEED, coinsX = 1;
 let camPx = 0, camPz = -7;
 let dmgA = 0, effPopT = 0;
-let winTriggered = false;
+let winTriggered = false, shopOpened = false;
 
 // ─── INPUT ───
 const keys = {};
@@ -211,69 +211,75 @@ function addTree(x,z){
 
 // ─── WEAPONS ───
 const WEPS=[null,
-    {name:'Пистолет',  dmg:15, cd:.52, col:0x222222, bl:.28},
-    {name:'Пистолет+', dmg:22, cd:.34, col:0x334455, bl:.28},
-    {name:'Пулемёт',   dmg:10, cd:.10, col:0x334433, bl:.36},
-    {name:'Дробовик',  dmg:70, cd:.72, col:0x553322, bl:.22, sg:true},
-    {name:'Снайперка', dmg:110,cd:.92, col:0x223344, bl:.50},
+    {name:'Пистолет',  dmg:15, cd:.52, col:0x334455, barrel:.42, grip:.18, wide:.07},
+    {name:'Пистолет+', dmg:22, cd:.34, col:0x223344, barrel:.48, grip:.18, wide:.08},
+    {name:'Пулемёт',   dmg:10, cd:.10, col:0x2A3A2A, barrel:.70, grip:.20, wide:.10},
+    {name:'Дробовик',  dmg:70, cd:.72, col:0x553322, barrel:.36, grip:.22, wide:.14, sg:true},
+    {name:'Снайперка', dmg:110,cd:.92, col:0x1A2A3A, barrel:.90, grip:.18, wide:.06},
 ];
 const W=()=>WEPS[wepLv];
 const effDmg=()=>Math.max(5, W().dmg + (permDmg-10) + upgDmg*10);
 const effCD=()=>W().cd*(.9**upgRate);
 
-// ─── PLAYER MESH ───
-let plyGrp, plyLL, plyLR, plyAL, plyAR, plyWalkT=0;
-let gunFlash=0;
+// ─── PLAYER MESH (weapon only) ───
+let plyGrp, plyWalkT=0, gunFlash=0;
 
 function buildPlayer(){
     if(plyGrp) scene.remove(plyGrp);
     plyGrp=new THREE.Group();
-    const bMat=new THREE.MeshLambertMaterial({color:0x2C5F8A});
-    const sMat=new THREE.MeshLambertMaterial({color:0xDDAA80});
-    const dMat=new THREE.MeshLambertMaterial({color:0x1A3A5C});
-    const gMat=new THREE.MeshLambertMaterial({color:W().col});
+    const wep=W();
+    const dark=new THREE.MeshLambertMaterial({color:0x111111});
+    const gMat=new THREE.MeshLambertMaterial({color:wep.col});
+    const bl=wep.barrel, wd=wep.wide, gp=wep.grip;
 
-    // Legs
-    const lG=new THREE.BoxGeometry(.22,.7,.22);
-    plyLL=new THREE.Mesh(lG,dMat); plyLL.position.set(-.16,.35,0);
-    plyLR=new THREE.Mesh(lG,dMat); plyLR.position.set(.16,.35,0);
-    // Body
-    const body=new THREE.Mesh(new THREE.BoxGeometry(.60,.80,.36),bMat);
-    body.position.set(0,1.1,0); body.castShadow=true;
-    // Arms
-    const aG=new THREE.BoxGeometry(.18,.56,.18);
-    plyAL=new THREE.Mesh(aG,bMat); plyAL.position.set(-.44,1.05,0);
-    plyAR=new THREE.Mesh(aG,bMat); plyAR.position.set(.44,1.05,0);
-    // Head
-    const head=new THREE.Mesh(new THREE.SphereGeometry(.24,8,6),sMat);
-    head.position.set(0,1.72,0); head.castShadow=true;
-    // Helmet
-    const helm=new THREE.Mesh(new THREE.BoxGeometry(.52,.22,.5),dMat);
-    helm.position.set(0,1.88,0);
-    // Gun (right side, pointing forward +Z)
-    const wep=W(), bl=wep.bl;
-    const gb=new THREE.Mesh(new THREE.BoxGeometry(.07,.07,bl+.16),gMat);
-    gb.position.set(.38,1.18,.22+bl/2);
-    const gg=new THREE.Mesh(new THREE.BoxGeometry(.055,.1,.065),gMat);
-    gg.position.set(.38,1.09,.14);
+    // Barrel (pointing forward along +Z)
+    const barrel=new THREE.Mesh(new THREE.BoxGeometry(wd, wd*.65, bl), gMat);
+    barrel.position.set(0, 0, bl/2); barrel.castShadow=true; plyGrp.add(barrel);
+
+    // Body/receiver
+    const recv=new THREE.Mesh(new THREE.BoxGeometry(wd*1.3, wd*1.1, bl*.45), gMat);
+    recv.position.set(0, -wd*.2, bl*.18); recv.castShadow=true; plyGrp.add(recv);
+
+    // Grip
+    const grip=new THREE.Mesh(new THREE.BoxGeometry(wd*.8, gp, wd*.9), gMat);
+    grip.position.set(0, -wd*.5-gp/2, bl*.1); grip.castShadow=true; plyGrp.add(grip);
+
+    // Trigger guard
+    const tg=new THREE.Mesh(new THREE.TorusGeometry(wd*.45, wd*.08, 4, 8, Math.PI),
+        dark);
+    tg.rotation.x=Math.PI/2; tg.position.set(0, -wd*.55, bl*.18); plyGrp.add(tg);
+
+    // Muzzle
+    const muz=new THREE.Mesh(new THREE.CylinderGeometry(wd*.38, wd*.38, wd*.5, 8),
+        dark);
+    muz.rotation.x=Math.PI/2; muz.position.set(0, 0, bl+wd*.25); plyGrp.add(muz);
+
     // Scope for sniper
     if(wepLv===5){
-        const sc=new THREE.Mesh(new THREE.CylinderGeometry(.024,.024,.18,8),
-            new THREE.MeshLambertMaterial({color:0x111111}));
-        sc.rotation.z=Math.PI/2; sc.position.set(.38,1.22,.2); plyGrp.add(sc);
+        const sc=new THREE.Mesh(new THREE.CylinderGeometry(.025,.025,.3,8),dark);
+        sc.rotation.x=Math.PI/2; sc.position.set(0,wd*.6,bl*.4); plyGrp.add(sc);
+        const sl=new THREE.Mesh(new THREE.CylinderGeometry(.036,.036,.04,8),dark);
+        sl.rotation.x=Math.PI/2; sl.position.set(0,wd*.6,bl*.28); plyGrp.add(sl);
+        const sr=sl.clone(); sr.position.z=bl*.52; plyGrp.add(sr);
     }
     // Drum for SMG
     if(wepLv===3){
-        const dr=new THREE.Mesh(new THREE.CylinderGeometry(.05,.05,.06,10),
-            new THREE.MeshLambertMaterial({color:0x111111}));
-        dr.rotation.x=Math.PI/2; dr.position.set(.38,1.1,.18); plyGrp.add(dr);
+        const dr=new THREE.Mesh(new THREE.CylinderGeometry(.065,.065,.08,12),dark);
+        dr.rotation.x=Math.PI/2; dr.position.set(0,-wd*.1,bl*.3); plyGrp.add(dr);
     }
-    // Muzzle flash
-    const fl=new THREE.Mesh(new THREE.SphereGeometry(.05,6,4),
-        new THREE.MeshBasicMaterial({color:0xFFEE44,transparent:true,opacity:0}));
-    fl.position.set(.38,1.18,.22+bl+.06); fl.userData.flash=true; plyGrp.add(fl);
+    // Shotgun double barrel
+    if(wepLv===4){
+        const b2=new THREE.Mesh(new THREE.BoxGeometry(wd*.6,wd*.5,bl*.7),gMat);
+        b2.position.set(wd*.9, 0, bl*.35); plyGrp.add(b2);
+    }
 
-    [plyLL,plyLR,body,plyAL,plyAR,head,helm,gb,gg].forEach(m=>{m.castShadow=true; plyGrp.add(m);});
+    // Muzzle flash sphere
+    const fl=new THREE.Mesh(new THREE.SphereGeometry(.06,6,4),
+        new THREE.MeshBasicMaterial({color:0xFFEE44,transparent:true,opacity:0}));
+    fl.position.set(0, 0, bl+wd*.5); fl.userData.flash=true; plyGrp.add(fl);
+
+    // Position: floating just above road, tilted slightly
+    plyGrp.rotation.x = -0.18;
     scene.add(plyGrp);
 }
 
@@ -321,6 +327,8 @@ function spawnGate(z){
             new THREE.PlaneGeometry(3.6,4.1),
             new THREE.MeshBasicMaterial({map:makeGateTex(eff.label,eff.good),transparent:true,side:THREE.DoubleSide})
         );
+        // Rotate to face -Z so text is readable from behind (camera approaches from -Z side)
+        mesh.rotation.y = Math.PI;
         mesh.position.set(x,2.05,z); gateGrp.add(mesh);
         return mesh;
     };
@@ -481,7 +489,7 @@ function startGame(){
 }
 
 function startLevel(){
-    GS='RUN'; winTriggered=false;
+    GS='RUN'; winTriggered=false; shopOpened=false;
     px=0; pz=0; pvx=0; camPx=0; camPz=-7;
     hp=maxHp; permDmg=10; wepLv=1; spd=FWD_SPEED; coinsX=1;
     combatFT=0; plyWalkT=0; gunFlash=0; dmgA=0; effPopT=0;
@@ -517,8 +525,8 @@ function tick(dt){
     }
     dmgA=Math.max(0,dmgA-dt*3.5);
     document.getElementById('dmg-vign').style.opacity=dmgA;
-    gunFlash=Math.max(0,gunFlash-dt*8);
-    if(plyGrp) for(const c of plyGrp.children) if(c.userData.flash) c.material.opacity=gunFlash>.1?.9:0;
+    gunFlash=Math.max(0,gunFlash-dt*10);
+    if(plyGrp) for(const c of plyGrp.children) if(c.userData && c.userData.flash) c.material.opacity=gunFlash>.1?.9:0;
 
     if(GS==='RUN') tickRun(dt);
     else if(GS==='COMBAT') tickCombat(dt);
@@ -536,11 +544,14 @@ function tickRun(dt){
     // Move forward
     pz += spd * dt;
 
-    // Walk anim
+    // Gun bob anim
     plyWalkT += dt*6;
-    if(plyLL){ plyLL.rotation.x= Math.sin(plyWalkT)*.5; plyLR.rotation.x=-Math.sin(plyWalkT)*.5; }
-    if(plyAL){ plyAL.rotation.x=-Math.sin(plyWalkT)*.3; plyAR.rotation.x= Math.sin(plyWalkT)*.3; }
-    if(plyGrp){ plyGrp.position.set(px,0,pz); plyGrp.rotation.y=0; }
+    if(plyGrp){
+        const bob = Math.sin(plyWalkT)*.055;
+        const sway = Math.sin(plyWalkT*.5)*.03;
+        plyGrp.position.set(px + .18, 1.05 + bob, pz + .6);
+        plyGrp.rotation.y = sway;
+    }
 
     // Camera smooth follow
     camPx += (px - camPx) * Math.min(1, dt*8);
@@ -578,7 +589,7 @@ function tickCombat(dt){
     else if(right) pvx=Math.min(pvx+X_ACCEL*dt, 6);
     else pvx*=(1-dt*12);
     px=Math.max(-X_LIMIT,Math.min(X_LIMIT,px+pvx*dt));
-    if(plyGrp) plyGrp.position.set(px,0,pz);
+    if(plyGrp) plyGrp.position.set(px+.18, 1.05, pz+.6);
     cam.position.set(camPx,4.2,camPz);
     cam.lookAt(camPx*.3+px*.7,.8,pz+7);
     camPx+=(px-camPx)*Math.min(1,dt*6);
@@ -622,9 +633,9 @@ function tickCombat(dt){
         if(dist<1.3){ e.atkT-=dt; if(e.atkT<=0){ e.atkT=.9; hp-=5+level*1.5; dmgA=1; refreshHUD(); if(hp<=0){hp=0;playerDie();} } }
     }
 
-    // Win
-    if(enemies.length>0&&enemies.every(e=>e.dead||e.removed)&&!winTriggered){
-        winTriggered=true;
+    // Win: all enemies cleared
+    if(enemies.length>0&&enemies.every(e=>e.dead||e.removed)&&!shopOpened){
+        shopOpened=true;
         setTimeout(()=>openShop(),1600);
     }
 }
