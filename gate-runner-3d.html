@@ -363,7 +363,12 @@ function updateBullets(dt){
                     if(lp.rimT!==undefined) lp.rimT=.12;
                     if(lp.topMesh) updateCombatTopTex(lp); // refresh HP number
                     if(lp.hp<=0&&!lp.dead){
-                        if(lp.isCombat){ lp.dead=true; coins+=Math.floor((lp.coinReward||30)*moneyX2); refreshHUD(); }
+                        if(lp.isCombat){
+                            lp.dead=true;
+                            const reward=Math.floor((lp.coinReward||30)*moneyX2);
+                            coins+=reward; refreshHUD();
+                            showEffPop({label:`+${reward} 🪙`, good:true});
+                        }
                         else killLootPlatform(lp);
                     }
                     if(!b.pierce) hit=true;
@@ -1021,7 +1026,7 @@ const COMBAT_ROWS = 3;
 const COMBAT_ROW_SPACING = 2.2;
 const COMBAT_START_Z = GATE_SPACING * GATES_PER_LEVEL + 30;
 // 15 columns spanning road width
-const COMBAT_COL_X = [-2.4, 0, 2.4];  // 3 columns with gaps
+const COMBAT_COL_X = [-3.1, 0, 3.1];  // 3 columns, 30% wider spread
 
 function makeCombatTopTex(label, bgColor='#FFD700', textColor='#ffffff'){
     const S=256;
@@ -1077,7 +1082,7 @@ function spawnCombatPlatform(x, z, hp, sc=1){
     const lp={g,hpCv,hpCtx,hpTex:hpTex2,hpSpr,topMesh,topTex,
         loot:null, maxHp,hp,dead:false,deadT:0,removed:false,rimMat:null,rimT:0,
         R, h, isCombat:true,
-        coinReward:Math.floor((10+level*8)*sc)};
+        coinReward:Math.floor((20+level*15)*sc)};
     drawLootHP(lp); lootPlatforms.push(lp);
     return lp;
 }
