@@ -458,65 +458,79 @@ function showEffPop(eff){
 let enemies=[], combatFT=0;
 
 
+// Fixed footprint radius so columns touch; height grows with row
+const HEX_R = 0.92;
+
 function spawnTarget(x, z, hp, sc){
     const g=new THREE.Group();
 
-    // ── Hexagonal platform (two tiers) ──
-    const stoneMat = new THREE.MeshLambertMaterial({color:0x7A6A4A});
-    const darkMat  = new THREE.MeshLambertMaterial({color:0x5A4A30});
+    // Height scales with row (sc)
+    const h1 = 0.28 + sc*0.55;   // base tier height
+    const h2 = 0.20 + sc*0.40;   // top tier height
+    const platY = h1 + h2;        // surface y
 
-    const baseR = 0.68*sc, baseH = 0.22*sc;
-    const topR  = 0.50*sc, topH  = 0.18*sc;
+    const stoneMat = new THREE.MeshLambertMaterial({color:0x8A7550});
+    const darkMat  = new THREE.MeshLambertMaterial({color:0x6A5538});
+    const rimMat   = new THREE.MeshLambertMaterial({color:0xAA9966});
 
-    const base = new THREE.Mesh(new THREE.CylinderGeometry(baseR,baseR*1.08,baseH,6), stoneMat);
-    base.position.y = baseH/2; base.castShadow=true; base.receiveShadow=true; g.add(base);
+    // Base hex slab
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(HEX_R, HEX_R*1.06, h1, 6), stoneMat);
+    base.position.y = h1/2; base.castShadow=true; base.receiveShadow=true; g.add(base);
 
-    const top = new THREE.Mesh(new THREE.CylinderGeometry(topR,baseR,topH,6), darkMat);
-    top.position.y = baseH + topH/2; top.castShadow=true; g.add(top);
+    // Top tier (slightly narrower)
+    const top = new THREE.Mesh(new THREE.CylinderGeometry(HEX_R*0.82, HEX_R, h2, 6), darkMat);
+    top.position.y = h1 + h2/2; top.castShadow=true; g.add(top);
 
-    const platY = baseH + topH; // y of platform surface
+    // Gold rim around top surface
+    const rim = new THREE.Mesh(new THREE.TorusGeometry(HEX_R*0.83, 0.045, 4, 6), rimMat);
+    rim.rotation.x = Math.PI/2; rim.position.y = platY; g.add(rim);
 
-    // ── 3-D coins pile on top ──
+    // ── 3D coin pile ──
     const coinMat  = new THREE.MeshLambertMaterial({color:0xFFD700});
-    const coinEdge = new THREE.MeshLambertMaterial({color:0xCC9900});
-    const coinR = 0.13*sc, coinH = 0.055*sc;
-    const coinGeo = new THREE.CylinderGeometry(coinR, coinR, coinH, 12);
+    const coinEdge = new THREE.MeshLambertMaterial({color:0xBB8800});
+    const cR = 0.11 + sc*0.04, cH = 0.052 + sc*0.012;
+    const coinGeo = new THREE.CylinderGeometry(cR, cR, cH, 12);
 
-    // scattered pile: several coins at random offsets + a small stack in centre
-    const coinPositions=[
-        [0,       0,      0],
-        [0.18*sc, 0,     -0.05*sc],
-        [-0.15*sc,0,      0.1*sc],
-        [0.05*sc, 0,      0.2*sc],
-        [-0.08*sc,0,     -0.18*sc],
-        // stacked centre coins
-        [0, coinH,    0],
-        [0, coinH*2,  0],
+    // Scattered base layer
+    const scatter=[
+        [ 0.28, 0,     0.10], [-0.30, 0,  0.15], [ 0.10, 0, -0.28],
+        [-0.18, 0,    -0.22], [ 0.32, 0, -0.12], [-0.08, 0,  0.32],
+        [ 0.22, 0,     0.28], [-0.26, 0, -0.08],
     ];
-    for(const [cx,cy,cz] of coinPositions){
+    for(const [cx,,cz] of scatter){
         const coin=new THREE.Mesh(coinGeo,[coinEdge,coinMat,coinEdge]);
-        coin.position.set(cx, platY+coinH/2+cy, cz);
+        coin.position.set(cx*HEX_R*1.1, platY+cH/2, cz*HEX_R*1.1);
         coin.rotation.y=Math.random()*Math.PI;
-        // tilt flat coins slightly
-        if(cy===0) coin.rotation.z=(Math.random()-.5)*.5;
+        coin.rotation.z=(Math.random()-.5)*0.6;
         coin.castShadow=true; g.add(coin);
     }
+    // Central upright stack
+    const stackH = 4 + Math.floor(sc*3);
+    for(let i=0;i<stackH;i++){
+        const coin=new THREE.Mesh(coinGeo,[coinEdge,coinMat,coinEdge]);
+        coin.position.set((Math.random()-.5)*0.06, platY + cH*(i+0.5), (Math.random()-.5)*0.06);
+        coin.rotation.y=Math.random()*Math.PI;
+        coin.castShadow=true; g.add(coin);
+    }
+    // Second smaller stack
+    for(let i=0;i<Math.max(2,stackH-2);i++){
+        const coin=new THREE.Mesh(coinGeo,[coinEdge,coinMat,coinEdge]);
+        coin.position.set(0.22*HEX_R, platY+cH*(i+0.5), 0.18*HEX_R);
+        coin.rotation.y=Math.random()*Math.PI; coin.castShadow=true; g.add(coin);
+    }
 
-    // ── HP bar sprite ──
+    // ── HP bar ──
     const hpCv=document.createElement('canvas'); hpCv.width=128; hpCv.height=18;
     const hpCtx=hpCv.getContext('2d');
     const hpTex=new THREE.CanvasTexture(hpCv);
     const hpSpr=new THREE.Sprite(new THREE.SpriteMaterial({map:hpTex,depthTest:false,transparent:true}));
-    const barY = platY + coinH*3 + 0.32*sc + 0.22;
-    hpSpr.position.set(0, barY, 0);
-    hpSpr.scale.set(1.3*sc+0.3, 0.2*sc+0.14, 1);
+    hpSpr.position.set(0, platY + cH*(stackH+1) + 0.28, 0);
+    hpSpr.scale.set(1.8, 0.22, 1);
     g.add(hpSpr);
 
     g.position.set(x,0,z); scene.add(g);
-    const col=0xFFD700;
-    const mat=stoneMat;
-    const e={g,mat,hpCv,hpCtx,hpTex,hpSpr,
-        maxHp:hp,hp,spd:0,col,dead:false,deadT:0,removed:false,
+    const e={g,mat:stoneMat,hpCv,hpCtx,hpTex,hpSpr,
+        maxHp:hp,hp,spd:0,col:0xFFD700,dead:false,deadT:0,removed:false,
         hitT:0,atkT:Infinity,walkT:0,reward:Math.ceil(hp)*coinsX,isTarget:true};
     drawEHP(e); enemies.push(e);
 }
@@ -533,15 +547,17 @@ function killEnemy(e){
     e.dead=true; coins+=e.reward; refreshHUD();
 }
 
-// 3 columns × 15 rows, each row 3× more HP than the previous, 3× bigger visually
+// 3 columns × 15 rows, each row 3× HP, no gaps between platforms
 function spawnWave(){
     const ROWS=15, COLS=3;
-    const colX=[-1.6, 0, 1.6];
+    const colSpacing = HEX_R * 2;             // columns touch side-to-side
+    const rowSpacing = HEX_R * Math.sqrt(3);  // hex flat-to-flat depth
+    const colX = [-colSpacing, 0, colSpacing];
     for(let r=0;r<ROWS;r++){
-        const hp=Math.max(1, Math.round(level * Math.pow(3, r)));
-        const sc=Math.min(0.35+r*0.14, 2.2);
+        const hp = Math.max(1, Math.round(level * Math.pow(3, r)));
+        const sc = Math.min(0.4 + r*0.15, 2.4);
         for(let c=0;c<COLS;c++){
-            spawnTarget(colX[c], pz+10+r*5, hp, sc);
+            spawnTarget(colX[c], pz + 10 + r*rowSpacing, hp, sc);
         }
     }
 }
@@ -757,10 +773,18 @@ function tickCombat(dt){
         }
     }
 
-    // Level ends when weapon has passed all targets
-    if(!shopOpened && enemies.length>0 && enemies.every(e=>e.g.position.z < pz-1)){
-        shopOpened=true;
-        setTimeout(()=>openShop(),600);
+    // Level ends when weapon collides with any target
+    if(!shopOpened){
+        for(const e of enemies){
+            if(e.removed||e.dead) continue;
+            const dz = e.g.position.z - pz;
+            const dx = Math.abs(e.g.position.x - px);
+            if(dz <= HEX_R && dz >= -0.4 && dx < HEX_R*1.8){
+                shopOpened=true;
+                setTimeout(()=>openShop(), 500);
+                break;
+            }
+        }
     }
 
     // Update targets
