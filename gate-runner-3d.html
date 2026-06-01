@@ -142,11 +142,12 @@ let GS = 'START', level = 1, coins = 0;
 let upgDmg = 0, upgRate = 0, upgMaxHp = 0;
 let px = 0, pz = 0, pvx = 0;
 let hp = 100, maxHp = 100;
-let permDmg = 10, wepLv = 1, spd = FWD_SPEED, coinsX = 1;
+let permDmg = 0, wepLv = 1, spd = FWD_SPEED, coinsX = 1;
 let camPx = 0, camPz = -7;
 let dmgA = 0, effPopT = 0;
 let winTriggered = false, shopOpened = false, combatMoving = false;
 let bullets = [], runFireT = 0;
+let ownedWeapons = new Set([1]), activeWeapon = 1;
 
 // ─── INPUT ───
 const keys = {};
@@ -349,33 +350,25 @@ function updateBullets(dt){
 let gates=[], gateGrp=new THREE.Group(); scene.add(gateGrp);
 
 const EFFS=[
-    {id:'hp+',   label:'+30 HP',      good:true },
-    {id:'hp-',   label:'−25 HP',      good:false},
-    {id:'dmg+',  label:'+10 УРН',     good:true },
-    {id:'dmg-',  label:'−8 УРН',      good:false},
-    {id:'wep+',  label:'⬆ ОРУЖИЕ',    good:true },
-    {id:'wep-',  label:'⬇ ОРУЖИЕ',    good:false},
-    {id:'heal',  label:'ПОЛНОЕ HP',   good:true },
-    {id:'coins', label:'💰 МОНЕТЫ',    good:true },
-    {id:'hp2',   label:'+50 HP',      good:true },
+    {id:'hp+',   label:'+30 HP',     good:true },
+    {id:'hp-',   label:'−25 HP',     good:false},
+    {id:'dmg+',  label:'+УРН',       good:true },
+    {id:'dmg-',  label:'−УРН',       good:false},
+    {id:'heal',  label:'ПОЛНОЕ HP',  good:true },
+    {id:'money', label:'💵 ДЕНЬГИ',  good:true },
+    {id:'hp2',   label:'+50 HP',     good:true },
 ];
 
 function randomEff(){ return EFFS[Math.floor(Math.random()*EFFS.length)]; }
 
-// Compute dynamic effect state based on bullet hits (charge).
-// Negative effects shrink toward zero then flip positive.
 function effAtCharge(base, charge){
     switch(base.id){
-        case 'hp-':{ const v=-25+charge*9;  return {id:'hp_val', val:v, label:(v>=0?'+':'')+Math.round(v)+' HP',   good:v>=0}; }
+        case 'hp-':{ const v=-25+charge*9;  return {id:'hp_val', val:v, label:(v>=0?'+':'')+Math.round(v)+' HP', good:v>=0}; }
         case 'dmg-':{ const v=-1+charge;    return {id:'dmg_val',val:v, label:(v>=0?'+':'')+v+' УРН', good:v>=0}; }
-        case 'wep-': return charge>=2
-            ? {id:'wep+',label:'⬆ ОРУЖИЕ', good:true}
-            : {id:'wep-',label:'⬇ ОРУЖИЕ', good:false};
-        // Positive effects grow with charge
-        case 'hp+':{ const v=30+charge*15; return {id:'hp_val', val:v, label:'+'+v+' HP',   good:true}; }
-        case 'hp2':{ const v=50+charge*20; return {id:'hp_val', val:v, label:'+'+v+' HP',   good:true}; }
-        case 'dmg+':{ const v=2+charge;    return {id:'dmg_val',val:v, label:'+'+v+' УРН', good:true}; }
-        default: return base; // heal, coins, wep+, x2 — unchanged
+        case 'hp+':{ const v=30+charge*15;  return {id:'hp_val', val:v, label:'+'+v+' HP',  good:true}; }
+        case 'hp2':{ const v=50+charge*20;  return {id:'hp_val', val:v, label:'+'+v+' HP',  good:true}; }
+        case 'dmg+':{ const v=2+charge;     return {id:'dmg_val',val:v, label:'+'+v+' УРН', good:true}; }
+        default: return base;
     }
 }
 
@@ -383,15 +376,38 @@ function makeGateTex(eff){
     const W=512, H=640;
     const cv=document.createElement('canvas'); cv.width=W; cv.height=H;
     const x=cv.getContext('2d');
-    x.fillStyle=eff.good?'rgba(0,160,60,.95)':'rgba(180,22,15,.95)';
-    x.fillRect(0,0,W,H);
-    const bc=eff.good?'#00FF88':'#FF4422';
-    x.strokeStyle=bc; x.lineWidth=14; x.strokeRect(7,7,W-14,H-14);
-    x.strokeStyle='rgba(255,255,255,.3)'; x.lineWidth=4; x.strokeRect(22,22,W-44,H-44);
-    x.fillStyle='#fff'; x.textAlign='center'; x.textBaseline='middle';
-    x.font=`bold ${eff.label.length>8?76:100}px Arial`;
-    x.shadowColor='rgba(0,0,0,.5)'; x.shadowBlur=8;
-    x.fillText(eff.label, W/2, H/2);
+
+    if(eff.id==='money'){
+        // Paper-money themed panel
+        x.fillStyle='#1a6b2a'; x.fillRect(0,0,W,H);
+        // Border
+        x.strokeStyle='#c8f0a0'; x.lineWidth=14; x.strokeRect(7,7,W-14,H-14);
+        x.strokeStyle='rgba(255,255,255,.3)'; x.lineWidth=3; x.strokeRect(22,22,W-44,H-44);
+        // Bill rectangles
+        const bills=[[60,90,392,160],[60,270,392,160],[60,450,392,120]];
+        for(const [bx,by,bw,bh] of bills){
+            x.fillStyle='rgba(0,80,0,.35)'; x.fillRect(bx,by,bw,bh);
+            x.strokeStyle='#a0e080'; x.lineWidth=3; x.strokeRect(bx,by,bw,bh);
+        }
+        // $ symbols on bills
+        x.font='bold 90px Arial'; x.fillStyle='#c8f0a0';
+        x.textAlign='center'; x.textBaseline='middle';
+        x.shadowColor='rgba(0,0,0,.6)'; x.shadowBlur=6;
+        x.fillText('$', W/2, 170); x.fillText('$', W/2, 350); x.fillText('$', W/2, 510);
+        // Label
+        x.font='bold 52px Arial'; x.fillStyle='#fff';
+        x.fillText('ДЕНЬГИ', W/2, 600);
+    } else {
+        x.fillStyle=eff.good?'rgba(0,160,60,.95)':'rgba(180,22,15,.95)';
+        x.fillRect(0,0,W,H);
+        const bc=eff.good?'#00FF88':'#FF4422';
+        x.strokeStyle=bc; x.lineWidth=14; x.strokeRect(7,7,W-14,H-14);
+        x.strokeStyle='rgba(255,255,255,.3)'; x.lineWidth=4; x.strokeRect(22,22,W-44,H-44);
+        x.fillStyle='#fff'; x.textAlign='center'; x.textBaseline='middle';
+        x.font=`bold ${eff.label.length>8?76:100}px Arial`;
+        x.shadowColor='rgba(0,0,0,.5)'; x.shadowBlur=8;
+        x.fillText(eff.label, W/2, H/2);
+    }
     const t=new THREE.CanvasTexture(cv);
     t.anisotropy=renderer.capabilities.getMaxAnisotropy();
     return t;
@@ -441,10 +457,8 @@ function applyEff(eff){
         case 'hp-':  hp=Math.max(5,hp-25); break;
         case 'dmg+': permDmg+=2; break;
         case 'dmg-': permDmg=Math.max(-upgDmg, permDmg-1); break;
-        case 'wep+': wepLv=Math.min(5,wepLv+1); buildPlayer(); break;
-        case 'wep-': wepLv=Math.max(1,wepLv-1); buildPlayer(); break;
         case 'heal': hp=maxHp; break;
-        case 'coins': coins+=Math.floor(20+level*10); break;
+        case 'money': coins+=Math.floor(30+level*15); break;
     }
     showEffPop(eff);
     refreshHUD();
@@ -647,20 +661,31 @@ function refreshHUD(){
 }
 
 // ─── SHOP ───
+const SHOP_WEPS=[
+    {lv:1, name:'🔫 Пистолет',   desc:'Стандарт. CD: 0.52s', cost:0},
+    {lv:2, name:'🔫 Пистолет+',  desc:'Быстрее. CD: 0.34s',  cost:120},
+    {lv:3, name:'🔫 Пулемёт',    desc:'Очень быстро. CD: 0.10s', cost:280},
+    {lv:4, name:'🔫 Дробовик',   desc:'Большой урон. CD: 0.72s', cost:420},
+    {lv:5, name:'🎯 Снайперка',  desc:'Макс. урон. CD: 0.92s',   cost:600},
+];
+
 function openShop(){
     GS='SHOP';
     document.getElementById('shop-sub').textContent=`Уровень ${level} пройден!`;
     document.getElementById('shop-coins').textContent=`🪙 ${coins} монет`;
+
     const upgs=[
-        {k:'dmg', name:'🔥 Урон',          desc:`+1 к урону\nУр.: ${upgDmg}`,  cur:upgDmg,  cost:80+upgDmg*35},
-        {k:'rate',name:'⚡ Скорострельность',desc:`−10% задержки\nУр.: ${upgRate}`,cur:upgRate,cost:80+upgRate*35},
-        {k:'hp',  name:'❤️ Здоровье',       desc:`+25 макс. HP\nУр.: ${upgMaxHp}`,cur:upgMaxHp,cost:100+upgMaxHp*45},
+        {k:'dmg', name:'🔥 Урон',             desc:`+1 к урону`,      cur:upgDmg,  cost:80+upgDmg*35},
+        {k:'rate',name:'⚡ Скорострельность',  desc:`−10% задержки`,   cur:upgRate, cost:80+upgRate*35},
+        {k:'hp',  name:'❤️ Здоровье',          desc:`+25 макс. HP`,    cur:upgMaxHp,cost:100+upgMaxHp*45},
     ];
     const g=document.getElementById('sgrid'); g.innerHTML='';
+
+    // Stat upgrades
     for(const u of upgs){
         const ok=coins>=u.cost&&u.cur<10;
         const c=document.createElement('div'); c.className='scard'+(ok?' ok':'');
-        c.innerHTML=`<h3>${u.name}</h3><p>${u.desc.replace(/\n/g,'<br>')}<br>Ур.: ${u.cur}/10</p><div class="cost">${u.cost} 🪙</div>`;
+        c.innerHTML=`<h3>${u.name}</h3><p>${u.desc}<br>Ур.: ${u.cur}/10</p><div class="cost">${u.cost} 🪙</div>`;
         const b=document.createElement('button'); b.className='btn btn-g';
         b.disabled=!ok; b.textContent=u.cur>=10?'Макс.':(ok?'Купить':'Мало 🪙');
         b.onclick=()=>{
@@ -673,6 +698,26 @@ function openShop(){
         };
         c.appendChild(b); g.appendChild(c);
     }
+
+    // Weapon purchases
+    const sep=document.createElement('div');
+    sep.style.cssText='width:100%;text-align:center;color:#FFD700;font-size:15px;font-weight:bold;margin:10px 0 4px';
+    sep.textContent='── ОРУЖИЕ ──'; g.appendChild(sep);
+
+    for(const w of SHOP_WEPS){
+        const owned=ownedWeapons.has(w.lv);
+        const active=activeWeapon===w.lv;
+        const canBuy=!owned&&coins>=w.cost;
+        const c=document.createElement('div'); c.className='scard'+(active?' ok':'');
+        c.innerHTML=`<h3>${w.name}</h3><p>${w.desc}</p><div class="cost">${owned?'Куплено':w.cost+' 🪙'}</div>`;
+        const b=document.createElement('button'); b.className='btn btn-g';
+        if(active){ b.textContent='✓ Активно'; b.disabled=true; }
+        else if(owned){ b.textContent='Выбрать'; b.onclick=()=>{ activeWeapon=w.lv; openShop(); }; }
+        else{ b.disabled=!canBuy; b.textContent=canBuy?'Купить':'Мало 🪙';
+            b.onclick=()=>{ if(coins<w.cost) return; coins-=w.cost; ownedWeapons.add(w.lv); activeWeapon=w.lv; openShop(); }; }
+        c.appendChild(b); g.appendChild(c);
+    }
+
     show('shop-ov');
 }
 
@@ -685,6 +730,7 @@ const hide=id=>document.getElementById(id).classList.remove('vis');
 function startGame(){
     hide('start-ov');
     level=1;coins=0;upgDmg=0;upgRate=0;upgMaxHp=0;maxHp=100;
+    ownedWeapons=new Set([1]); activeWeapon=1;
     buildStaticWorld();
     startLevel();
 }
@@ -692,7 +738,7 @@ function startGame(){
 function startLevel(){
     GS='RUN'; winTriggered=false; shopOpened=false;
     px=0; pz=0; pvx=0; camPx=0; camPz=-7;
-    hp=maxHp; permDmg=0; wepLv=1; spd=FWD_SPEED; coinsX=1;
+    hp=maxHp; permDmg=0; wepLv=activeWeapon; spd=FWD_SPEED; coinsX=1;
     combatFT=0; plyWalkT=0; gunFlash=0; dmgA=0; effPopT=0; runFireT=0; combatMoving=false;
 
     bullets.forEach(b=>scene.remove(b.mesh)); bullets=[];
