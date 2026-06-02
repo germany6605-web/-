@@ -435,30 +435,62 @@ function makeGateTex(eff){
     const x=cv.getContext('2d');
     const v=eff.currentVal, good=v>=0;
 
-    const bgColor = eff.id==='money' ? (good?'#1a6b2a':'#6b1a1a')
-                  : eff.id==='range' ? (good?'#1a3d6b':'#6b3d1a')
-                  : eff.id==='rate'  ? (good?'#4a1a6b':'#6b4a1a')
-                  : (good?'rgba(0,140,50,.95)':'rgba(170,20,10,.95)');
-    x.fillStyle=bgColor; x.fillRect(0,0,W,H);
+    // Background gradient
+    const bgTop = eff.id==='money' ? (good?'#0d4a1a':'#4a0d0d')
+                : eff.id==='range' ? (good?'#0d2a4a':'#4a2a0d')
+                : eff.id==='rate'  ? (good?'#2a0d4a':'#4a2a0d')
+                : (good?'#0a3d1a':'#3d0a0a');
+    const bgBot = eff.id==='money' ? (good?'#1f8c35':'#8c1f1f')
+                : eff.id==='range' ? (good?'#1f508c':'#8c501f')
+                : eff.id==='rate'  ? (good?'#5a1f8c':'#8c5a1f')
+                : (good?'#1a8c40':'#8c1a1a');
+    const grad=x.createLinearGradient(0,0,0,H);
+    grad.addColorStop(0, bgTop); grad.addColorStop(1, bgBot);
+    x.fillStyle=grad; x.fillRect(0,0,W,H);
+
+    // Glossy top sheen
+    const sheen=x.createLinearGradient(0,0,0,H*0.45);
+    sheen.addColorStop(0,'rgba(255,255,255,0.13)'); sheen.addColorStop(1,'rgba(255,255,255,0)');
+    x.fillStyle=sheen; x.fillRect(0,0,W,H*0.45);
+
+    // Outer glow border
     const bc=good?'#00FF88':'#FF4422';
-    x.strokeStyle=bc; x.lineWidth=14; x.strokeRect(7,7,W-14,H-14);
-    x.strokeStyle='rgba(255,255,255,.25)'; x.lineWidth=3; x.strokeRect(22,22,W-44,H-44);
+    x.shadowColor=bc; x.shadowBlur=18;
+    x.strokeStyle=bc; x.lineWidth=10;
+    const r=18;
+    x.beginPath(); x.roundRect(6,6,W-12,H-12,r); x.stroke();
+    x.shadowBlur=0;
+
+    // Inner thin border
+    x.strokeStyle='rgba(255,255,255,0.3)'; x.lineWidth=2;
+    x.beginPath(); x.roundRect(20,20,W-40,H-40,r-4); x.stroke();
+
     x.textAlign='center'; x.textBaseline='middle';
-    x.shadowColor='rgba(0,0,0,.7)'; x.shadowBlur=8;
 
+    // Icon
     const icon = eff.id==='money'?'💵': eff.id==='range'?'🎯': eff.id==='rate'?'⚡':'⚔️';
-    x.font='bold 110px Arial'; x.fillStyle='#fff';
-    x.fillText(icon, W/2, 170);
+    x.font='100px Arial'; x.fillStyle='#fff';
+    x.shadowColor='rgba(0,0,0,0.8)'; x.shadowBlur=10;
+    x.fillText(icon, W/2, 148);
 
-    // Current accumulated value (big)
+    // Divider line
+    x.shadowBlur=0;
+    x.strokeStyle='rgba(255,255,255,0.2)'; x.lineWidth=2;
+    x.beginPath(); x.moveTo(40,220); x.lineTo(W-40,220); x.stroke();
+
+    // Value (big, with shadow)
     const valStr=(v>=0?'+':'')+v;
-    x.font='bold 210px Arial Black,Arial';
-    x.fillStyle=good?'#88FF88':'#FF8888';
-    x.fillText(valStr, W/2, 420);
+    x.shadowColor='rgba(0,0,0,0.9)'; x.shadowBlur=16;
+    x.font='bold 200px Arial Black,Arial';
+    x.fillStyle=good?'#AAFFCC':'#FFAAAA';
+    x.fillText(valStr, W/2, 400);
 
-    const typeLabel = eff.id==='money'?'ДЕНЬГИ': eff.id==='range'?'ДАЛЬН': eff.id==='rate'?'СКОР':'УРН';
-    x.font='bold 68px Arial'; x.fillStyle='#fff';
-    x.fillText(typeLabel, W/2, 590);
+    // Type label
+    x.shadowBlur=6;
+    const typeLabel = eff.id==='money'?'ДЕНЬГИ': eff.id==='range'?'ДАЛЬНОСТЬ': eff.id==='rate'?'СКОРОСТЬ':'УРОН';
+    x.font='bold 56px Arial'; x.fillStyle='rgba(255,255,255,0.9)';
+    x.fillText(typeLabel, W/2, 575);
+    x.shadowBlur=0;
 
     const t=new THREE.CanvasTexture(cv);
     t.anisotropy=renderer.capabilities.getMaxAnisotropy();
@@ -466,16 +498,38 @@ function makeGateTex(eff){
 }
 
 function makeIncTex(incVal){
-    const cv=document.createElement('canvas'); cv.width=128; cv.height=128;
+    const W=160, H=160;
+    const cv=document.createElement('canvas'); cv.width=W; cv.height=H;
     const x=cv.getContext('2d');
     const good=incVal>=0;
-    x.fillStyle=good?'rgba(0,200,80,.9)':'rgba(220,40,20,.9)';
-    x.beginPath(); x.roundRect(4,4,120,120,20); x.fill();
-    x.font='bold 72px Arial Black,Arial';
+
+    // Drop shadow
+    x.shadowColor='rgba(0,0,0,0.7)'; x.shadowBlur=10; x.shadowOffsetY=3;
+    const grad=x.createLinearGradient(0,0,0,H);
+    grad.addColorStop(0, good?'#00dd55':'#ee2200');
+    grad.addColorStop(1, good?'#007722':'#881100');
+    x.fillStyle=grad;
+    x.beginPath(); x.roundRect(6,6,W-12,H-12,22); x.fill();
+    x.shadowBlur=0; x.shadowOffsetY=0;
+
+    // Highlight sheen
+    const sheen=x.createLinearGradient(0,6,0,H*0.5);
+    sheen.addColorStop(0,'rgba(255,255,255,0.25)'); sheen.addColorStop(1,'rgba(255,255,255,0)');
+    x.fillStyle=sheen;
+    x.beginPath(); x.roundRect(6,6,W-12,(H-12)*0.5,22); x.fill();
+
+    // Border glow
+    x.strokeStyle=good?'rgba(0,255,120,0.8)':'rgba(255,80,30,0.8)';
+    x.lineWidth=2.5;
+    x.beginPath(); x.roundRect(6,6,W-12,H-12,22); x.stroke();
+
+    // Text
+    x.font='bold 80px Arial Black,Arial';
     x.textAlign='center'; x.textBaseline='middle';
     x.fillStyle='#fff';
-    x.shadowColor='rgba(0,0,0,.9)'; x.shadowBlur=6;
-    x.fillText((incVal>=0?'+':'')+incVal, 64, 66);
+    x.shadowColor='rgba(0,0,0,0.95)'; x.shadowBlur=8;
+    x.fillText((incVal>=0?'+':'')+incVal, W/2, H/2+2);
+
     const t=new THREE.CanvasTexture(cv);
     t.anisotropy=renderer.capabilities.getMaxAnisotropy();
     return t;
