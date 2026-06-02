@@ -344,15 +344,23 @@ function updateBullets(dt){
                 // Adjust bullet X relative to gate's slide offset
                 const slideX = gate.slideGrp ? gate.slideGrp.position.x : 0;
                 const lbx = bx - slideX;
-                // Each bullet hit applies the gate's value directly
+                // Bullet hit: increment hits, update currentVal display
                 if(lbx < -0.1 && lbx > -3.9 && (gate.coolL<=0 || b.tripleExtra) && gate.pL){
                     gate.coolL=b.tripleExtra ? Math.min(gate.coolL, 0.02) : 0.25;
-                    applyEff(gate.eL);
+                    gate.hitsL++;
+                    gate.eL.currentVal=gate.eL.baseVal+gate.hitsL*gate.eL.incVal;
+                    gate.pL.material.map.dispose();
+                    gate.pL.material.map=makeGateTex(gate.eL);
+                    gate.pL.material.needsUpdate=true;
                     hit=true; break;
                 }
                 if(lbx > 0.1 && lbx < 3.9 && (gate.coolR<=0 || b.tripleExtra) && gate.pR){
                     gate.coolR=b.tripleExtra ? Math.min(gate.coolR, 0.02) : 0.25;
-                    applyEff(gate.eR);
+                    gate.hitsR++;
+                    gate.eR.currentVal=gate.eR.baseVal+gate.hitsR*gate.eR.incVal;
+                    gate.pR.material.map.dispose();
+                    gate.pR.material.map=makeGateTex(gate.eR);
+                    gate.pR.material.needsUpdate=true;
                     hit=true; break;
                 }
             }
@@ -409,26 +417,22 @@ let gates=[], gateGrp=new THREE.Group(); scene.add(gateGrp);
 const EFF_TYPES=['dmg','dmg','dmg','money','range','rate'];
 function randomEff(){
     const type=EFF_TYPES[Math.floor(Math.random()*EFF_TYPES.length)];
-    const val=Math.floor(Math.random()*11)-3; // -3 … +7
-    return makeEffObj(type, val);
+    const baseVal=Math.floor(Math.random()*8)-2;  // initial value: -2 … +5
+    const incVal =Math.floor(Math.random()*11)-3; // per-hit increment: -3 … +7
+    return {id:type, baseVal, incVal, currentVal:baseVal};
 }
-function makeEffObj(type, val){
-    const good=val>=0;
-    switch(type){
-        case 'dmg':   return {id:'dmg',   val, label:(val>=0?'+':'')+val+' УРН',       good};
-        case 'money': return {id:'money', val, label:(val>=0?'+':'')+val+' 💵',         good};
-        case 'range': return {id:'range', val, label:(val>=0?'+':'')+val+' 🎯 ДАЛЬН',  good};
-        case 'rate':  return {id:'rate',  val, label:(val>=0?'+':'')+val+' ⚡ СКОР',   good};
-    }
+function effLabel(eff){
+    const v=eff.currentVal;
+    const typeLabel=eff.id==='money'?'ДЕНЬГИ':eff.id==='range'?'ДАЛЬН':eff.id==='rate'?'СКОР':'УРН';
+    return {val:v, good:v>=0, label:(v>=0?'+':'')+v+' '+typeLabel};
 }
 
 function makeGateTex(eff){
     const W=512, H=640;
     const cv=document.createElement('canvas'); cv.width=W; cv.height=H;
     const x=cv.getContext('2d');
-    const good=eff.good;
+    const v=eff.currentVal, good=v>=0;
 
-    // Background
     const bgColor = eff.id==='money' ? (good?'#1a6b2a':'#6b1a1a')
                   : eff.id==='range' ? (good?'#1a3d6b':'#6b3d1a')
                   : eff.id==='rate'  ? (good?'#4a1a6b':'#6b4a1a')
@@ -437,26 +441,41 @@ function makeGateTex(eff){
     const bc=good?'#00FF88':'#FF4422';
     x.strokeStyle=bc; x.lineWidth=14; x.strokeRect(7,7,W-14,H-14);
     x.strokeStyle='rgba(255,255,255,.25)'; x.lineWidth=3; x.strokeRect(22,22,W-44,H-44);
-
     x.textAlign='center'; x.textBaseline='middle';
     x.shadowColor='rgba(0,0,0,.7)'; x.shadowBlur=8;
 
-    // Type icon at top
     const icon = eff.id==='money'?'💵': eff.id==='range'?'🎯': eff.id==='rate'?'⚡':'⚔️';
     x.font='bold 110px Arial'; x.fillStyle='#fff';
-    x.fillText(icon, W/2, 180);
+    x.fillText(icon, W/2, 170);
 
-    // Value (big, coloured)
-    const valStr=(eff.val>=0?'+':'')+eff.val;
-    x.font='bold 200px Arial Black,Arial';
+    // Current accumulated value (big)
+    const valStr=(v>=0?'+':'')+v;
+    x.font='bold 210px Arial Black,Arial';
     x.fillStyle=good?'#88FF88':'#FF8888';
     x.fillText(valStr, W/2, 420);
 
-    // Type label at bottom
     const typeLabel = eff.id==='money'?'ДЕНЬГИ': eff.id==='range'?'ДАЛЬН': eff.id==='rate'?'СКОР':'УРН';
-    x.font='bold 70px Arial'; x.fillStyle='#fff';
+    x.font='bold 68px Arial'; x.fillStyle='#fff';
     x.fillText(typeLabel, W/2, 590);
 
+    const t=new THREE.CanvasTexture(cv);
+    t.anisotropy=renderer.capabilities.getMaxAnisotropy();
+    return t;
+}
+
+function makeIncTex(incVal){
+    // Small canvas showing per-hit increment above the gate bar
+    const cv=document.createElement('canvas'); cv.width=192; cv.height=64;
+    const x=cv.getContext('2d');
+    const good=incVal>=0;
+    x.fillStyle=good?'rgba(0,200,80,.85)':'rgba(220,40,20,.85)';
+    x.beginPath(); x.roundRect(4,4,184,56,14); x.fill();
+    x.font='bold 36px Arial Black,Arial';
+    x.textAlign='center'; x.textBaseline='middle';
+    x.fillStyle='#fff';
+    x.shadowColor='rgba(0,0,0,.8)'; x.shadowBlur=5;
+    const s=(incVal>=0?'+':'')+incVal+' за выстрел';
+    x.fillText(s, 96, 34);
     const t=new THREE.CanvasTexture(cv);
     t.anisotropy=renderer.capabilities.getMaxAnisotropy();
     return t;
@@ -482,6 +501,11 @@ function spawnGate(z, moving=false){
         );
         mesh.rotation.y=Math.PI;
         mesh.position.set(x,2.05,posZ); target.add(mesh); meshes.push(mesh);
+
+        // Floating increment label above panel
+        const iSpr=new THREE.Sprite(new THREE.SpriteMaterial({map:makeIncTex(eff.incVal),depthTest:false,transparent:true}));
+        iSpr.scale.set(2.6,0.85,1);
+        iSpr.position.set(x,5.1,posZ); target.add(iSpr); meshes.push(iSpr);
         return mesh;
     };
     const pL=mkPanel(eL,-2), pR=mkPanel(eR,2);
@@ -503,6 +527,7 @@ function spawnGate(z, moving=false){
     const slideSpd = moving ? 0.9+Math.random()*0.8 : 0;
     gates.push({z,eL,eR,pL,pR,meshes,slideGrp,slideAmp,slideSpd,slideT:Math.random()*Math.PI*2,
         hitsL:0,hitsR:0, coolL:0,coolR:0, passed:false,removed:false});
+    // hitsL/hitsR track bullet hits; currentVal updates on each hit
 }
 
 // Half-gate: single panel on left OR right side only
@@ -518,9 +543,13 @@ function spawnGateSide(side, z, eff){
     );
     panel.rotation.y=Math.PI;
     panel.position.set(cx,2.05,z); gateGrp.add(panel); meshes.push(panel);
+    // Increment sprite above panel
+    const iSpr=new THREE.Sprite(new THREE.SpriteMaterial({map:makeIncTex(eff.incVal),depthTest:false,transparent:true}));
+    iSpr.scale.set(2.4,0.8,1); iSpr.position.set(cx,5.1,z); gateGrp.add(iSpr); meshes.push(iSpr);
 
     const mkPole=(x)=>{
-        const m=new THREE.Mesh(POLE_GEO,new THREE.MeshLambertMaterial({color:eff.good?0x00AA44:0xAA2200}));
+        const good=eff.currentVal>=0;
+        const m=new THREE.Mesh(POLE_GEO,new THREE.MeshLambertMaterial({color:good?0x00AA44:0xAA2200}));
         m.position.set(x,2.2,z); gateGrp.add(m); meshes.push(m);
     };
     mkPole(outerPole); mkPole(innerPole);
@@ -571,18 +600,15 @@ function spawnRow(z){
 }
 
 function applyEff(eff){
-    const v=eff.val||0;
+    const v = (eff.currentVal !== undefined) ? eff.currentVal : (eff.val||0);
+    const label = effLabel ? effLabel(eff).label : eff.label||'';
     switch(eff.id){
         case 'dmg':   permDmg=Math.max(-upgDmg, permDmg+v); break;
-        case 'money': coins=Math.max(0, coins+Math.floor((30+level*15)*(v>=0?v:v))); break;
+        case 'money': coins=Math.max(0, coins+Math.floor((30+level*10)*Math.max(1,Math.abs(v||1)))*(v>=0?1:-1)); break;
         case 'range': permRange=Math.max(0, Math.min(10, permRange+v)); break;
         case 'rate':  permRate=Math.max(0, Math.min(10, permRate+v)); break;
-        // legacy
-        case 'dmg_val': permDmg=Math.max(-upgDmg, permDmg+v); break;
-        case 'dmg+': permDmg+=1; break;
-        case 'dmg-': permDmg=Math.max(-upgDmg, permDmg-1); break;
     }
-    showEffPop(eff);
+    showEffPop({label, good:v>=0});
     refreshHUD();
 }
 
