@@ -1062,7 +1062,7 @@ function makeCombatTopTex(label, bgColor='#FFD700', textColor='#ffffff'){
     t.anisotropy=renderer.capabilities.getMaxAnisotropy(); return t;
 }
 
-function spawnCombatPlatform(x, z, hp, sc=1){
+function spawnCombatPlatform(x, z, hp, sc=1, coinMult=1){
     const g=new THREE.Group();
     const R=COMBAT_HEX_R*sc, h=0.35*sc;
 
@@ -1096,7 +1096,7 @@ function spawnCombatPlatform(x, z, hp, sc=1){
     const lp={g,hpCv,hpCtx,hpTex:hpTex2,hpSpr,topMesh,topTex,
         loot:null, maxHp,hp,dead:false,deadT:0,removed:false,rimMat:null,rimT:0,
         R, h, isCombat:true,
-        coinReward:Math.floor((20+level*15)*sc)};
+        coinReward:Math.floor((20+level*15)*sc*coinMult)};
     drawLootHP(lp); lootPlatforms.push(lp);
     return lp;
 }
@@ -1157,10 +1157,11 @@ function spawnCombatZone(){
     const TOTAL_ROWS=17;  // 3 front + 14 behind
     const ROW_SC_BASE=6.0; // 4× bigger than previous 1.5 base
     for(let r=0;r<TOTAL_ROWS;r++){
-        const sc=ROW_SC_BASE+r*0.08;                          // 6.0 … 7.28
-        const hp=Math.max(10, Math.round(level*30*(1+r*0.4)*sc)); // HP −30% more
+        const sc=ROW_SC_BASE+r*0.08;
+        const hp=Math.max(10, Math.round(level*30*(1+r*0.4)*sc));
+        const coinMult=2+r/(TOTAL_ROWS-1)*3; // ×2 (row 0) … ×5 (last row)
         for(let c=0;c<COMBAT_COL_X.length;c++){
-            spawnCombatPlatform(COMBAT_COL_X[c], COMBAT_START_Z+r*COMBAT_ROW_SPACING, hp, sc);
+            spawnCombatPlatform(COMBAT_COL_X[c], COMBAT_START_Z+r*COMBAT_ROW_SPACING, hp, sc, coinMult);
         }
     }
     // Multiplier row (×2…×5)
