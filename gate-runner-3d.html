@@ -138,7 +138,7 @@ scene.add(sun);
 
 // ─── CONSTANTS ───
 const ROAD_W = 8, ROAD_HALF = ROAD_W/2;
-const GATE_SPACING = 20, GATES_PER_LEVEL = 9;
+const GATE_SPACING = 20, GATES_PER_LEVEL = 15;
 const COMBAT_DIST = GATE_SPACING * GATES_PER_LEVEL + 15;
 const FWD_SPEED = 6, X_LIMIT = 3.0, X_ACCEL = 22;
 
@@ -308,8 +308,11 @@ const BULL_SPD = 38;
 
 function fireBulletRun(){
     const w=W();
-    const shots = tripleShot ? Math.max(w.shots, 3) : w.shots;
-    const spread = tripleShot && shots>w.shots ? Math.max(w.spread, 0.12) : w.spread;
+    const baseShots = w.shots;
+    const shots = tripleShot ? Math.max(baseShots, 3) : baseShots;
+    const spread = tripleShot && shots>baseShots ? Math.max(w.spread, 0.12) : w.spread;
+    // Extra bullets added by tripleShot (beyond weapon's base shots) get tripleExtra flag
+    const tripleExtrasStart = (tripleShot && shots>baseShots) ? baseShots : shots;
     for(let i=0;i<shots;i++){
         const angle = shots>1 ? ((i-(shots-1)/2)*spread) + (Math.random()-.5)*spread*.3 : 0;
         const geo = w.bScale===1.0 ? BULL_GEO : new THREE.SphereGeometry(.055*w.bScale,5,4);
@@ -317,7 +320,8 @@ function fireBulletRun(){
         const b = new THREE.Mesh(geo, mat);
         b.position.set(px+.18, 1.1, pz+.6+w.barrel+.1);
         scene.add(b);
-        bullets.push({mesh:b, life:2.5, vx:Math.sin(angle)*BULL_SPD, dmgMult:w.dmgMult, pierce:w.pierce||false});
+        bullets.push({mesh:b, life:2.5, vx:Math.sin(angle)*BULL_SPD, dmgMult:w.dmgMult,
+            pierce:w.pierce||false, tripleExtra: i>=tripleExtrasStart});
     }
     gunFlash = .15;
 }
@@ -335,13 +339,15 @@ function updateBullets(dt){
         if(GS==='RUN'){
             for(const gate of gates){
                 if(gate.removed || Math.abs(bz - gate.z) > 1.2) continue;
-                if(bx < -0.1 && bx > -3.9 && gate.coolL<=0 && gate.pL){
-                    gate.coolL=0.25; gate.hitsL++;
+                if(bx < -0.1 && bx > -3.9 && (gate.coolL<=0 || b.tripleExtra) && gate.pL){
+                    gate.coolL=b.tripleExtra ? Math.min(gate.coolL, 0.02) : 0.25;
+                    gate.hitsL++;
                     updateGatePanel(gate,'L'); // update display only, effect applies on walk-through
                     hit=true; break;
                 }
-                if(bx > 0.1 && bx < 3.9 && gate.coolR<=0 && gate.pR){
-                    gate.coolR=0.25; gate.hitsR++;
+                if(bx > 0.1 && bx < 3.9 && (gate.coolR<=0 || b.tripleExtra) && gate.pR){
+                    gate.coolR=b.tripleExtra ? Math.min(gate.coolR, 0.02) : 0.25;
+                    gate.hitsR++;
                     updateGatePanel(gate,'R');
                     hit=true; break;
                 }
@@ -1058,7 +1064,7 @@ function makeCombatTopTex(label, bgColor='#FFD700', textColor='#ffffff'){
 
 function spawnCombatPlatform(x, z, hp, sc=1){
     const g=new THREE.Group();
-    const R=COMBAT_HEX_R*sc, h=0.7*sc;
+    const R=COMBAT_HEX_R*sc, h=0.35*sc;
 
     const yMat=new THREE.MeshLambertMaterial({color:0xFFE000});
     const yDarkMat=new THREE.MeshLambertMaterial({color:0xFFAA00});
