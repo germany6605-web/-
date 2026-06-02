@@ -344,16 +344,15 @@ function updateBullets(dt){
                 // Adjust bullet X relative to gate's slide offset
                 const slideX = gate.slideGrp ? gate.slideGrp.position.x : 0;
                 const lbx = bx - slideX;
+                // Each bullet hit applies the gate's value directly
                 if(lbx < -0.1 && lbx > -3.9 && (gate.coolL<=0 || b.tripleExtra) && gate.pL){
                     gate.coolL=b.tripleExtra ? Math.min(gate.coolL, 0.02) : 0.25;
-                    gate.hitsL++;
-                    updateGatePanel(gate,'L');
+                    applyEff(gate.eL);
                     hit=true; break;
                 }
                 if(lbx > 0.1 && lbx < 3.9 && (gate.coolR<=0 || b.tripleExtra) && gate.pR){
                     gate.coolR=b.tripleExtra ? Math.min(gate.coolR, 0.02) : 0.25;
-                    gate.hitsR++;
-                    updateGatePanel(gate,'R');
+                    applyEff(gate.eR);
                     hit=true; break;
                 }
             }
@@ -406,25 +405,20 @@ function updateBullets(dt){
 // ─── GATES ───
 let gates=[], gateGrp=new THREE.Group(); scene.add(gateGrp);
 
-const EFFS=[
-    {id:'dmg+',   label:'+УРН',       good:true },
-    {id:'dmg-',   label:'−УРН',       good:false},
-    {id:'money',  label:'💵 ДЕНЬГИ',  good:true },
-    {id:'money',  label:'💵 ДЕНЬГИ',  good:true },
-    {id:'dmg+',   label:'+УРН',       good:true },
-    {id:'range+', label:'+ДАЛЬНОСТЬ', good:true },
-    {id:'rate+',  label:'+СКОРОСТЬ',  good:true },
-];
-
-function randomEff(){ return EFFS[Math.floor(Math.random()*EFFS.length)]; }
-
-function effAtCharge(base, charge){
-    switch(base.id){
-        case 'dmg-':   { const v=-1+charge; return {id:'dmg_val',  val:v, label:(v>=0?'+':'')+v+' УРН',   good:v>=0}; }
-        case 'dmg+':   { const v=1+charge;  return {id:'dmg_val',  val:v, label:'+'+v+' УРН',            good:true}; }
-        case 'range+': { const v=1+charge;  return {id:'range_val',val:v, label:'+'+v+' 🎯 ДАЛЬНОСТЬ',   good:true}; }
-        case 'rate+':  { const v=1+charge;  return {id:'rate_val', val:v, label:'+'+v+' ⚡ СКОРОСТЬ',    good:true}; }
-        default: return base;
+// Effect types for gate panels
+const EFF_TYPES=['dmg','dmg','dmg','money','range','rate'];
+function randomEff(){
+    const type=EFF_TYPES[Math.floor(Math.random()*EFF_TYPES.length)];
+    const val=Math.floor(Math.random()*11)-3; // -3 … +7
+    return makeEffObj(type, val);
+}
+function makeEffObj(type, val){
+    const good=val>=0;
+    switch(type){
+        case 'dmg':   return {id:'dmg',   val, label:(val>=0?'+':'')+val+' УРН',       good};
+        case 'money': return {id:'money', val, label:(val>=0?'+':'')+val+' 💵',         good};
+        case 'range': return {id:'range', val, label:(val>=0?'+':'')+val+' 🎯 ДАЛЬН',  good};
+        case 'rate':  return {id:'rate',  val, label:(val>=0?'+':'')+val+' ⚡ СКОР',   good};
     }
 }
 
@@ -432,38 +426,37 @@ function makeGateTex(eff){
     const W=512, H=640;
     const cv=document.createElement('canvas'); cv.width=W; cv.height=H;
     const x=cv.getContext('2d');
+    const good=eff.good;
 
-    if(eff.id==='money'){
-        // Paper-money themed panel
-        x.fillStyle='#1a6b2a'; x.fillRect(0,0,W,H);
-        // Border
-        x.strokeStyle='#c8f0a0'; x.lineWidth=14; x.strokeRect(7,7,W-14,H-14);
-        x.strokeStyle='rgba(255,255,255,.3)'; x.lineWidth=3; x.strokeRect(22,22,W-44,H-44);
-        // Bill rectangles
-        const bills=[[60,90,392,160],[60,270,392,160],[60,450,392,120]];
-        for(const [bx,by,bw,bh] of bills){
-            x.fillStyle='rgba(0,80,0,.35)'; x.fillRect(bx,by,bw,bh);
-            x.strokeStyle='#a0e080'; x.lineWidth=3; x.strokeRect(bx,by,bw,bh);
-        }
-        // $ symbols on bills
-        x.font='bold 90px Arial'; x.fillStyle='#c8f0a0';
-        x.textAlign='center'; x.textBaseline='middle';
-        x.shadowColor='rgba(0,0,0,.6)'; x.shadowBlur=6;
-        x.fillText('$', W/2, 170); x.fillText('$', W/2, 350); x.fillText('$', W/2, 510);
-        // Label
-        x.font='bold 52px Arial'; x.fillStyle='#fff';
-        x.fillText('ДЕНЬГИ', W/2, 600);
-    } else {
-        x.fillStyle=eff.good?'rgba(0,160,60,.95)':'rgba(180,22,15,.95)';
-        x.fillRect(0,0,W,H);
-        const bc=eff.good?'#00FF88':'#FF4422';
-        x.strokeStyle=bc; x.lineWidth=14; x.strokeRect(7,7,W-14,H-14);
-        x.strokeStyle='rgba(255,255,255,.3)'; x.lineWidth=4; x.strokeRect(22,22,W-44,H-44);
-        x.fillStyle='#fff'; x.textAlign='center'; x.textBaseline='middle';
-        x.font=`bold ${eff.label.length>8?76:100}px Arial`;
-        x.shadowColor='rgba(0,0,0,.5)'; x.shadowBlur=8;
-        x.fillText(eff.label, W/2, H/2);
-    }
+    // Background
+    const bgColor = eff.id==='money' ? (good?'#1a6b2a':'#6b1a1a')
+                  : eff.id==='range' ? (good?'#1a3d6b':'#6b3d1a')
+                  : eff.id==='rate'  ? (good?'#4a1a6b':'#6b4a1a')
+                  : (good?'rgba(0,140,50,.95)':'rgba(170,20,10,.95)');
+    x.fillStyle=bgColor; x.fillRect(0,0,W,H);
+    const bc=good?'#00FF88':'#FF4422';
+    x.strokeStyle=bc; x.lineWidth=14; x.strokeRect(7,7,W-14,H-14);
+    x.strokeStyle='rgba(255,255,255,.25)'; x.lineWidth=3; x.strokeRect(22,22,W-44,H-44);
+
+    x.textAlign='center'; x.textBaseline='middle';
+    x.shadowColor='rgba(0,0,0,.7)'; x.shadowBlur=8;
+
+    // Type icon at top
+    const icon = eff.id==='money'?'💵': eff.id==='range'?'🎯': eff.id==='rate'?'⚡':'⚔️';
+    x.font='bold 110px Arial'; x.fillStyle='#fff';
+    x.fillText(icon, W/2, 180);
+
+    // Value (big, coloured)
+    const valStr=(eff.val>=0?'+':'')+eff.val;
+    x.font='bold 200px Arial Black,Arial';
+    x.fillStyle=good?'#88FF88':'#FF8888';
+    x.fillText(valStr, W/2, 420);
+
+    // Type label at bottom
+    const typeLabel = eff.id==='money'?'ДЕНЬГИ': eff.id==='range'?'ДАЛЬН': eff.id==='rate'?'СКОР':'УРН';
+    x.font='bold 70px Arial'; x.fillStyle='#fff';
+    x.fillText(typeLabel, W/2, 590);
+
     const t=new THREE.CanvasTexture(cv);
     t.anisotropy=renderer.capabilities.getMaxAnisotropy();
     return t;
@@ -491,7 +484,7 @@ function spawnGate(z, moving=false){
         mesh.position.set(x,2.05,posZ); target.add(mesh); meshes.push(mesh);
         return mesh;
     };
-    const pL=mkPanel(effAtCharge(eL,0),-2), pR=mkPanel(effAtCharge(eR,0),2);
+    const pL=mkPanel(eL,-2), pR=mkPanel(eR,2);
 
     const mkPole=(x,good)=>{
         const m=new THREE.Mesh(POLE_GEO,new THREE.MeshLambertMaterial({color:good?0x00AA44:0xAA2200}));
@@ -519,11 +512,9 @@ function spawnGateSide(side, z, eff){
     const outerPole = isL ? -3.9 : 3.9;          // road-edge pole
     const innerPole = isL ? -0.15 : 0.15;        // centre-line pole
     const meshes=[];
-    const dyn = effAtCharge(eff, 0);
-
     const panel=new THREE.Mesh(
         new THREE.PlaneGeometry(3.6,4.1),
-        new THREE.MeshBasicMaterial({map:makeGateTex(dyn),transparent:true,side:THREE.DoubleSide})
+        new THREE.MeshBasicMaterial({map:makeGateTex(eff),transparent:true,side:THREE.DoubleSide})
     );
     panel.rotation.y=Math.PI;
     panel.position.set(cx,2.05,z); gateGrp.add(panel); meshes.push(panel);
@@ -564,7 +555,9 @@ function spawnRow(z){
     let r=Math.random()*total, cfg=cfgs[0];
     for(const c of cfgs){ r-=c.w; if(r<=0){cfg=c;break;} }
 
-    if(cfg.L==='gate' && cfg.R==='gate'){ spawnGate(z, Math.random()<0.25); return; }
+    // 20% chance: spawn a standalone moving gate instead of the normal row
+    if(Math.random()<0.20){ spawnGate(z, true); return; }
+    if(cfg.L==='gate' && cfg.R==='gate'){ spawnGate(z, false); return; }
 
     const doSlot=(type,side)=>{
         const xPos = side==='L' ? -2.0 : 2.0;
@@ -578,32 +571,21 @@ function spawnRow(z){
 }
 
 function applyEff(eff){
+    const v=eff.val||0;
     switch(eff.id){
-        case 'dmg_val':  permDmg=Math.max(-upgDmg, permDmg+eff.val); break;
-        case 'dmg+':     permDmg+=1; break;
-        case 'dmg-':     permDmg=Math.max(-upgDmg, permDmg-1); break;
-        case 'money':    coins+=Math.floor(30+level*15); break;
-        case 'range_val':permRange=Math.min(10, permRange+(eff.val||1)); break;
-        case 'range+':   permRange=Math.min(10, permRange+1); break;
-        case 'rate_val': permRate=Math.min(10, permRate+(eff.val||1)); break;
-        case 'rate+':    permRate=Math.min(10, permRate+1); break;
+        case 'dmg':   permDmg=Math.max(-upgDmg, permDmg+v); break;
+        case 'money': coins=Math.max(0, coins+Math.floor((30+level*15)*(v>=0?v:v))); break;
+        case 'range': permRange=Math.max(0, Math.min(10, permRange+v)); break;
+        case 'rate':  permRate=Math.max(0, Math.min(10, permRate+v)); break;
+        // legacy
+        case 'dmg_val': permDmg=Math.max(-upgDmg, permDmg+v); break;
+        case 'dmg+': permDmg+=1; break;
+        case 'dmg-': permDmg=Math.max(-upgDmg, permDmg-1); break;
     }
     showEffPop(eff);
     refreshHUD();
 }
 
-function updateGatePanel(gate, side){
-    const isL = side==='L';
-    const hits = isL ? gate.hitsL : gate.hitsR;
-    const base = isL ? gate.eL : gate.eR;
-    const panel = isL ? gate.pL : gate.pR;
-    if(!panel || !base) return base || {id:'none',label:'',good:false};
-    const dyn = effAtCharge(base, hits);
-    panel.material.map.dispose();
-    panel.material.map = makeGateTex(dyn);
-    panel.material.needsUpdate = true;
-    return dyn;
-}
 
 function showEffPop(eff){
     effPopT=1.8;
@@ -1428,17 +1410,13 @@ function tickRun(dt){
             gate.slideGrp.position.x=Math.sin(gate.slideT)*gate.slideAmp;
         }
 
-        // Player walks through gate — apply the charged effect once
+        // Player walks through gate — apply effect of the side the player is on
         if(!gate.passed && pz > gate.z+0.2){
             gate.passed=true;
             const slideX = gate.slideGrp ? gate.slideGrp.position.x : 0;
             const side = (px - slideX) < 0 ? 'L' : 'R';
-            const base = side==='L' ? gate.eL : gate.eR;
-            const hits = side==='L' ? gate.hitsL : gate.hitsR;
-            if(base){
-                const dyn = effAtCharge(base, hits);
-                applyEff(dyn);
-            }
+            const eff = side==='L' ? gate.eL : gate.eR;
+            if(eff) applyEff(eff);
         }
 
         // Remove gate instantly as soon as player exits the zone
