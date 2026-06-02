@@ -464,18 +464,16 @@ function makeGateTex(eff){
 }
 
 function makeIncTex(incVal){
-    // Small canvas showing per-hit increment above the gate bar
-    const cv=document.createElement('canvas'); cv.width=192; cv.height=64;
+    const cv=document.createElement('canvas'); cv.width=128; cv.height=128;
     const x=cv.getContext('2d');
     const good=incVal>=0;
-    x.fillStyle=good?'rgba(0,200,80,.85)':'rgba(220,40,20,.85)';
-    x.beginPath(); x.roundRect(4,4,184,56,14); x.fill();
-    x.font='bold 36px Arial Black,Arial';
+    x.fillStyle=good?'rgba(0,200,80,.9)':'rgba(220,40,20,.9)';
+    x.beginPath(); x.roundRect(4,4,120,120,20); x.fill();
+    x.font='bold 72px Arial Black,Arial';
     x.textAlign='center'; x.textBaseline='middle';
     x.fillStyle='#fff';
-    x.shadowColor='rgba(0,0,0,.8)'; x.shadowBlur=5;
-    const s=(incVal>=0?'+':'')+incVal+' за выстрел';
-    x.fillText(s, 96, 34);
+    x.shadowColor='rgba(0,0,0,.9)'; x.shadowBlur=6;
+    x.fillText((incVal>=0?'+':'')+incVal, 64, 66);
     const t=new THREE.CanvasTexture(cv);
     t.anisotropy=renderer.capabilities.getMaxAnisotropy();
     return t;
@@ -504,7 +502,7 @@ function spawnGate(z, moving=false){
 
         // Floating increment label above panel
         const iSpr=new THREE.Sprite(new THREE.SpriteMaterial({map:makeIncTex(eff.incVal),depthTest:false,transparent:true}));
-        iSpr.scale.set(2.6,0.85,1);
+        iSpr.scale.set(0.9,0.9,1);
         iSpr.position.set(x,5.1,posZ); target.add(iSpr); meshes.push(iSpr);
         return mesh;
     };
@@ -545,7 +543,7 @@ function spawnGateSide(side, z, eff){
     panel.position.set(cx,2.05,z); gateGrp.add(panel); meshes.push(panel);
     // Increment sprite above panel
     const iSpr=new THREE.Sprite(new THREE.SpriteMaterial({map:makeIncTex(eff.incVal),depthTest:false,transparent:true}));
-    iSpr.scale.set(2.4,0.8,1); iSpr.position.set(cx,5.1,z); gateGrp.add(iSpr); meshes.push(iSpr);
+    iSpr.scale.set(0.9,0.9,1); iSpr.position.set(cx,5.1,z); gateGrp.add(iSpr); meshes.push(iSpr);
 
     const mkPole=(x)=>{
         const good=eff.currentVal>=0;
