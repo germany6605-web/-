@@ -86,6 +86,14 @@ body { background:#000; overflow:hidden; font-family:'Segoe UI',Arial,sans-serif
   <div class="sgrid" id="sgrid-upg"></div>
   <button class="btn" id="shop-next-btn" onclick="nextLevel()">СЛЕДУЮЩИЙ УРОВЕНЬ ▶</button>
 </div>
+<div class="ov" id="loss-ov" style="background:radial-gradient(ellipse at 50% 40%,#1a0000 0%,#000 100%)">
+  <div style="font-size:80px;margin-bottom:12px">💀</div>
+  <h1 style="font-size:46px;color:#FF3333;text-shadow:0 0 30px #FF0000;letter-spacing:3px">ВЫ ПРОИГРАЛИ!</h1>
+  <p style="color:#FFA0A0;font-size:18px;margin:12px 0 24px">Вы врезались в препятствие!</p>
+  <div id="loss-coins" style="font-size:24px;color:#FFD700;margin-bottom:28px">🪙 0</div>
+  <button class="btn" style="font-size:20px;padding:14px 40px;margin-bottom:12px" onclick="retryFromLoss()">↺ ПОВТОРИТЬ</button>
+  <button class="btn" style="font-size:16px;padding:10px 30px;background:rgba(80,0,0,.6)" onclick="startGame()">▶ В НАЧАЛО</button>
+</div>
 <div class="ov" id="victory-ov" style="background:radial-gradient(ellipse at 50% 40%,#1a1200 0%,#000 100%)">
   <div style="font-size:80px;margin-bottom:12px">🏆</div>
   <h1 style="font-size:52px;color:#FFD700;text-shadow:0 0 30px #FFD700,0 0 60px #FF8800;letter-spacing:4px">ВЫ ПОБЕДИЛИ!</h1>
@@ -1141,10 +1149,10 @@ function updateCombatTopTex(lp){
 function spawnCombatZone(){
     // 3 rows × 15 pillars — bigger platforms, HP ×0.8 vs previous
     const TOTAL_ROWS=17;  // 3 front + 14 behind
-    const ROW_SC_BASE=1.5;
+    const ROW_SC_BASE=6.0; // 4× bigger than previous 1.5 base
     for(let r=0;r<TOTAL_ROWS;r++){
-        const sc=ROW_SC_BASE+r*0.15;                          // 1.5 … 3.9
-        const hp=Math.max(10, Math.round(level*80*(1+r*0.4)*sc));
+        const sc=ROW_SC_BASE+r*0.08;                          // 6.0 … 7.28
+        const hp=Math.max(10, Math.round(level*64*(1+r*0.4)*sc)); // HP ×0.8 (−20%)
         for(let c=0;c<COMBAT_COL_X.length;c++){
             spawnCombatPlatform(COMBAT_COL_X[c], COMBAT_START_Z+r*COMBAT_ROW_SPACING, hp, sc);
         }
@@ -1280,7 +1288,7 @@ const show=id=>document.getElementById(id).classList.add('vis');
 const hide=id=>document.getElementById(id).classList.remove('vis');
 
 function startGame(){
-    hide('start-ov'); hide('victory-ov');
+    hide('start-ov'); hide('victory-ov'); hide('loss-ov');
     level=1;coins=0;upgDmg=0;upgRate=0;
     ownedWeapons=new Set([1]); activeWeapon=1;
     buildStaticWorld();
@@ -1288,6 +1296,7 @@ function startGame(){
 }
 
 function startLevel(){
+    hide('shop-ov'); hide('loss-ov');
     GS='RUN'; winTriggered=false; shopOpened=false;
     px=0; pz=0; pvx=0; camPx=0; camPz=-7;
     // Reset ALL run-phase gains — only shop upgrades (upgDmg/upgRate) persist
@@ -1315,8 +1324,19 @@ function startLevel(){
     refreshHUD();
 }
 
-function playerDie(){
-    openShop(true);
+function playerDie(fromObstacle=false){
+    GS='SHOP';
+    if(fromObstacle){
+        document.getElementById('loss-coins').textContent=`🪙 ${coins} монет`;
+        show('loss-ov');
+    } else {
+        openShop(true);
+    }
+}
+
+function retryFromLoss(){
+    hide('loss-ov');
+    startLevel();
 }
 
 // ─── UPDATE ───
@@ -1442,18 +1462,7 @@ function tickRun(dt){
         }
     }
 
-    // Combat platforms: COLLISION ENDS LEVEL immediately
-    if(!shopOpened){
-        for(const lp of lootPlatforms){
-            if(!lp.isCombat||lp.removed||lp.dead) continue;
-            const dz=lp.g.position.z-pz, dx=Math.abs(lp.g.position.x-px);
-            if(dz<=lp.R*0.9 && dz>=-0.5 && dx<lp.R*1.5){
-                shopOpened=true; openShop(); return;
-            }
-        }
-    }
-
-    // Weapon platform: reaching it ends the level
+    // Weapon platform: check FIRST so it's not blocked by obstacle collision
     if(!shopOpened && weaponPlatform && !weaponPlatform.reached){
         weaponPlatform.bobT+=dt*2;
         weaponPlatform.rimMat.color.setHSL((weaponPlatform.bobT*0.3)%1, 1.0, 0.6);
@@ -1463,7 +1472,18 @@ function tickRun(dt){
             weaponPlatform.reached=true;
             weaponUnlocked=weaponPlatform.wepLv;
             ownedWeapons.add(weaponUnlocked);
-            shopOpened=true; openShop();
+            shopOpened=true; openShop(); return;
+        }
+    }
+
+    // Combat platforms: collision = death
+    if(!shopOpened){
+        for(const lp of lootPlatforms){
+            if(!lp.isCombat||lp.removed||lp.dead) continue;
+            const dz=lp.g.position.z-pz, dx=Math.abs(lp.g.position.x-px);
+            if(dz<=lp.R*0.85 && dz>=-0.5 && dx<lp.R*1.4){
+                shopOpened=true; playerDie(true); return;
+            }
         }
     }
 
