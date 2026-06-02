@@ -153,7 +153,8 @@ let winTriggered = false, shopOpened = false;
 let bullets = [], runFireT = 0;
 let ownedWeapons = new Set([1]), activeWeapon = 1;
 // Run-phase power-ups (reset each level)
-let tripleShot = false, dmgX2 = 1, moneyX2 = 1;
+let tripleShot = 0, dmgX2 = 1, moneyX2 = 1;
+let permRange = 0, permRate = 0;
 let lootPlatforms = [], pickups = [];
 let weaponPlatform = null, weaponUnlocked = 0;
 
@@ -237,7 +238,8 @@ const WEPS=[null,
 ];
 const W=()=>WEPS[wepLv];
 const effDmg=()=>Math.max(1, 1 + upgDmg + Math.floor(permDmg/2)) * dmgX2;
-const effCD=()=>W().cd*(.9**upgRate);
+const effCD=()=>W().cd*(.9**upgRate)*(.9**permRate);
+const effLife=()=>1.2+permRange*0.3;
 
 // ─── PLAYER MESH (weapon only) ───
 let plyGrp, plyWalkT=0, gunFlash=0;
@@ -309,10 +311,10 @@ const BULL_SPD = 38;
 function fireBulletRun(){
     const w=W();
     const baseShots = w.shots;
-    const shots = tripleShot ? Math.max(baseShots, 3) : baseShots;
-    const spread = tripleShot && shots>baseShots ? Math.max(w.spread, 0.12) : w.spread;
-    // Extra bullets added by tripleShot (beyond weapon's base shots) get tripleExtra flag
-    const tripleExtrasStart = (tripleShot && shots>baseShots) ? baseShots : shots;
+    const extraShots = tripleShot * 2;          // each pickup adds 2 extra bullets
+    const shots = baseShots + extraShots;
+    const spread = tripleShot>0 && extraShots>0 ? Math.max(w.spread, 0.12) : w.spread;
+    const tripleExtrasStart = baseShots;        // bullets beyond base are tripleExtra
     for(let i=0;i<shots;i++){
         const angle = shots>1 ? ((i-(shots-1)/2)*spread) + (Math.random()-.5)*spread*.3 : 0;
         const geo = w.bScale===1.0 ? BULL_GEO : new THREE.SphereGeometry(.055*w.bScale,5,4);
@@ -320,7 +322,7 @@ function fireBulletRun(){
         const b = new THREE.Mesh(geo, mat);
         b.position.set(px+.18, 1.1, pz+.6+w.barrel+.1);
         scene.add(b);
-        bullets.push({mesh:b, life:2.5, vx:Math.sin(angle)*BULL_SPD, dmgMult:w.dmgMult,
+        bullets.push({mesh:b, life:effLife(), vx:Math.sin(angle)*BULL_SPD, dmgMult:w.dmgMult,
             pierce:w.pierce||false, tripleExtra: i>=tripleExtrasStart});
     }
     gunFlash = .15;
@@ -339,13 +341,16 @@ function updateBullets(dt){
         if(GS==='RUN'){
             for(const gate of gates){
                 if(gate.removed || Math.abs(bz - gate.z) > 1.2) continue;
-                if(bx < -0.1 && bx > -3.9 && (gate.coolL<=0 || b.tripleExtra) && gate.pL){
+                // Adjust bullet X relative to gate's slide offset
+                const slideX = gate.slideGrp ? gate.slideGrp.position.x : 0;
+                const lbx = bx - slideX;
+                if(lbx < -0.1 && lbx > -3.9 && (gate.coolL<=0 || b.tripleExtra) && gate.pL){
                     gate.coolL=b.tripleExtra ? Math.min(gate.coolL, 0.02) : 0.25;
                     gate.hitsL++;
-                    updateGatePanel(gate,'L'); // update display only, effect applies on walk-through
+                    updateGatePanel(gate,'L');
                     hit=true; break;
                 }
-                if(bx > 0.1 && bx < 3.9 && (gate.coolR<=0 || b.tripleExtra) && gate.pR){
+                if(lbx > 0.1 && lbx < 3.9 && (gate.coolR<=0 || b.tripleExtra) && gate.pR){
                     gate.coolR=b.tripleExtra ? Math.min(gate.coolR, 0.02) : 0.25;
                     gate.hitsR++;
                     updateGatePanel(gate,'R');
@@ -402,19 +407,23 @@ function updateBullets(dt){
 let gates=[], gateGrp=new THREE.Group(); scene.add(gateGrp);
 
 const EFFS=[
-    {id:'dmg+',  label:'+УРН',      good:true },
-    {id:'dmg-',  label:'−УРН',      good:false},
-    {id:'money', label:'💵 ДЕНЬГИ', good:true },
-    {id:'money', label:'💵 ДЕНЬГИ', good:true },  // doubled weight
-    {id:'dmg+',  label:'+УРН',      good:true },  // doubled weight
+    {id:'dmg+',   label:'+УРН',       good:true },
+    {id:'dmg-',   label:'−УРН',       good:false},
+    {id:'money',  label:'💵 ДЕНЬГИ',  good:true },
+    {id:'money',  label:'💵 ДЕНЬГИ',  good:true },
+    {id:'dmg+',   label:'+УРН',       good:true },
+    {id:'range+', label:'+ДАЛЬНОСТЬ', good:true },
+    {id:'rate+',  label:'+СКОРОСТЬ',  good:true },
 ];
 
 function randomEff(){ return EFFS[Math.floor(Math.random()*EFFS.length)]; }
 
 function effAtCharge(base, charge){
     switch(base.id){
-        case 'dmg-':{ const v=-1+charge; return {id:'dmg_val',val:v, label:(v>=0?'+':'')+v+' УРН', good:v>=0}; }
-        case 'dmg+':{ const v=1+charge;  return {id:'dmg_val',val:v, label:'+'+v+' УРН', good:true}; }
+        case 'dmg-':   { const v=-1+charge; return {id:'dmg_val',  val:v, label:(v>=0?'+':'')+v+' УРН',   good:v>=0}; }
+        case 'dmg+':   { const v=1+charge;  return {id:'dmg_val',  val:v, label:'+'+v+' УРН',            good:true}; }
+        case 'range+': { const v=1+charge;  return {id:'range_val',val:v, label:'+'+v+' 🎯 ДАЛЬНОСТЬ',   good:true}; }
+        case 'rate+':  { const v=1+charge;  return {id:'rate_val', val:v, label:'+'+v+' ⚡ СКОРОСТЬ',    good:true}; }
         default: return base;
     }
 }
@@ -462,11 +471,16 @@ function makeGateTex(eff){
 
 const POLE_GEO=new THREE.BoxGeometry(.12,4.4,.12);
 
-function spawnGate(z){
+function spawnGate(z, moving=false){
     let eL,eR;
     do{eL=randomEff(); eR=randomEff();}while(eL.id===eR.id);
 
     const meshes=[];
+    // Moving gates get their own sub-group so we can slide it
+    const slideGrp = moving ? new THREE.Group() : null;
+    if(slideGrp){ slideGrp.position.set(0,0,z); gateGrp.add(slideGrp); }
+    const target = slideGrp || gateGrp;
+    const posZ = slideGrp ? 0 : z;  // local z when using group
 
     const mkPanel=(eff,x)=>{
         const mesh=new THREE.Mesh(
@@ -474,25 +488,28 @@ function spawnGate(z){
             new THREE.MeshBasicMaterial({map:makeGateTex(eff),transparent:true,side:THREE.DoubleSide})
         );
         mesh.rotation.y=Math.PI;
-        mesh.position.set(x,2.05,z); gateGrp.add(mesh); meshes.push(mesh);
+        mesh.position.set(x,2.05,posZ); target.add(mesh); meshes.push(mesh);
         return mesh;
     };
     const pL=mkPanel(effAtCharge(eL,0),-2), pR=mkPanel(effAtCharge(eR,0),2);
 
     const mkPole=(x,good)=>{
         const m=new THREE.Mesh(POLE_GEO,new THREE.MeshLambertMaterial({color:good?0x00AA44:0xAA2200}));
-        m.position.set(x,2.2,z); gateGrp.add(m); meshes.push(m);
+        m.position.set(x,2.2,posZ); target.add(m); meshes.push(m);
     };
     mkPole(-3.9,eL.good); mkPole(-.15,eL.good); mkPole(.15,eR.good); mkPole(3.9,eR.good);
 
     const mkBar=(x,good)=>{
         const bar=new THREE.Mesh(new THREE.BoxGeometry(3.8,.12,.12),
             new THREE.MeshLambertMaterial({color:good?0x00AA44:0xAA2200}));
-        bar.position.set(x,4.35,z); gateGrp.add(bar); meshes.push(bar);
+        bar.position.set(x,4.35,posZ); target.add(bar); meshes.push(bar);
     };
     mkBar(-2,eL.good); mkBar(2,eR.good);
 
-    gates.push({z,eL,eR,pL,pR,meshes, hitsL:0,hitsR:0, coolL:0,coolR:0, passed:false,removed:false});
+    const slideAmp = moving ? 1.4+Math.random()*0.8 : 0;
+    const slideSpd = moving ? 0.9+Math.random()*0.8 : 0;
+    gates.push({z,eL,eR,pL,pR,meshes,slideGrp,slideAmp,slideSpd,slideT:Math.random()*Math.PI*2,
+        hitsL:0,hitsR:0, coolL:0,coolR:0, passed:false,removed:false});
 }
 
 // Half-gate: single panel on left OR right side only
@@ -547,7 +564,7 @@ function spawnRow(z){
     let r=Math.random()*total, cfg=cfgs[0];
     for(const c of cfgs){ r-=c.w; if(r<=0){cfg=c;break;} }
 
-    if(cfg.L==='gate' && cfg.R==='gate'){ spawnGate(z); return; }
+    if(cfg.L==='gate' && cfg.R==='gate'){ spawnGate(z, Math.random()<0.25); return; }
 
     const doSlot=(type,side)=>{
         const xPos = side==='L' ? -2.0 : 2.0;
@@ -562,10 +579,14 @@ function spawnRow(z){
 
 function applyEff(eff){
     switch(eff.id){
-        case 'dmg_val': permDmg=Math.max(-upgDmg, permDmg+eff.val); break;
-        case 'dmg+': permDmg+=1; break;
-        case 'dmg-': permDmg=Math.max(-upgDmg, permDmg-1); break;
-        case 'money': coins+=Math.floor(30+level*15); break;
+        case 'dmg_val':  permDmg=Math.max(-upgDmg, permDmg+eff.val); break;
+        case 'dmg+':     permDmg+=1; break;
+        case 'dmg-':     permDmg=Math.max(-upgDmg, permDmg-1); break;
+        case 'money':    coins+=Math.floor(30+level*15); break;
+        case 'range_val':permRange=Math.min(10, permRange+(eff.val||1)); break;
+        case 'range+':   permRange=Math.min(10, permRange+1); break;
+        case 'rate_val': permRate=Math.min(10, permRate+(eff.val||1)); break;
+        case 'rate+':    permRate=Math.min(10, permRate+1); break;
     }
     showEffPop(eff);
     refreshHUD();
@@ -768,7 +789,7 @@ function killLootPlatform(lp){
 
 function applyPickup(loot){
     switch(loot.id){
-        case 'triple':  tripleShot=true; break;
+        case 'triple':  tripleShot+=1; break;   // each pickup adds 2 extra bullets
         case 'dmgx2':   dmgX2*=2; break;
         case 'moneyx2': moneyX2*=2; break;
         case 'coins':   coins+=Math.floor(40+level*20)*moneyX2; break;
@@ -1184,9 +1205,10 @@ function refreshHUD(){
     document.getElementById('lv-d').textContent=`Уровень ${level}`;
     document.getElementById('coins-d').textContent=`🪙 ${coins}`;
     document.getElementById('wep-name').textContent=W().name;
-    const shots = tripleShot ? Math.max(W().shots,3) : W().shots;
+    const shots = W().shots + tripleShot*2;
     document.getElementById('dmg-d').textContent=`УРН: ${effDmg()} ×${shots}`
-        +(tripleShot?' 💥':'')+(dmgX2>1?` ⚔️×${dmgX2}`:'')+(moneyX2>1?` 💰×${moneyX2}`:'');
+        +(tripleShot>0?` 💥×${tripleShot}`:'')+(dmgX2>1?` ⚔️×${dmgX2}`:'')+(moneyX2>1?` 💰×${moneyX2}`:'')
+        +(permRange>0?` 🎯+${permRange}`:'')+(permRate>0?` ⚡+${permRate}`:'');
 }
 
 // ─── SHOP ───
@@ -1307,7 +1329,7 @@ function startLevel(){
     GS='RUN'; winTriggered=false; shopOpened=false;
     px=0; pz=0; pvx=0; camPx=0; camPz=-7;
     // Reset ALL run-phase gains — only shop upgrades (upgDmg/upgRate) persist
-    permDmg=0; tripleShot=false; dmgX2=1; moneyX2=1;
+    permDmg=0; tripleShot=0; dmgX2=1; moneyX2=1; permRange=0; permRate=0;
     wepLv=activeWeapon; spd=FWD_SPEED; coinsX=1;
     plyWalkT=0; gunFlash=0; effPopT=0; runFireT=0;
     weaponUnlocked=0;
@@ -1400,10 +1422,17 @@ function tickRun(dt){
         gate.coolL=Math.max(0,gate.coolL-dt);
         gate.coolR=Math.max(0,gate.coolR-dt);
 
+        // Animate sliding gates
+        if(gate.slideGrp && !gate.passed){
+            gate.slideT+=dt*gate.slideSpd;
+            gate.slideGrp.position.x=Math.sin(gate.slideT)*gate.slideAmp;
+        }
+
         // Player walks through gate — apply the charged effect once
         if(!gate.passed && pz > gate.z+0.2){
             gate.passed=true;
-            const side = px < 0 ? 'L' : 'R';
+            const slideX = gate.slideGrp ? gate.slideGrp.position.x : 0;
+            const side = (px - slideX) < 0 ? 'L' : 'R';
             const base = side==='L' ? gate.eL : gate.eR;
             const hits = side==='L' ? gate.hitsL : gate.hitsR;
             if(base){
@@ -1416,7 +1445,8 @@ function tickRun(dt){
         if(!gate.removed && pz > gate.z+1.8){
             gate.passed=true;
             gate.removed=true;
-            gate.meshes.forEach(m=>gateGrp.remove(m));
+            if(gate.slideGrp) gateGrp.remove(gate.slideGrp);
+            else gate.meshes.forEach(m=>gateGrp.remove(m));
         }
     }
 
