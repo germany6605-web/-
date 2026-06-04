@@ -158,7 +158,6 @@ let permRange = 0, permRate = 0;
 let lootPlatforms = [], pickups = [];
 let weaponPlatform = null, weaponUnlocked = 0;
 let combatHPMult = 1;
-let multZones = [], levelStartCoins = 0, levelMultiplier = 1;
 
 // ─── INPUT ───
 const keys = {};
@@ -1272,84 +1271,17 @@ function updateCombatTopTex(lp){
     lp.topMesh.material[1].needsUpdate=true;
 }
 
-function spawnCoinMultZone(z, mult){
-    const hue = 60-(mult-2)*18; // ×2=yellow ×3=orange ×4=red-orange ×5=red
-    const W=7.0, D=2.8;
-    const g=new THREE.Group();
-
-    // Top face texture
-    const cv=document.createElement('canvas'); cv.width=512; cv.height=256;
-    const ctx=cv.getContext('2d');
-    const grd=ctx.createLinearGradient(0,0,512,0);
-    grd.addColorStop(0,`hsl(${hue+10},100%,50%)`);
-    grd.addColorStop(0.5,`hsl(${hue},100%,60%)`);
-    grd.addColorStop(1,`hsl(${hue-10},100%,50%)`);
-    ctx.fillStyle=grd; ctx.fillRect(0,0,512,256);
-    // Border
-    ctx.strokeStyle='rgba(255,255,255,0.6)'; ctx.lineWidth=16;
-    rrect(ctx,8,8,496,240,28); ctx.stroke();
-    // Big multiplier text
-    ctx.font='bold 180px Arial Black,Arial'; ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillStyle='#fff'; ctx.shadowColor='rgba(0,0,0,0.9)'; ctx.shadowBlur=18;
-    ctx.fillText(`×${mult} ДОХОД`,256,128);
-    const topTex=new THREE.CanvasTexture(cv);
-    topTex.anisotropy=renderer.capabilities.getMaxAnisotropy();
-
-    const sideMat=new THREE.MeshLambertMaterial({color:new THREE.Color(`hsl(${hue},100%,35%)`)});
-    const topMat=new THREE.MeshBasicMaterial({map:topTex});
-    const tile=new THREE.Mesh(
-        new THREE.BoxGeometry(W,0.18,D),
-        [sideMat,sideMat,topMat,sideMat,sideMat,sideMat]
-    );
-    tile.position.y=0.09; g.add(tile);
-
-    // Tall floating label
-    const lcv=document.createElement('canvas'); lcv.width=256; lcv.height=96;
-    const lctx=lcv.getContext('2d');
-    const lgrd=lctx.createLinearGradient(0,0,256,96);
-    lgrd.addColorStop(0,`hsl(${hue+10},100%,55%)`);
-    lgrd.addColorStop(1,`hsl(${hue-10},100%,40%)`);
-    lctx.fillStyle=lgrd; lctx.fillRect(0,0,256,96);
-    lctx.strokeStyle='rgba(255,255,255,0.5)'; lctx.lineWidth=5; lctx.strokeRect(2,2,252,92);
-    lctx.font='bold 70px Arial Black,Arial'; lctx.textAlign='center'; lctx.textBaseline='middle';
-    lctx.fillStyle='#fff'; lctx.shadowColor='#000'; lctx.shadowBlur=8;
-    lctx.fillText(`×${mult}`,128,48);
-    const ltex=new THREE.CanvasTexture(lcv);
-    const spr=new THREE.Sprite(new THREE.SpriteMaterial({map:ltex,depthTest:false,transparent:true}));
-    spr.scale.set(3.5,1.3,1); spr.position.set(0,1.5,0); g.add(spr);
-
-    g.position.set(0,0,z); scene.add(g);
-    multZones.push({g,z,mult,W,D,activated:false,bobT:0});
-}
-
 function spawnCombatZone(){
-    // Layout per section: [zone] → [combat rows]
-    // Player walks through zone first, then hits combat rows.
-    // Further sections = higher multiplier, but harder combat.
-    const ROWS_PER_SEC=4, NUM_SEC=4;
-    const ROW_SC_BASE=6.0;
-    const ZONE_DEPTH=3.5; // space for the floor zone before rows
-    const SEC_LEN=ZONE_DEPTH+ROWS_PER_SEC*COMBAT_ROW_SPACING+2.0;
-
-    for(let s=0;s<NUM_SEC;s++){
-        const secZ=COMBAT_START_Z+s*SEC_LEN;
-        const mult=s+2; // ×2 … ×5
-
-        // Floor zone FIRST — reachable before combat rows block
-        spawnCoinMultZone(secZ+1.5, mult);
-
-        // Combat rows after the zone
-        for(let r=0;r<ROWS_PER_SEC;r++){
-            const globalRow=s*ROWS_PER_SEC+r;
-            const sc=ROW_SC_BASE+globalRow*0.08;
-            const hp=Math.max(10,Math.round(30*(1+globalRow*0.4)*sc*combatHPMult));
-            for(let c=0;c<COMBAT_COL_X.length;c++){
-                spawnCombatPlatform(COMBAT_COL_X[c],secZ+ZONE_DEPTH+r*COMBAT_ROW_SPACING,hp,sc,mult);
-            }
+    const TOTAL_ROWS=17, ROW_SC_BASE=6.0;
+    for(let r=0;r<TOTAL_ROWS;r++){
+        const sc=ROW_SC_BASE+r*0.08;
+        const hp=Math.max(10,Math.round(30*(1+r*0.4)*sc*combatHPMult));
+        const coinMult=2+r/(TOTAL_ROWS-1)*3;
+        for(let c=0;c<COMBAT_COL_X.length;c++){
+            spawnCombatPlatform(COMBAT_COL_X[c],COMBAT_START_Z+r*COMBAT_ROW_SPACING,hp,sc,coinMult);
         }
     }
-
-    const wepZ=COMBAT_START_Z+NUM_SEC*SEC_LEN+1.5;
+    const wepZ=COMBAT_START_Z+TOTAL_ROWS*COMBAT_ROW_SPACING+3.0;
     spawnWeaponPlatform(wepZ);
     if(activeWeapon===5||ownedWeapons.has(5)) spawnTrophyCup(wepZ+4);
 }
@@ -1388,17 +1320,10 @@ function boostCombatHP(pct){
 
 function openShop(isDeath=false){
     GS='SHOP'; shopDeath=isDeath;
-    // Apply level income multiplier
-    if(!isDeath && levelMultiplier>1){
-        const income=coins-levelStartCoins;
-        if(income>0) coins=levelStartCoins+Math.floor(income*levelMultiplier);
-        refreshHUD();
-    }
-    const multStr=(!isDeath&&levelMultiplier>1)?` (доход ×${levelMultiplier})`:'';
     document.getElementById('shop-sub').textContent=
         isDeath ? `☠ Вы погибли на уровне ${level}. Улучшитесь и попробуйте снова!`
-                : weaponUnlocked ? `🔓 Новое оружие! Уровень ${level} пройден!${multStr}`
-                : `Уровень ${level} пройден!${multStr}`;
+                : weaponUnlocked ? `🔓 Новое оружие! Уровень ${level} пройден!`
+                : `Уровень ${level} пройден!`;
     document.getElementById('shop-coins').textContent=`🪙 ${coins} монет`;
 
     const gu=document.getElementById('sgrid-upg'); gu.innerHTML='';
@@ -1497,13 +1422,11 @@ function startLevel(){
     if(weaponPlatform){ scene.remove(weaponPlatform.g); weaponPlatform=null; }
     if(trophyCup){ scene.remove(trophyCup.g); trophyCup=null; }
 
-    levelStartCoins=coins; levelMultiplier=1;
     bullets.forEach(b=>scene.remove(b.mesh)); bullets=[];
     enemies.forEach(e=>scene.remove(e.g)); enemies=[];
     mobs.forEach(m=>scene.remove(m.g)); mobs=[];
     lootPlatforms.forEach(lp=>scene.remove(lp.g)); lootPlatforms=[];
     pickups.forEach(p=>scene.remove(p.mesh)); pickups=[];
-    multZones.forEach(z=>scene.remove(z.g)); multZones=[];
     while(gateGrp.children.length) gateGrp.remove(gateGrp.children[0]);
     gates=[];
 
@@ -1664,18 +1587,6 @@ function tickRun(dt){
         p.mesh.rotation.y+=dt*2;
         if(Math.abs(pz-p.mesh.position.z)<0.9 && Math.abs(px-p.mesh.position.x)<0.9){
             p.collected=true; scene.remove(p.mesh); applyPickup(p.loot);
-        }
-    }
-
-    // Coin multiplier floor zones — update levelMultiplier as player advances
-    for(const zone of multZones){
-        if(zone.activated) continue;
-        zone.bobT+=dt*2;
-        zone.g.children[0].position.y=0.09+Math.sin(zone.bobT)*0.06;
-        if(pz>=zone.z-zone.D/2 && pz<=zone.z+zone.D/2 && Math.abs(px)<zone.W/2){
-            zone.activated=true;
-            levelMultiplier=zone.mult;
-            showEffPop({label:`×${zone.mult} 💰`,good:true});
         }
     }
 
