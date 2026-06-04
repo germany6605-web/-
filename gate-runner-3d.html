@@ -157,6 +157,7 @@ let tripleShot = 0, dmgX2 = 1, moneyX2 = 1;
 let permRange = 0, permRate = 0;
 let lootPlatforms = [], pickups = [];
 let weaponPlatform = null, weaponUnlocked = 0;
+let combatHPMult = 1; // persists across levels; ×1.5 each time a new weapon is collected
 
 // ─── INPUT ───
 const keys = {};
@@ -1258,7 +1259,7 @@ function spawnCombatZone(){
     const ROW_SC_BASE=6.0; // 4× bigger than previous 1.5 base
     for(let r=0;r<TOTAL_ROWS;r++){
         const sc=ROW_SC_BASE+r*0.08;
-        const hp=Math.max(10, Math.round(level*30*(1+r*0.4)*sc));
+        const hp=Math.max(10, Math.round(level*30*(1+r*0.4)*sc*combatHPMult));
         const coinMult=2+r/(TOTAL_ROWS-1)*3; // ×2 (row 0) … ×5 (last row)
         for(let c=0;c<COMBAT_COL_X.length;c++){
             spawnCombatPlatform(COMBAT_COL_X[c], COMBAT_START_Z+r*COMBAT_ROW_SPACING, hp, sc, coinMult);
@@ -1315,7 +1316,7 @@ function openShop(isDeath=false){
     GS='SHOP'; shopDeath=isDeath;
     document.getElementById('shop-sub').textContent=
         isDeath ? `☠ Вы погибли на уровне ${level}. Улучшитесь и попробуйте снова!`
-                : weaponUnlocked ? `🔓 Новое оружие разблокировано! Уровень ${level} пройден!`
+                : weaponUnlocked ? `🔓 Новое оружие! Уровень ${level} пройден! Препятствия следующего уровня +50% HP`
                 : `Уровень ${level} пройден!`;
     document.getElementById('shop-coins').textContent=`🪙 ${coins} монет`;
 
@@ -1334,7 +1335,7 @@ function openShop(isDeath=false){
         b.style.borderColor='#FFD700';
         if(isActive){ b.textContent='✓ Активно'; b.disabled=true; }
         else{ b.textContent='Выбрать';
-            b.onclick=()=>{ boostCombatHP(0.05); activeWeapon=weaponUnlocked; openShop(shopDeath); }; }
+            b.onclick=()=>{ activeWeapon=weaponUnlocked; openShop(shopDeath); }; }
         c.appendChild(b); gu.appendChild(c);
     }
 
@@ -1349,7 +1350,7 @@ function openShop(isDeath=false){
             <div class="cost">${isActive?'✓ Активно':'Куплено'}</div>`;
         const b=document.createElement('button'); b.className='btn btn-g';
         if(isActive){ b.textContent='✓ Активно'; b.disabled=true; }
-        else{ b.textContent='Выбрать'; b.onclick=()=>{ boostCombatHP(0.05); activeWeapon=lv; openShop(shopDeath); }; }
+        else{ b.textContent='Выбрать'; b.onclick=()=>{ activeWeapon=lv; openShop(shopDeath); }; }
         c.appendChild(b); gu.appendChild(c);
     }
 
@@ -1398,7 +1399,7 @@ const hide=id=>document.getElementById(id).classList.remove('vis');
 function startGame(){
     hide('start-ov'); hide('victory-ov'); hide('loss-ov');
     level=1;coins=0;upgDmg=0;upgRate=0;
-    ownedWeapons=new Set([1]); activeWeapon=1;
+    ownedWeapons=new Set([1]); activeWeapon=1; combatHPMult=1;
     buildStaticWorld();
     startLevel();
 }
@@ -1584,17 +1585,18 @@ function tickRun(dt){
             weaponPlatform.reached=true;
             weaponUnlocked=weaponPlatform.wepLv;
             ownedWeapons.add(weaponUnlocked);
+            combatHPMult *= 1.5; // next level platforms +50% HP
             shopOpened=true; openShop(); return;
         }
     }
 
-    // Combat platforms: collision = death
+    // Combat platforms: reaching them = level complete (not death)
     if(!shopOpened){
         for(const lp of lootPlatforms){
             if(!lp.isCombat||lp.removed||lp.dead) continue;
             const dz=lp.g.position.z-pz, dx=Math.abs(lp.g.position.x-px);
             if(dz<=lp.R*0.85 && dz>=-0.5 && dx<lp.R*1.4){
-                shopOpened=true; playerDie(true); return;
+                shopOpened=true; openShop(false); return;
             }
         }
     }
