@@ -567,9 +567,14 @@ function spawnGate(z, moving=false){
             new THREE.PlaneGeometry(3.6,4.1),
             new THREE.MeshBasicMaterial({map:makeGateTex(eff),transparent:true,side:THREE.DoubleSide})
         );
+        panel.rotation.y=Math.PI;
         panel.position.set(0,2.05,posZ); target.add(panel); meshes.push(panel);
-        const iSpr=new THREE.Sprite(new THREE.SpriteMaterial({map:makeIncTex(eff.incVal),depthTest:false,transparent:true}));
-        iSpr.scale.set(0.9,0.9,1); iSpr.position.set(0,5.1,posZ); target.add(iSpr); meshes.push(iSpr);
+        const iPlane=new THREE.Mesh(
+            new THREE.PlaneGeometry(0.9,0.9),
+            new THREE.MeshBasicMaterial({map:makeIncTex(eff.incVal),transparent:true,side:THREE.DoubleSide,depthTest:false})
+        );
+        iPlane.rotation.y=Math.PI;
+        iPlane.position.set(0,4.9,posZ); target.add(iPlane); meshes.push(iPlane);
         const mkPoleM=(x)=>{ const m=new THREE.Mesh(POLE_GEO,new THREE.MeshLambertMaterial({color:eff.currentVal>=0?0x00AA44:0xAA2200})); m.position.set(x,2.2,posZ); target.add(m); meshes.push(m); };
         mkPoleM(-1.9); mkPoleM(1.9);
         const bar=new THREE.Mesh(new THREE.BoxGeometry(3.8,.12,.12),new THREE.MeshLambertMaterial({color:eff.currentVal>=0?0x00AA44:0xAA2200}));
@@ -586,10 +591,14 @@ function spawnGate(z, moving=false){
             new THREE.PlaneGeometry(3.6,4.1),
             new THREE.MeshBasicMaterial({map:makeGateTex(eff),transparent:true,side:THREE.DoubleSide})
         );
+        mesh.rotation.y=Math.PI;
         mesh.position.set(x,2.05,posZ); target.add(mesh); meshes.push(mesh);
-        const iSpr=new THREE.Sprite(new THREE.SpriteMaterial({map:makeIncTex(eff.incVal),depthTest:false,transparent:true}));
-        iSpr.scale.set(0.9,0.9,1);
-        iSpr.position.set(x,5.1,posZ); target.add(iSpr); meshes.push(iSpr);
+        const iPlane=new THREE.Mesh(
+            new THREE.PlaneGeometry(0.9,0.9),
+            new THREE.MeshBasicMaterial({map:makeIncTex(eff.incVal),transparent:true,side:THREE.DoubleSide,depthTest:false})
+        );
+        iPlane.rotation.y=Math.PI;
+        iPlane.position.set(x,4.9,posZ); target.add(iPlane); meshes.push(iPlane);
         return mesh;
     };
     const pL=mkPanel(eL,-2), pR=mkPanel(eR,2);
