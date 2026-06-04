@@ -1512,6 +1512,14 @@ function tickRun(dt){
     // Auto-fire while running
     runFireT = Math.max(0, runFireT - dt);
     if(runFireT <= 0){ runFireT = effCD(); fireBulletRun(); }
+
+    // Animate sliding gates BEFORE bullet detection so hitbox matches visual
+    for(const gate of gates){
+        if(gate.removed || !gate.slideGrp || gate.passed) continue;
+        gate.slideT += dt * gate.slideSpd;
+        gate.slideGrp.position.x = Math.sin(gate.slideT) * gate.slideAmp;
+    }
+
     updateBullets(dt);
 
     // Gate collision + cleanup
@@ -1520,23 +1528,23 @@ function tickRun(dt){
         gate.coolL=Math.max(0,gate.coolL-dt);
         gate.coolR=Math.max(0,gate.coolR-dt);
 
-        // Animate sliding gates
-        if(gate.slideGrp && !gate.passed){
-            gate.slideT+=dt*gate.slideSpd;
-            gate.slideGrp.position.x=Math.sin(gate.slideT)*gate.slideAmp;
-        }
-
         // Player walks through gate — apply effect only if player hit the gate
+        // For moving gates: only trigger if player is within the panel's X range
         if(!gate.passed && pz > gate.z+0.2){
             gate.passed=true;
             const slideX = gate.slideGrp ? gate.slideGrp.position.x : 0;
-            const side = (px - slideX) < 0 ? 'L' : 'R';
-            const eff = side==='L' ? gate.eL : gate.eR;
-            const hits = side==='L' ? gate.hitsL : gate.hitsR;
-            if(eff && hits > 0) applyEff(eff);
+            if(gate.slideGrp){
+                // Moving gate: check player is within ±1.8 of panel center
+                if(Math.abs(px - slideX) <= 1.8 && gate.hitsL > 0) applyEff(gate.eL);
+            } else {
+                const side = px < 0 ? 'L' : 'R';
+                const eff = side==='L' ? gate.eL : gate.eR;
+                const hits = side==='L' ? gate.hitsL : gate.hitsR;
+                if(eff && hits > 0) applyEff(eff);
+            }
         }
 
-        // Remove gate instantly as soon as player exits the zone
+        // Remove gate as soon as player exits the zone
         if(!gate.removed && pz > gate.z+1.8){
             gate.passed=true;
             gate.removed=true;
