@@ -351,7 +351,7 @@ function updateBullets(dt){
                 if((fullWidth ? (lbx>-1.8&&lbx<1.8) : (lbx<-0.1&&lbx>-3.9)) && (gate.coolL<=0||b.tripleExtra) && gate.pL){
                     gate.coolL=b.tripleExtra ? Math.min(gate.coolL, 0.02) : 0.25;
                     gate.hitsL++;
-                    gate.eL.currentVal=gate.hitsL*gate.eL.incVal;
+                    gate.eL.currentVal=gate.eL.baseVal+gate.hitsL*gate.eL.incVal;
                     gate.pL.material.map.dispose();
                     gate.pL.material.map=makeGateTex(gate.eL);
                     gate.pL.material.needsUpdate=true;
@@ -360,7 +360,7 @@ function updateBullets(dt){
                 if(lbx > 0.1 && lbx < 3.9 && (gate.coolR<=0 || b.tripleExtra) && gate.pR){
                     gate.coolR=b.tripleExtra ? Math.min(gate.coolR, 0.02) : 0.25;
                     gate.hitsR++;
-                    gate.eR.currentVal=gate.hitsR*gate.eR.incVal;
+                    gate.eR.currentVal=gate.eR.baseVal+gate.hitsR*gate.eR.incVal;
                     gate.pR.material.map.dispose();
                     gate.pR.material.map=makeGateTex(gate.eR);
                     gate.pR.material.needsUpdate=true;
@@ -420,8 +420,9 @@ let gates=[], gateGrp=new THREE.Group(); scene.add(gateGrp);
 const EFF_TYPES=['dmg','dmg','dmg','money','range','rate'];
 function randomEff(){
     const type=EFF_TYPES[Math.floor(Math.random()*EFF_TYPES.length)];
+    const baseVal=Math.floor(Math.random()*8)-2;  // -2 … +5
     let incVal; do{ incVal=Math.floor(Math.random()*11)-3; }while(incVal===0); // -3…-1, +1…+7
-    return {id:type, incVal, currentVal:0};
+    return {id:type, baseVal, incVal, currentVal:baseVal};
 }
 function effLabel(eff){
     const v=eff.currentVal;
@@ -693,7 +694,7 @@ function applyEff(eff){
     const label = effLabel ? effLabel(eff).label : eff.label||'';
     switch(eff.id){
         case 'dmg':   permDmg=Math.max(-upgDmg, permDmg+v); break;
-        case 'money': coins=Math.max(0, coins+Math.floor((30+level*10)*Math.max(1,Math.abs(v||1)))*(v>=0?1:-1)); break;
+        case 'money': coins=Math.max(0, coins+Math.floor((30+level*10)*Math.abs(v))*(v>=0?1:-1)); break;
         case 'range': permRange=Math.max(0, Math.min(10, permRange+v)); break;
         case 'rate':  permRate=Math.max(0, Math.min(10, permRate+v)); break;
     }
