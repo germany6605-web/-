@@ -348,7 +348,7 @@ function updateBullets(dt){
                 // Bullet hit: increment hits, update currentVal display
                 // For single moving gate (pR=null): full-width check
                 const fullWidth = gate.pL && !gate.pR;
-                if((fullWidth ? (lbx>-3.8&&lbx<3.8) : (lbx<-0.1&&lbx>-3.9)) && (gate.coolL<=0||b.tripleExtra) && gate.pL){
+                if((fullWidth ? (lbx>-1.8&&lbx<1.8) : (lbx<-0.1&&lbx>-3.9)) && (gate.coolL<=0||b.tripleExtra) && gate.pL){
                     gate.coolL=b.tripleExtra ? Math.min(gate.coolL, 0.02) : 0.25;
                     gate.hitsL++;
                     gate.eL.currentVal=gate.eL.baseVal+gate.hitsL*gate.eL.incVal;
