@@ -157,7 +157,8 @@ let tripleShot = 0, dmgX2 = 1, moneyX2 = 1;
 let permRange = 0, permRate = 0;
 let lootPlatforms = [], pickups = [];
 let weaponPlatform = null, weaponUnlocked = 0;
-let combatHPMult = 1; // persists across levels; ×1.5 each time a new weapon is collected
+let combatHPMult = 1;
+let multZones = [], levelStartCoins = 0;
 
 // ─── INPUT ───
 const keys = {};
@@ -1271,9 +1272,56 @@ function updateCombatTopTex(lp){
     lp.topMesh.material[1].needsUpdate=true;
 }
 
+function spawnCoinMultZone(x, z, mult){
+    const hue = 60 - (mult-2)*18; // ×2=yellow, ×3=orange, ×4=red-orange, ×5=red
+    const g = new THREE.Group();
+
+    // Top face canvas texture
+    const cv=document.createElement('canvas'); cv.width=256; cv.height=256;
+    const ctx=cv.getContext('2d');
+    const grd=ctx.createLinearGradient(0,0,256,256);
+    grd.addColorStop(0,`hsl(${hue+10},100%,55%)`);
+    grd.addColorStop(1,`hsl(${hue-10},100%,38%)`);
+    ctx.fillStyle=grd; ctx.fillRect(0,0,256,256);
+    ctx.strokeStyle='rgba(255,255,255,0.55)'; ctx.lineWidth=14;
+    rrect(ctx,7,7,242,242,22); ctx.stroke();
+    ctx.font='bold 150px Arial Black,Arial'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillStyle='#fff'; ctx.shadowColor='rgba(0,0,0,0.85)'; ctx.shadowBlur=14;
+    ctx.fillText(`×${mult}`,128,128);
+    const topTex=new THREE.CanvasTexture(cv);
+    topTex.anisotropy=renderer.capabilities.getMaxAnisotropy();
+
+    const sideMat=new THREE.MeshLambertMaterial({color:new THREE.Color(`hsl(${hue},100%,40%)`)});
+    const topMat=new THREE.MeshLambertMaterial({map:topTex});
+    const tile=new THREE.Mesh(
+        new THREE.BoxGeometry(1.85,0.14,2.6),
+        [sideMat,sideMat,topMat,sideMat,sideMat,sideMat]
+    );
+    tile.position.y=0.07; g.add(tile);
+
+    // Floating label
+    const lcv=document.createElement('canvas'); lcv.width=128; lcv.height=56;
+    const lctx=lcv.getContext('2d');
+    lctx.fillStyle=`hsl(${hue},100%,48%)`; lctx.fillRect(0,0,128,56);
+    lctx.strokeStyle='rgba(255,255,255,0.5)'; lctx.lineWidth=4; lctx.strokeRect(2,2,124,52);
+    lctx.font='bold 40px Arial Black,Arial'; lctx.textAlign='center'; lctx.textBaseline='middle';
+    lctx.fillStyle='#fff'; lctx.shadowColor='#000'; lctx.shadowBlur=6;
+    lctx.fillText(`×${mult}`,64,28);
+    const ltex=new THREE.CanvasTexture(lcv);
+    const spr=new THREE.Sprite(new THREE.SpriteMaterial({map:ltex,depthTest:false,transparent:true}));
+    spr.scale.set(1.5,0.65,1); spr.position.set(0,1.1,0); g.add(spr);
+
+    g.position.set(x,0,z); scene.add(g);
+    multZones.push({g,x,z,mult,activated:false,bobT:0});
+}
+
 function spawnCombatZone(){
-    // 3 rows × 15 pillars — bigger platforms, HP ×0.8 vs previous
-    const TOTAL_ROWS=17;  // 3 front + 14 behind
+    // Coin multiplier floor zones — player walks through one before combat
+    const mzZ = COMBAT_START_Z - 7;
+    [-2.775, -0.925, 0.925, 2.775].forEach((x,i) => spawnCoinMultZone(x, mzZ, i+2));
+
+    // Combat platforms
+    const TOTAL_ROWS=17;
     const ROW_SC_BASE=6.0; // 4× bigger than previous 1.5 base
     for(let r=0;r<TOTAL_ROWS;r++){
         const sc=ROW_SC_BASE+r*0.08;
@@ -1434,11 +1482,13 @@ function startLevel(){
     if(weaponPlatform){ scene.remove(weaponPlatform.g); weaponPlatform=null; }
     if(trophyCup){ scene.remove(trophyCup.g); trophyCup=null; }
 
+    levelStartCoins=coins;
     bullets.forEach(b=>scene.remove(b.mesh)); bullets=[];
     enemies.forEach(e=>scene.remove(e.g)); enemies=[];
     mobs.forEach(m=>scene.remove(m.g)); mobs=[];
     lootPlatforms.forEach(lp=>scene.remove(lp.g)); lootPlatforms=[];
     pickups.forEach(p=>scene.remove(p.mesh)); pickups=[];
+    multZones.forEach(z=>scene.remove(z.g)); multZones=[];
     while(gateGrp.children.length) gateGrp.remove(gateGrp.children[0]);
     gates=[];
 
@@ -1599,6 +1649,22 @@ function tickRun(dt){
         p.mesh.rotation.y+=dt*2;
         if(Math.abs(pz-p.mesh.position.z)<0.9 && Math.abs(px-p.mesh.position.x)<0.9){
             p.collected=true; scene.remove(p.mesh); applyPickup(p.loot);
+        }
+    }
+
+    // Coin multiplier floor zones
+    for(const zone of multZones){
+        if(zone.activated) continue;
+        zone.bobT+=dt*2;
+        zone.g.children[0].position.y=0.07+Math.sin(zone.bobT)*0.05;
+        if(Math.abs(pz-zone.z)<1.3 && Math.abs(px-zone.x)<0.925){
+            zone.activated=true;
+            multZones.forEach(z=>z.activated=true); // only one activates
+            const income=coins-levelStartCoins;
+            if(income>0) coins=levelStartCoins+income*zone.mult;
+            else coins=Math.max(0,coins+Math.abs(income)*(zone.mult-1));
+            refreshHUD();
+            showEffPop({label:`×${zone.mult} 💰 ДОХОД`,good:true});
         }
     }
 
