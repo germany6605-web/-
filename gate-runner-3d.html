@@ -1323,26 +1323,30 @@ function spawnCoinMultZone(z, mult){
 }
 
 function spawnCombatZone(){
-    // 4 equal sections, each: ROWS_PER_SEC combat rows + full-width floor zone
+    // Layout per section: [zone] → [combat rows]
+    // Player walks through zone first, then hits combat rows.
+    // Further sections = higher multiplier, but harder combat.
     const ROWS_PER_SEC=4, NUM_SEC=4;
     const ROW_SC_BASE=6.0;
-    const SEC_LEN=ROWS_PER_SEC*COMBAT_ROW_SPACING+4.0; // rows + gap for zone
+    const ZONE_DEPTH=3.5; // space for the floor zone before rows
+    const SEC_LEN=ZONE_DEPTH+ROWS_PER_SEC*COMBAT_ROW_SPACING+2.0;
 
     for(let s=0;s<NUM_SEC;s++){
         const secZ=COMBAT_START_Z+s*SEC_LEN;
         const mult=s+2; // ×2 … ×5
-        // Combat rows for this section
+
+        // Floor zone FIRST — reachable before combat rows block
+        spawnCoinMultZone(secZ+1.5, mult);
+
+        // Combat rows after the zone
         for(let r=0;r<ROWS_PER_SEC;r++){
             const globalRow=s*ROWS_PER_SEC+r;
             const sc=ROW_SC_BASE+globalRow*0.08;
             const hp=Math.max(10,Math.round(30*(1+globalRow*0.4)*sc*combatHPMult));
-            const coinMult=mult;
             for(let c=0;c<COMBAT_COL_X.length;c++){
-                spawnCombatPlatform(COMBAT_COL_X[c],secZ+r*COMBAT_ROW_SPACING,hp,sc,coinMult);
+                spawnCombatPlatform(COMBAT_COL_X[c],secZ+ZONE_DEPTH+r*COMBAT_ROW_SPACING,hp,sc,mult);
             }
         }
-        // Floor zone AFTER rows
-        spawnCoinMultZone(secZ+ROWS_PER_SEC*COMBAT_ROW_SPACING+2.0, mult);
     }
 
     const wepZ=COMBAT_START_Z+NUM_SEC*SEC_LEN+1.5;
