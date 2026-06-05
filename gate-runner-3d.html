@@ -257,16 +257,46 @@ function addTree(x,z){
 // shots: number of bullets per fire, spread: angle spread (rad), dmgMult: damage per bullet
 // pierce: bullet passes through targets, bScale: bullet size, bColor: bullet colour
 const WEPS=[null,
-    {name:'Пистолет',  cd:.52, col:0x334455, barrel:.42, grip:.18, wide:.07,
-     shots:1, spread:0,    dmgMult:1,  bScale:1.0, bColor:0xFFEE44},
-    {name:'Пистолет+', cd:.34, col:0x223344, barrel:.48, grip:.18, wide:.08,
-     shots:2, spread:.06,  dmgMult:1,  bScale:0.9, bColor:0xFFCC00},
-    {name:'Пулемёт',   cd:.09, col:0x2A3A2A, barrel:.70, grip:.20, wide:.10,
-     shots:1, spread:.03,  dmgMult:1,  bScale:0.6, bColor:0xFF8800},
-    {name:'Дробовик',  cd:.65, col:0x553322, barrel:.36, grip:.22, wide:.14,
-     shots:6, spread:.10,  dmgMult:1.35, bScale:1.1, bColor:0xFF3300},
-    {name:'Снайперка', cd:.85, col:0x1A2A3A, barrel:.90, grip:.18, wide:.06,
-     shots:1, spread:0,    dmgMult:3,  bScale:1.8, bColor:0x44DDFF, pierce:true},
+    {name:'Пистолет',       cd:.52, col:0x334455, barrel:.42, grip:.18, wide:.07,
+     shots:1, spread:0,     dmgMult:1,    bScale:1.0, bColor:0xFFEE44},
+    {name:'Пистолет+',      cd:.34, col:0x223344, barrel:.48, grip:.18, wide:.08,
+     shots:2, spread:.06,   dmgMult:1,    bScale:0.9, bColor:0xFFCC00},
+    {name:'Пулемёт',        cd:.09, col:0x2A3A2A, barrel:.70, grip:.20, wide:.10,
+     shots:1, spread:.03,   dmgMult:1,    bScale:0.6, bColor:0xFF8800},
+    {name:'Дробовик',       cd:.65, col:0x553322, barrel:.36, grip:.22, wide:.14,
+     shots:6, spread:.10,   dmgMult:1.35, bScale:1.1, bColor:0xFF3300},
+    {name:'Снайперка',      cd:.85, col:0x1A2A3A, barrel:.90, grip:.18, wide:.06,
+     shots:1, spread:0,     dmgMult:3,    bScale:1.8, bColor:0x44DDFF, pierce:true},
+    {name:'Автомат',        cd:.12, col:0x3A2A1A, barrel:.62, grip:.20, wide:.09,
+     shots:1, spread:.025,  dmgMult:1.2,  bScale:0.8, bColor:0xFF6600},
+    {name:'Базука',         cd:1.8, col:0x1A3A1A, barrel:.80, grip:.24, wide:.20,
+     shots:1, spread:0,     dmgMult:8,    bScale:2.5, bColor:0xFF4400},
+    {name:'Лазер',          cd:.15, col:0x001A3A, barrel:.95, grip:.16, wide:.06,
+     shots:1, spread:0,     dmgMult:1.5,  bScale:0.5, bColor:0x00FFFF, pierce:true},
+    {name:'Плазмаган',      cd:.40, col:0x2A003A, barrel:.58, grip:.20, wide:.12,
+     shots:3, spread:.08,   dmgMult:1.6,  bScale:1.2, bColor:0xFF00FF},
+    {name:'Супердробовик',  cd:.80, col:0x4A2A10, barrel:.38, grip:.24, wide:.18,
+     shots:9, spread:.16,   dmgMult:1.8,  bScale:1.0, bColor:0xFF2200},
+    {name:'Мини-ган',       cd:.04, col:0x3A3A1A, barrel:.75, grip:.22, wide:.13,
+     shots:1, spread:.04,   dmgMult:0.8,  bScale:0.5, bColor:0xFFFF00},
+    {name:'Ракетница',      cd:1.2, col:0x2A1A0A, barrel:.85, grip:.26, wide:.22,
+     shots:1, spread:0,     dmgMult:12,   bScale:2.0, bColor:0xFF3300},
+    {name:'ПП',             cd:.07, col:0x2A2A2A, barrel:.52, grip:.18, wide:.09,
+     shots:2, spread:.05,   dmgMult:0.9,  bScale:0.7, bColor:0xFFAA00},
+    {name:'Плазмапушка',    cd:2.0, col:0x1A001A, barrel:.90, grip:.22, wide:.16,
+     shots:1, spread:0,     dmgMult:20,   bScale:3.0, bColor:0x8800FF, pierce:true},
+    {name:'Двустволка',     cd:1.0, col:0x3A2A10, barrel:.40, grip:.24, wide:.16,
+     shots:2, spread:.02,   dmgMult:4,    bScale:1.5, bColor:0xFF8800},
+    {name:'Квадроствол',    cd:.55, col:0x2A1A08, barrel:.45, grip:.22, wide:.17,
+     shots:4, spread:.12,   dmgMult:1.4,  bScale:1.0, bColor:0xFFAA44},
+    {name:'Шквал',          cd:.30, col:0x0A2A1A, barrel:.60, grip:.20, wide:.10,
+     shots:4, spread:.04,   dmgMult:1.1,  bScale:0.85,bColor:0x44FF88},
+    {name:'Гиперлуч',       cd:.50, col:0x1A1A3A, barrel:.92, grip:.18, wide:.07,
+     shots:1, spread:0,     dmgMult:5,    bScale:1.5, bColor:0xFFFFFF, pierce:true},
+    {name:'Шрапнель',       cd:.70, col:0x3A1A0A, barrel:.34, grip:.22, wide:.15,
+     shots:12, spread:.25,  dmgMult:1.0,  bScale:0.7, bColor:0xFF6644},
+    {name:'Аннигилятор',    cd:3.0, col:0x1A0010, barrel:.95, grip:.24, wide:.18,
+     shots:1, spread:0,     dmgMult:50,   bScale:4.0, bColor:0xFF00AA, pierce:true},
 ];
 const W=()=>WEPS[wepLv];
 const effDmg=()=>Math.max(1, 1 + Math.floor(permDmg/2)) * dmgX2;
@@ -1209,7 +1239,7 @@ function applyPickup(loot){
 }
 
 // ─── WEAPON PLATFORM ───
-const WEP_ICONS=['','🔫','🔫','💥','🔥','🎯'];
+const WEP_ICONS=['','🔫','🔫','💥','🔥','🎯','⚡','🚀','🔵','🟣','💢','🌀','💣','🔶','☄️','🌪','🟢','⚪','🌟','❄️','💜'];
 
 function makeWepPlatTex(wep){
     const S=512;
@@ -1595,7 +1625,7 @@ function spawnCombatZone(){
     }
     const wepZ=COMBAT_START_Z+TOTAL_ROWS*COMBAT_ROW_SPACING+3.0;
     spawnWeaponPlatform(wepZ);
-    if(activeWeapon===5||ownedWeapons.has(5)) spawnTrophyCup(wepZ+4);
+    if(activeWeapon===20||ownedWeapons.has(20)) spawnTrophyCup(wepZ+4);
 }
 
 // ─── HUD ───
@@ -1615,8 +1645,23 @@ const SHOP_WEPS_DESC=[
     '1 пуля · CD 0.52с<br>Стандартное оружие',
     '2 пули · CD 0.34с<br>Двойная очередь',
     '1 пуля · CD 0.09с<br>Очень высокая скорострельность',
-    '6 пуль · CD 0.65с<br>Широкий разброс, ×2 урон',
-    '1 пуля · CD 0.85с<br>Пробивает насквозь, ×6 урон',
+    '6 пуль · CD 0.65с<br>Широкий разброс, ×1.35 урон',
+    '1 пуля · CD 0.85с<br>Пробивает насквозь, ×3 урон',
+    '1 пуля · CD 0.12с<br>Быстрый автоматический огонь, ×1.2 урон',
+    '1 пуля · CD 1.8с<br>Огромный снаряд, ×8 урон',
+    '1 пуля · CD 0.15с<br>Пробивает насквозь, ×1.5 урон',
+    '3 пули · CD 0.4с<br>Плазменный разброс, ×1.6 урон',
+    '9 пуль · CD 0.8с<br>Максимальный разброс, ×1.8 урон',
+    '1 пуля · CD 0.04с<br>Ураганный огонь, ×0.8 урон',
+    '1 пуля · CD 1.2с<br>Ракета, ×12 урон',
+    '2 пули · CD 0.07с<br>Очередями, ×0.9 урон',
+    '1 пуля · CD 2.0с<br>Пробивает, ×20 урон',
+    '2 пули · CD 1.0с<br>Двойной залп, ×4 урон',
+    '4 пули · CD 0.55с<br>Четыре ствола, ×1.4 урон',
+    '4 пули · CD 0.3с<br>Быстрый шквал, ×1.1 урон',
+    '1 пуля · CD 0.5с<br>Пробивает насквозь, ×5 урон',
+    '12 пуль · CD 0.7с<br>Шрапнельный взрыв, ×1.0 урон',
+    '1 пуля · CD 3.0с<br>Пробивает, ×50 урон — АННИГИЛЯЦИЯ',
 ];
 let shopDeath=false;
 
