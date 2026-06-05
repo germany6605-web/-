@@ -74,8 +74,18 @@ body { background:#000; overflow:hidden; font-family:'Segoe UI',Arial,sans-serif
 
 <div id="tir-hud" style="display:none;position:fixed;top:80px;left:50%;transform:translateX(-50%);
   background:rgba(0,0,30,0.85);border:2px solid #4488FF;border-radius:12px;
-  padding:10px 28px;font-size:26px;font-weight:bold;color:#88CCFF;z-index:30;letter-spacing:2px">
-  <span id="tir-timer">🎯 10s</span>
+  padding:10px 28px;font-size:24px;font-weight:bold;color:#88CCFF;z-index:30;letter-spacing:2px;text-align:center">
+  <span id="tir-timer">🎯 10s</span> &nbsp;&nbsp; <span id="tir-score-hud" style="color:#FFD700">0 🎯</span>
+</div>
+<div id="tir-diff-modal" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+  background:rgba(0,0,40,0.97);border:2px solid #4488FF;border-radius:16px;
+  padding:28px 36px;z-index:50;text-align:center;color:#88CCFF;font-family:monospace">
+  <div style="font-size:22px;font-weight:bold;margin-bottom:18px">🎯 ВЫБЕРИТЕ СЛОЖНОСТЬ</div>
+  <div style="display:flex;gap:14px;justify-content:center">
+    <button class="btn" style="font-size:16px;padding:12px 20px;border-color:#44FF88;color:#44FF88" onclick="beginTir(0.6)">🟢 ЛЁГКО</button>
+    <button class="btn" style="font-size:16px;padding:12px 20px;border-color:#FFD700;color:#FFD700" onclick="beginTir(1.0)">🟡 СРЕДНЕ</button>
+    <button class="btn" style="font-size:16px;padding:12px 20px;border-color:#FF4444;color:#FF4444" onclick="beginTir(1.9)">🔴 СЛОЖНО</button>
+  </div>
 </div>
 
 <div class="ov vis" id="start-ov">
@@ -171,11 +181,14 @@ let lootPlatforms = [], pickups = [];
 let weaponPlatform = null, weaponUnlocked = 0;
 let combatHPMult = 1;
 
+let upgTir = 0; // shop upgrade: increases tir duration
 let tirZones = [];
-let tirActive = false, tirT = 0, tirDur = 10, tirScore = 0, tirCoinReward = 0;
-let tirTargets = []; // {mesh, x, y, hp, dead, removed, reward}
+let tirActive = false, tirT = 0, tirScore = 0, tirCoinReward = 0, tirDiffMult = 1.0;
+let tirTargets = [];
 let tirSpawnT = 0;
-let tirFrozenPz = 0; // player Z frozen during tir
+let tirFrozenPz = 0;
+let tirPendingZ = null; // zone z waiting for difficulty pick
+const tirDur = () => 10 + upgTir * 2;
 
 // ─── INPUT ───
 const keys = {};
@@ -908,9 +921,19 @@ function spawnTirTarget(){
 }
 
 function startTir(z){
-    tirActive=true; tirT=0; tirScore=0; tirSpawnT=0.5; tirFrozenPz=pz;
+    tirPendingZ=z;
+    // Hide the zone label immediately
+    const tz=tirZones.find(t=>t.z===z);
+    if(tz && tz.labelSpr) { scene.remove(tz.labelSpr); tz.labelSpr=null; }
+    document.getElementById('tir-diff-modal').style.display='block';
+}
+
+function beginTir(diffMult){
+    document.getElementById('tir-diff-modal').style.display='none';
+    tirActive=true; tirT=0; tirScore=0; tirSpawnT=0.4; tirFrozenPz=pz; tirDiffMult=diffMult;
     document.getElementById('tir-hud').style.display='block';
-    document.getElementById('tir-timer').textContent='🎯 10s';
+    document.getElementById('tir-timer').textContent='🎯 '+tirDur()+'s';
+    document.getElementById('tir-score-hud').textContent='0 🎯';
 }
 
 function endTir(){
@@ -925,25 +948,25 @@ function endTir(){
 
 function tickTir(dt){
     tirT+=dt;
-    const remaining=Math.max(0,tirDur-tirT);
+    const dur=tirDur();
+    const remaining=Math.max(0,dur-tirT);
     document.getElementById('tir-timer').textContent='🎯 '+Math.ceil(remaining)+'s';
+    document.getElementById('tir-score-hud').textContent=tirScore+' 🎯';
 
     tirSpawnT-=dt;
-    if(tirSpawnT<=0 && tirT<tirDur-1){
+    if(tirSpawnT<=0 && tirT<dur-1){
         spawnTirTarget();
-        tirSpawnT=0.5+Math.random()*0.6;
+        tirSpawnT=0.4+Math.random()*0.5;
     }
 
     for(const t of tirTargets){
         if(t.dead||t.removed) continue;
-        t.mesh.position.y-=dt*(2.5+tirT*0.15);
+        t.mesh.position.y-=dt*(2.5+tirT*0.12)*tirDiffMult;
         t.mesh.rotation.z+=dt*1.5;
-        if(t.mesh.position.y<0.3){
-            scene.remove(t.mesh); t.removed=true;
-        }
+        if(t.mesh.position.y<0.3){ scene.remove(t.mesh); t.removed=true; }
     }
 
-    if(tirT>=tirDur){ endTir(); }
+    if(tirT>=dur){ endTir(); }
 }
 
 function applyEff(eff){
@@ -1648,6 +1671,26 @@ function openShop(isDeath=false){
         c.appendChild(b); gu.appendChild(c);
     }
 
+    // ── Tir duration upgrade ──
+    {
+        const cur=upgTir, maxT=10;
+        const curDur=10+cur*2, ok=coins>=(100+cur*50) && cur<maxT;
+        const cost=100+cur*50;
+        const c=document.createElement('div'); c.className='scard'+(ok?' ok':'');
+        c.innerHTML=`<h3>⏱ Время тира</h3>
+            <p>Увеличивает длительность мини-игры<br>Сейчас: <b>${curDur}с</b> / макс. 30с</p>
+            <div class="cost">${cur>=maxT?'МАКС':cost+' 🪙'}</div>`;
+        const b=document.createElement('button'); b.className='btn btn-g';
+        b.disabled=!ok; b.textContent=cur>=maxT?'Макс.':(ok?'Купить':'Мало 🪙');
+        b.onclick=()=>{
+            if(coins<cost||upgTir>=maxT) return;
+            coins-=cost; upgTir++;
+            document.getElementById('shop-coins').textContent=`🪙 ${coins} монет`;
+            openShop(shopDeath); shopTab('upg');
+        };
+        c.appendChild(b); gu.appendChild(c);
+    }
+
     shopTab(_shopTab);
     document.getElementById('shop-next-btn').textContent =
         isDeath ? '↺ ПОВТОРИТЬ УРОВЕНЬ' : 'СЛЕДУЮЩИЙ УРОВЕНЬ ▶';
@@ -1672,7 +1715,7 @@ const hide=id=>document.getElementById(id).classList.remove('vis');
 
 function startGame(){
     hide('start-ov'); hide('victory-ov'); hide('loss-ov');
-    level=1;coins=0;upgGate={dmg:0,money:0,range:0,rate:0};_shopTab='wep';
+    level=1;coins=0;upgGate={dmg:0,money:0,range:0,rate:0};upgTir=0;_shopTab='wep';
     ownedWeapons=new Set([1]); activeWeapon=1; combatHPMult=1;
     buildStaticWorld();
     startLevel();
@@ -1696,8 +1739,10 @@ function startLevel(){
     lootPlatforms.forEach(lp=>scene.remove(lp.g)); lootPlatforms=[];
     pickups.forEach(p=>scene.remove(p.mesh)); pickups=[];
     tirZones.forEach(tz=>{ scene.remove(tz.floorMesh); scene.remove(tz.labelSpr); });
-    tirZones=[]; tirActive=false; tirTargets.forEach(t=>{ if(!t.removed) scene.remove(t.mesh); }); tirTargets=[];
+    tirZones=[]; tirActive=false; tirPendingZ=null;
+    tirTargets.forEach(t=>{ if(!t.removed) scene.remove(t.mesh); }); tirTargets=[];
     document.getElementById('tir-hud').style.display='none';
+    document.getElementById('tir-diff-modal').style.display='none';
     while(gateGrp.children.length) gateGrp.remove(gateGrp.children[0]);
     gates=[];
 
@@ -1751,9 +1796,9 @@ function tickRun(dt){
     else       pvx *= (1 - dt*14);
     px = Math.max(-X_LIMIT, Math.min(X_LIMIT, px + pvx*dt));
 
-    // Move forward
-    if(!tirActive) pz += spd * dt;
-    else pz = tirFrozenPz;
+    // Move forward (freeze during tir or difficulty selection)
+    if(!tirActive && !tirPendingZ) pz += spd * dt;
+    else if(tirActive) pz = tirFrozenPz;
 
     // Gun bob anim
     plyWalkT += dt*6;
