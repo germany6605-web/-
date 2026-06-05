@@ -1774,13 +1774,18 @@ function gearMagBonus()     { return Math.floor(((getWepGears(wepLv).magazine||{
 function gearSilBonus()     { return ((getWepGears(wepLv).silencer||{}).level||0)*0.08; }
 function gearScopeBonus()   { return ((getWepGears(wepLv).scope   ||{}).level||0)*0.20; }
 
+let gearsBought = 0;
+function gearBuyCost(){ return Math.round(100 * Math.pow(1.2, gearsBought)); }
+function gearBuyLevel(){ return Math.min(10, Math.floor(gearsBought / 100) + 1); }
+
 function buyGear(){
-    const cost = 100;
+    const cost = gearBuyCost();
     if(coins < cost){ return; }
     const idx = gearGrid.indexOf(null);
     if(idx === -1){ return; }
     coins -= cost;
-    gearGrid[idx] = {level:1};
+    gearsBought++;
+    gearGrid[idx] = {level: gearBuyLevel()};
     document.getElementById('shop-coins').textContent = `🪙 ${coins} монет`;
     renderModTab();
 }
@@ -1875,10 +1880,11 @@ function renderModTab(){
     // ── Actions row ──
     const acts = document.createElement('div'); acts.className='mod-actions';
     const hasFree = gearGrid.includes(null);
+    const bCost = gearBuyCost(), bLv = gearBuyLevel();
     const buyBtn = document.createElement('button');
     buyBtn.className='btn btn-g'; buyBtn.style.fontSize='14px'; buyBtn.style.padding='8px 18px';
-    buyBtn.textContent = hasFree ? `Купить ⚙ ур.1 — 100 🪙` : 'Сетка заполнена';
-    buyBtn.disabled = !hasFree || coins < 100;
+    buyBtn.textContent = hasFree ? `Купить ⚙ ур.${bLv} — ${bCost} 🪙` : 'Сетка заполнена';
+    buyBtn.disabled = !hasFree || coins < bCost;
     buyBtn.onclick = buyGear;
     acts.appendChild(buyBtn);
     root.appendChild(acts);
@@ -2012,7 +2018,7 @@ const hide=id=>document.getElementById(id).classList.remove('vis');
 function startGame(){
     hide('start-ov'); hide('victory-ov'); hide('loss-ov');
     level=1;coins=0;upgGate={dmg:0,money:0,range:0,rate:0};upgTir=0;_shopTab='wep';
-    gearGrid=new Array(21).fill(null); weaponGears={}; _gearSel=-1; _modWep=1;
+    gearGrid=new Array(21).fill(null); weaponGears={}; _gearSel=-1; _modWep=1; gearsBought=0;
     ownedWeapons=new Set([1]); activeWeapon=1; combatHPMult=1;
     buildStaticWorld();
     startLevel();
