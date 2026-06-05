@@ -358,26 +358,28 @@ function updateBullets(dt){
                 // Adjust bullet X relative to gate's slide offset
                 const slideX = gate.slideGrp ? gate.slideGrp.position.x : 0;
                 const lbx = bx - slideX;
-                // Bullet hit: increment hits, update currentVal display
-                // For single moving gate (pR=null): full-width check
                 const fullWidth = gate.pL && !gate.pR;
-                if((fullWidth ? (lbx>-1.8&&lbx<1.8) : (lbx<-0.1&&lbx>-3.9)) && (gate.coolL<=0||b.tripleExtra) && gate.pL){
-                    gate.coolL=b.tripleExtra ? Math.min(gate.coolL, 0.02) : 0.25;
-                    gate.hitsL++;
-                    gate.eL.currentVal=gate.eL.baseVal+gate.hitsL*gate.eL.incVal;
-                    gate.pL.material.map.dispose();
-                    gate.pL.material.map=makeGateTex(gate.eL);
-                    gate.pL.material.needsUpdate=true;
-                    hit=true; break;
+                if(gate.pL && (fullWidth ? (lbx>-1.8&&lbx<1.8) : (lbx<-0.1&&lbx>-3.9))){
+                    if(gate.coolL<=0 || b.tripleExtra){
+                        gate.coolL=b.tripleExtra ? Math.min(gate.coolL, 0.02) : 0.25;
+                        gate.hitsL++;
+                        gate.eL.currentVal=gate.eL.baseVal+gate.hitsL*gate.eL.incVal;
+                        gate.pL.material.map.dispose();
+                        gate.pL.material.map=makeGateTex(gate.eL);
+                        gate.pL.material.needsUpdate=true;
+                    }
+                    if(!b.pierce) hit=true; break;
                 }
-                if(lbx > 0.1 && lbx < 3.9 && (gate.coolR<=0 || b.tripleExtra) && gate.pR){
-                    gate.coolR=b.tripleExtra ? Math.min(gate.coolR, 0.02) : 0.25;
-                    gate.hitsR++;
-                    gate.eR.currentVal=gate.eR.baseVal+gate.hitsR*gate.eR.incVal;
-                    gate.pR.material.map.dispose();
-                    gate.pR.material.map=makeGateTex(gate.eR);
-                    gate.pR.material.needsUpdate=true;
-                    hit=true; break;
+                if(gate.pR && lbx > 0.1 && lbx < 3.9){
+                    if(gate.coolR<=0 || b.tripleExtra){
+                        gate.coolR=b.tripleExtra ? Math.min(gate.coolR, 0.02) : 0.25;
+                        gate.hitsR++;
+                        gate.eR.currentVal=gate.eR.baseVal+gate.hitsR*gate.eR.incVal;
+                        gate.pR.material.map.dispose();
+                        gate.pR.material.map=makeGateTex(gate.eR);
+                        gate.pR.material.needsUpdate=true;
+                    }
+                    if(!b.pierce) hit=true; break;
                 }
             }
         }
