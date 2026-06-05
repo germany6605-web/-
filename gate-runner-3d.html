@@ -82,9 +82,9 @@ body { background:#000; overflow:hidden; font-family:'Segoe UI',Arial,sans-serif
   padding:28px 36px;z-index:50;text-align:center;color:#88CCFF;font-family:monospace">
   <div style="font-size:22px;font-weight:bold;margin-bottom:18px">🎯 ВЫБЕРИТЕ СЛОЖНОСТЬ</div>
   <div style="display:flex;gap:14px;justify-content:center">
-    <button class="btn" style="font-size:16px;padding:12px 20px;border-color:#44FF88;color:#44FF88" onclick="beginTir(0.6)">🟢 ЛЁГКО</button>
-    <button class="btn" style="font-size:16px;padding:12px 20px;border-color:#FFD700;color:#FFD700" onclick="beginTir(1.0)">🟡 СРЕДНЕ</button>
-    <button class="btn" style="font-size:16px;padding:12px 20px;border-color:#FF4444;color:#FF4444" onclick="beginTir(1.9)">🔴 СЛОЖНО</button>
+    <button class="btn" style="font-size:16px;padding:12px 20px;border-color:#44FF88;color:#44FF88" onclick="beginTir(0.6,1)">🟢 ЛЁГКО ×1</button>
+    <button class="btn" style="font-size:16px;padding:12px 20px;border-color:#FFD700;color:#FFD700" onclick="beginTir(1.0,2)">🟡 СРЕДНЕ ×2</button>
+    <button class="btn" style="font-size:16px;padding:12px 20px;border-color:#FF4444;color:#FF4444" onclick="beginTir(1.9,3)">🔴 СЛОЖНО ×3</button>
   </div>
 </div>
 
@@ -918,7 +918,7 @@ function spawnTirTarget(){
     const x=Math.random()*6.4-3.2;
     mesh.position.set(x,6.0,tirFrozenPz+8);
     scene.add(mesh);
-    const reward=15+level*5;
+    const reward=Math.round((15+level*5)*tirCoinMult);
     tirTargets.push({mesh,hp:1,dead:false,removed:false,reward});
 }
 
@@ -950,9 +950,10 @@ function makeTirWallTex(){
     cx.fillStyle='rgba(255,200,50,0.18)'; cx.fillText('ТИР',256,128);
     const t=new THREE.CanvasTexture(cv); t.anisotropy=renderer.capabilities.getMaxAnisotropy(); return t;
 }
-function beginTir(diffMult){
+let tirCoinMult = 1;
+function beginTir(diffMult, coinMult){
     document.getElementById('tir-diff-modal').style.display='none';
-    tirActive=true; tirT=0; tirScore=0; tirSpawnT=0.4; tirFrozenPz=pz; tirDiffMult=diffMult; tirPendingZ=null;
+    tirActive=true; tirT=0; tirScore=0; tirSpawnT=0.4; tirFrozenPz=pz; tirDiffMult=diffMult; tirCoinMult=coinMult||1; tirPendingZ=null;
 
     // Spawn wall
     const wallZ = tirFrozenPz + 10;
@@ -970,7 +971,7 @@ function endTir(){
     tirActive=false;
     if(tirWall){ scene.remove(tirWall); tirWall=null; }
     for(const t of tirTargets){ if(!t.removed){ scene.remove(t.mesh); t.removed=true; } }
-    const totalCoins=tirScore*(15+level*5);
+    const totalCoins=tirScore*Math.round((15+level*5)*tirCoinMult);
     coins+=totalCoins; refreshHUD();
     if(tirScore>0) showEffPop({label:`🎯 +${totalCoins} монет (${tirScore} мишеней)`, good:true});
     document.getElementById('tir-hud').style.display='none';
