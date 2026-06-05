@@ -924,6 +924,8 @@ function spawnTirTarget(){
 
 function startTir(z){
     tirPendingZ=z;
+    // Clear any in-flight bullets immediately
+    bullets.forEach(b=>scene.remove(b.mesh)); bullets=[];
     // Hide the zone label immediately
     const tz=tirZones.find(t=>t.z===z);
     if(tz && tz.labelSpr) { scene.remove(tz.labelSpr); tz.labelSpr=null; }
@@ -1859,7 +1861,7 @@ function tickRun(dt){
         gate.slideGrp.position.x = Math.sin(gate.slideT) * gate.slideAmp;
     }
 
-    updateBullets(dt);
+    if(!tirPendingZ) updateBullets(dt);
 
     // Gate collision + cleanup
     for(const gate of gates){
