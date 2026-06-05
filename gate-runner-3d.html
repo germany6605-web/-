@@ -468,6 +468,8 @@ function updateBullets(dt){
             }
         }
 
+        // Stop bullets at tir wall
+        if(!hit && tirWall && b.mesh.position.z >= tirWall.position.z - 0.2) hit=true;
         if(hit || b.life<=0){
             scene.remove(b.mesh);
             bullets.splice(i,1);
@@ -928,9 +930,35 @@ function startTir(z){
     document.getElementById('tir-diff-modal').style.display='block';
 }
 
+let tirWall = null;
+function makeTirWallTex(){
+    const cv=document.createElement('canvas'); cv.width=512; cv.height=256;
+    const cx=cv.getContext('2d');
+    cx.fillStyle='#1a0a00'; cx.fillRect(0,0,512,256);
+    // wood planks
+    for(let i=0;i<8;i++){
+        const y=i*32;
+        cx.fillStyle=i%2===0?'#3d1e08':'#4a2510';
+        cx.fillRect(0,y,512,31);
+        cx.strokeStyle='#1a0800'; cx.lineWidth=2;
+        cx.strokeRect(0,y,512,31);
+    }
+    // "ТИР" text
+    cx.font='bold 72px Arial'; cx.textAlign='center'; cx.textBaseline='middle';
+    cx.fillStyle='rgba(255,200,50,0.18)'; cx.fillText('ТИР',256,128);
+    const t=new THREE.CanvasTexture(cv); t.anisotropy=renderer.capabilities.getMaxAnisotropy(); return t;
+}
 function beginTir(diffMult){
     document.getElementById('tir-diff-modal').style.display='none';
     tirActive=true; tirT=0; tirScore=0; tirSpawnT=0.4; tirFrozenPz=pz; tirDiffMult=diffMult;
+
+    // Spawn wall
+    const wallZ = tirFrozenPz + 10;
+    const wallMat = new THREE.MeshLambertMaterial({map:makeTirWallTex()});
+    tirWall = new THREE.Mesh(new THREE.BoxGeometry(8.2, 7, 0.4), wallMat);
+    tirWall.position.set(0, 3.5, wallZ);
+    scene.add(tirWall);
+
     document.getElementById('tir-hud').style.display='block';
     document.getElementById('tir-timer').textContent='🎯 '+tirDur()+'s';
     document.getElementById('tir-score-hud').textContent='0 🎯';
@@ -938,6 +966,7 @@ function beginTir(diffMult){
 
 function endTir(){
     tirActive=false;
+    if(tirWall){ scene.remove(tirWall); tirWall=null; }
     for(const t of tirTargets){ if(!t.removed){ scene.remove(t.mesh); t.removed=true; } }
     const totalCoins=tirScore*(15+level*5);
     coins+=totalCoins; refreshHUD();
@@ -1739,6 +1768,7 @@ function startLevel(){
     lootPlatforms.forEach(lp=>scene.remove(lp.g)); lootPlatforms=[];
     pickups.forEach(p=>scene.remove(p.mesh)); pickups=[];
     tirZones.forEach(tz=>{ scene.remove(tz.floorMesh); scene.remove(tz.labelSpr); });
+    if(tirWall){ scene.remove(tirWall); tirWall=null; }
     tirZones=[]; tirActive=false; tirPendingZ=null;
     tirTargets.forEach(t=>{ if(!t.removed) scene.remove(t.mesh); }); tirTargets=[];
     document.getElementById('tir-hud').style.display='none';
