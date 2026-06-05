@@ -1745,8 +1745,9 @@ function tickRun(dt){
     // Horizontal input
     const left  = keys['ArrowLeft'] ||keys['KeyA'];
     const right = keys['ArrowRight']||keys['KeyD'];
-    if(left)  pvx = Math.min(pvx + X_ACCEL*dt, spd*0.6);
-    else if(right) pvx = Math.max(pvx - X_ACCEL*dt, -spd*0.6);
+    const xMaxSpd = tirActive ? spd*1.2 : spd*0.6;
+    if(left)  pvx = Math.min(pvx + X_ACCEL*dt, xMaxSpd);
+    else if(right) pvx = Math.max(pvx - X_ACCEL*dt, -xMaxSpd);
     else       pvx *= (1 - dt*14);
     px = Math.max(-X_LIMIT, Math.min(X_LIMIT, px + pvx*dt));
 
