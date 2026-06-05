@@ -342,9 +342,10 @@ function updateBullets(dt){
         if(GS==='RUN'){
             for(const gate of gates){
                 if(gate.removed || Math.abs(bz - gate.z) > 1.2) continue;
-                // Barricaded gate: bullets hit per-side cover first
+                // Barricaded gate: bullets hit per-side cover first (check X range)
                 {
-                    const cov = bx<0 ? gate.coverL : gate.coverR;
+                    const cov = (bx>=-3.8&&bx<-0.1) ? gate.coverL
+                              : (bx>0.1&&bx<=3.8)   ? gate.coverR : null;
                     if(cov && !cov.removed){
                         cov.hp -= effDmg()*(b.dmgMult||1);
                         cov.hitT=0.12;
