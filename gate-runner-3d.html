@@ -1844,9 +1844,11 @@ function tickRun(dt){
     cam.position.set(camPx, 3.4, camPz);
     cam.lookAt(camPx*.4+px*.6, 1.0, pz+6);
 
-    // Auto-fire while running
-    runFireT = Math.max(0, runFireT - dt);
-    if(runFireT <= 0){ runFireT = effCD(); fireBulletRun(); }
+    // Auto-fire while running (disabled during tir difficulty selection)
+    if(!tirPendingZ){
+        runFireT = Math.max(0, runFireT - dt);
+        if(runFireT <= 0){ runFireT = effCD(); fireBulletRun(); }
+    }
 
     if(tirActive) tickTir(dt);
 
