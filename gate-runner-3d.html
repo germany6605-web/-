@@ -72,6 +72,12 @@ body { background:#000; overflow:hidden; font-family:'Segoe UI',Arial,sans-serif
   <div id="effect-pop"></div>
 </div>
 
+<div id="tir-hud" style="display:none;position:fixed;top:80px;left:50%;transform:translateX(-50%);
+  background:rgba(0,0,30,0.85);border:2px solid #4488FF;border-radius:12px;
+  padding:10px 28px;font-size:26px;font-weight:bold;color:#88CCFF;z-index:30;letter-spacing:2px">
+  <span id="tir-timer">🎯 10s</span>
+</div>
+
 <div class="ov vis" id="start-ov">
   <h1>GATE RUNNER 3D</h1>
   <p>Беги вперёд и выбирай ворота<br>
@@ -164,6 +170,12 @@ let permRange = 0, permRate = 0;
 let lootPlatforms = [], pickups = [];
 let weaponPlatform = null, weaponUnlocked = 0;
 let combatHPMult = 1;
+
+let tirZones = [];
+let tirActive = false, tirT = 0, tirDur = 10, tirScore = 0, tirCoinReward = 0;
+let tirTargets = []; // {mesh, x, y, hp, dead, removed, reward}
+let tirSpawnT = 0;
+let tirFrozenPz = 0; // player Z frozen during tir
 
 // ─── INPUT ───
 const keys = {};
@@ -387,6 +399,21 @@ function updateBullets(dt){
                         gate.pR.material.needsUpdate=true;
                     }
                     if(!b.pierce) hit=true; break;
+                }
+            }
+        }
+
+        // RUN: bullet hits tir targets
+        if(GS==='RUN' && tirActive && !hit){
+            for(const t of tirTargets){
+                if(t.dead||t.removed) continue;
+                if(Math.abs(bz-t.mesh.position.z)<0.5 && Math.abs(bx-t.mesh.position.x)<0.45){
+                    t.dead=true; t.removed=true;
+                    scene.remove(t.mesh);
+                    tirScore++;
+                    coins+=t.reward; refreshHUD();
+                    if(!b.pierce) hit=true;
+                    break;
                 }
             }
         }
@@ -809,6 +836,9 @@ function spawnRow(z){
     let r=Math.random()*total, cfg=cfgs[0];
     for(const c of cfgs){ r-=c.w; if(r<=0){cfg=c;break;} }
 
+    // 12% chance: spawn a tir zone
+    if(Math.random()<0.12){ spawnTirZone(z); return; }
+
     // 18% chance: spawn a barricaded gate
     if(Math.random()<0.18){
         function pickCover(){ const r=Math.random(); return r<0.30?null:r<0.65?0:r<0.90?1:2; }
@@ -830,6 +860,90 @@ function spawnRow(z){
     };
     doSlot(cfg.L,'L');
     doSlot(cfg.R,'R');
+}
+
+function makeBullseyeTex(){
+    const S=128;
+    const cv=document.createElement('canvas'); cv.width=S; cv.height=S;
+    const ctx=cv.getContext('2d');
+    ctx.fillStyle='#CC0000'; ctx.fillRect(0,0,S,S);
+    const rings=[{r:54,c:'#FFFFFF'},{r:40,c:'#CC0000'},{r:27,c:'#FFFFFF'},{r:14,c:'#CC0000'},{r:6,c:'#000000'}];
+    for(const rg of rings){
+        ctx.fillStyle=rg.c; ctx.beginPath(); ctx.arc(S/2,S/2,rg.r,0,Math.PI*2); ctx.fill();
+    }
+    const t=new THREE.CanvasTexture(cv);
+    t.anisotropy=renderer.capabilities.getMaxAnisotropy();
+    return t;
+}
+
+function spawnTirZone(z){
+    const floorMat=new THREE.MeshLambertMaterial({color:0x003366,transparent:true,opacity:0.85});
+    const floorMesh=new THREE.Mesh(new THREE.PlaneGeometry(7.5,5),floorMat);
+    floorMesh.rotation.x=-Math.PI/2; floorMesh.position.set(0,0.02,z);
+    scene.add(floorMesh);
+
+    const lCv=document.createElement('canvas'); lCv.width=256; lCv.height=64;
+    const lx=lCv.getContext('2d');
+    lx.fillStyle='#001133'; lx.fillRect(0,0,256,64);
+    lx.font='bold 36px Arial'; lx.textAlign='center'; lx.textBaseline='middle';
+    lx.fillStyle='#FFFFFF'; lx.shadowColor='#4488FF'; lx.shadowBlur=10;
+    lx.fillText('🎯 ТИР', 128, 32);
+    const lTex=new THREE.CanvasTexture(lCv);
+    const labelSpr=new THREE.Sprite(new THREE.SpriteMaterial({map:lTex,depthTest:false,transparent:true}));
+    labelSpr.position.set(0,3.5,z); labelSpr.scale.set(4,1,1);
+    scene.add(labelSpr);
+
+    tirZones.push({floorMesh, labelSpr, z, triggered:false});
+}
+
+function spawnTirTarget(){
+    const bullseyeTex=makeBullseyeTex();
+    const mat=new THREE.MeshBasicMaterial({map:bullseyeTex,side:THREE.DoubleSide});
+    const mesh=new THREE.Mesh(new THREE.BoxGeometry(0.7,0.7,0.3),mat);
+    const x=Math.random()*6.4-3.2;
+    mesh.position.set(x,6.0,tirFrozenPz+8);
+    scene.add(mesh);
+    const reward=15+level*5;
+    tirTargets.push({mesh,hp:1,dead:false,removed:false,reward});
+}
+
+function startTir(z){
+    tirActive=true; tirT=0; tirScore=0; tirSpawnT=0.5; tirFrozenPz=pz;
+    document.getElementById('tir-hud').style.display='block';
+    document.getElementById('tir-timer').textContent='🎯 10s';
+}
+
+function endTir(){
+    tirActive=false;
+    for(const t of tirTargets){ if(!t.removed){ scene.remove(t.mesh); t.removed=true; } }
+    const totalCoins=tirScore*(15+level*5);
+    coins+=totalCoins; refreshHUD();
+    if(tirScore>0) showEffPop({label:`🎯 +${totalCoins} монет (${tirScore} мишеней)`, good:true});
+    document.getElementById('tir-hud').style.display='none';
+    tirTargets=[];
+}
+
+function tickTir(dt){
+    tirT+=dt;
+    const remaining=Math.max(0,tirDur-tirT);
+    document.getElementById('tir-timer').textContent='🎯 '+Math.ceil(remaining)+'s';
+
+    tirSpawnT-=dt;
+    if(tirSpawnT<=0 && tirT<tirDur-1){
+        spawnTirTarget();
+        tirSpawnT=0.5+Math.random()*0.6;
+    }
+
+    for(const t of tirTargets){
+        if(t.dead||t.removed) continue;
+        t.mesh.position.y-=dt*(2.5+tirT*0.15);
+        t.mesh.rotation.z+=dt*1.5;
+        if(t.mesh.position.y<0.3){
+            scene.remove(t.mesh); t.removed=true;
+        }
+    }
+
+    if(tirT>=tirDur){ endTir(); }
 }
 
 function applyEff(eff){
@@ -1581,6 +1695,9 @@ function startLevel(){
     mobs.forEach(m=>scene.remove(m.g)); mobs=[];
     lootPlatforms.forEach(lp=>scene.remove(lp.g)); lootPlatforms=[];
     pickups.forEach(p=>scene.remove(p.mesh)); pickups=[];
+    tirZones.forEach(tz=>{ scene.remove(tz.floorMesh); scene.remove(tz.labelSpr); });
+    tirZones=[]; tirActive=false; tirTargets.forEach(t=>{ if(!t.removed) scene.remove(t.mesh); }); tirTargets=[];
+    document.getElementById('tir-hud').style.display='none';
     while(gateGrp.children.length) gateGrp.remove(gateGrp.children[0]);
     gates=[];
 
@@ -1634,7 +1751,8 @@ function tickRun(dt){
     px = Math.max(-X_LIMIT, Math.min(X_LIMIT, px + pvx*dt));
 
     // Move forward
-    pz += spd * dt;
+    if(!tirActive) pz += spd * dt;
+    else pz = tirFrozenPz;
 
     // Gun bob anim
     plyWalkT += dt*6;
@@ -1647,13 +1765,15 @@ function tickRun(dt){
 
     // Camera smooth follow (closer)
     camPx += (px - camPx) * Math.min(1, dt*8);
-    camPz += (pz - 4 - camPz) * Math.min(1, dt*6);
+    if(!tirActive) camPz += (pz - 4 - camPz) * Math.min(1, dt*6);
     cam.position.set(camPx, 3.4, camPz);
     cam.lookAt(camPx*.4+px*.6, 1.0, pz+6);
 
     // Auto-fire while running
     runFireT = Math.max(0, runFireT - dt);
     if(runFireT <= 0){ runFireT = effCD(); fireBulletRun(); }
+
+    if(tirActive) tickTir(dt);
 
     // Animate sliding gates BEFORE bullet detection so hitbox matches visual
     for(const gate of gates){
@@ -1766,6 +1886,17 @@ function tickRun(dt){
         p.mesh.rotation.y+=dt*2;
         if(Math.abs(pz-p.mesh.position.z)<0.9 && Math.abs(px-p.mesh.position.x)<0.9){
             p.collected=true; scene.remove(p.mesh); applyPickup(p.loot);
+        }
+    }
+
+    // Tir zone trigger
+    if(!shopOpened && !tirActive){
+        for(const tz of tirZones){
+            if(tz.triggered) continue;
+            if(pz>=tz.z-1 && pz<tz.z+3){
+                tz.triggered=true;
+                startTir(tz.z);
+            }
         }
     }
 
