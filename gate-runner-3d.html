@@ -342,17 +342,18 @@ function updateBullets(dt){
         if(GS==='RUN'){
             for(const gate of gates){
                 if(gate.removed || Math.abs(bz - gate.z) > 1.2) continue;
-                // Barricaded gate: bullets hit cover first
-                if(gate.cover && !gate.coverRemoved){
-                    if(Math.abs(bx)<3.8){
-                        gate.coverHp-=effDmg()*(b.dmgMult||1);
-                        gate.coverHitT=0.12;
-                        gate.coverMat.emissive.setHex(0xFF6600);
-                        drawCoverHP(gate);
-                        if(gate.coverHp<=0&&!gate.coverDead){gate.coverDead=true;gate.coverDeadT=0;}
+                // Barricaded gate: bullets hit per-side cover first
+                {
+                    const cov = bx<0 ? gate.coverL : gate.coverR;
+                    if(cov && !cov.removed){
+                        cov.hp -= effDmg()*(b.dmgMult||1);
+                        cov.hitT=0.12;
+                        cov.mat.emissive.setHex(0xFF6600);
+                        drawCoverHP(cov);
+                        if(cov.hp<=0&&!cov.dead){cov.dead=true;cov.deadT=0;}
                         if(!b.pierce) hit=true;
+                        break;
                     }
-                    break;
                 }
                 // Adjust bullet X relative to gate's slide offset
                 const slideX = gate.slideGrp ? gate.slideGrp.position.x : 0;
@@ -731,37 +732,30 @@ function makeBarricadeTex(type){
     const t=new THREE.CanvasTexture(cv); t.anisotropy=renderer.capabilities.getMaxAnisotropy(); return t;
 }
 
-function drawCoverHP(gate){
-    const pct=Math.max(0,gate.coverHp/gate.coverMaxHp);
-    gate.coverHpCtx.clearRect(0,0,256,20);
-    gate.coverHpCtx.fillStyle='rgba(0,0,0,0.6)'; gate.coverHpCtx.fillRect(0,0,256,20);
-    gate.coverHpCtx.fillStyle=pct>0.55?'#44EE44':pct>0.28?'#FFAA00':'#FF2200';
-    gate.coverHpCtx.fillRect(2,2,Math.round(252*pct),16);
-    gate.coverHpTex.needsUpdate=true;
+function drawCoverHP(cov){
+    const pct=Math.max(0,cov.hp/cov.maxHp);
+    cov.hpCtx.clearRect(0,0,256,20);
+    cov.hpCtx.fillStyle='rgba(0,0,0,0.6)'; cov.hpCtx.fillRect(0,0,256,20);
+    cov.hpCtx.fillStyle=pct>0.55?'#44EE44':pct>0.28?'#FFAA00':'#FF2200';
+    cov.hpCtx.fillRect(2,2,Math.round(252*pct),16);
+    cov.hpTex.needsUpdate=true;
 }
 
-function spawnBarricade(z, type){
-    // Create normal double gate
-    spawnGate(z, false);
-    const gate=gates[gates.length-1];
-
-    // Add cover over the gate
+function makeSideCover(type, xCenter, z, gate){
     const cfg=BARR_TYPES[type];
     const hp=Math.round(cfg.hpBase+cfg.hpLvl*level);
-    const W=7.6, H=4.7, D=0.32;
-    const coverMat=new THREE.MeshLambertMaterial({map:makeBarricadeTex(type),emissive:new THREE.Color(0)});
-    const cover=new THREE.Mesh(new THREE.BoxGeometry(W,H,D),coverMat);
-    cover.position.set(0,H/2,z-0.1); gateGrp.add(cover); gate.meshes.push(cover);
+    const W=3.8, H=4.7, D=0.32;
+    const mat=new THREE.MeshLambertMaterial({map:makeBarricadeTex(type),emissive:new THREE.Color(0)});
+    const mesh=new THREE.Mesh(new THREE.BoxGeometry(W,H,D),mat);
+    mesh.position.set(xCenter,H/2,z-0.1); gateGrp.add(mesh); gate.meshes.push(mesh);
 
-    // HP bar above cover
     const hpCv=document.createElement('canvas'); hpCv.width=256; hpCv.height=20;
     const hpCtx=hpCv.getContext('2d');
     const hpTex=new THREE.CanvasTexture(hpCv);
     const hpSpr=new THREE.Sprite(new THREE.SpriteMaterial({map:hpTex,depthTest:false,transparent:true}));
-    hpSpr.scale.set(4.2,0.32,1); hpSpr.position.set(0,H+0.55,z-0.1);
+    hpSpr.scale.set(2.1,0.32,1); hpSpr.position.set(xCenter,H+0.55,z-0.1);
     gateGrp.add(hpSpr); gate.meshes.push(hpSpr);
 
-    // Type label
     const lCv=document.createElement('canvas'); lCv.width=256; lCv.height=44;
     const lCtx=lCv.getContext('2d');
     lCtx.fillStyle=['#7B3510','#BB3311','#666666'][type]; lCtx.fillRect(0,0,256,44);
@@ -771,16 +765,20 @@ function spawnBarricade(z, type){
     lCtx.fillText(cfg.name,128,22);
     const lTex=new THREE.CanvasTexture(lCv);
     const lSpr=new THREE.Sprite(new THREE.SpriteMaterial({map:lTex,depthTest:false,transparent:true}));
-    lSpr.scale.set(3.0,0.52,1); lSpr.position.set(0,H+1.0,z-0.1);
+    lSpr.scale.set(1.8,0.52,1); lSpr.position.set(xCenter,H+1.0,z-0.1);
     gateGrp.add(lSpr); gate.meshes.push(lSpr);
 
-    Object.assign(gate,{
-        cover, coverMat,
-        coverHpCtx:hpCtx, coverHpTex:hpTex, coverHpSpr:hpSpr, coverLblSpr:lSpr,
-        coverHp:hp, coverMaxHp:hp,
-        coverDead:false, coverDeadT:0, coverRemoved:false, coverHitT:0
-    });
-    drawCoverHP(gate);
+    return { mesh, mat, hpCtx, hpTex, hpSpr, lSpr, hp, maxHp:hp,
+             dead:false, deadT:0, removed:false, hitT:0 };
+}
+
+function spawnBarricade(z, typeL, typeR){
+    spawnGate(z, false);
+    const gate=gates[gates.length-1];
+    gate.coverL = (typeL!=null) ? makeSideCover(typeL, -1.9, z, gate) : null;
+    gate.coverR = (typeR!=null) ? makeSideCover(typeR,  1.9, z, gate) : null;
+    if(gate.coverL) drawCoverHP(gate.coverL);
+    if(gate.coverR) drawCoverHP(gate.coverR);
 }
 
 function spawnRow(z){
@@ -804,8 +802,11 @@ function spawnRow(z){
 
     // 18% chance: spawn a barricaded gate
     if(Math.random()<0.18){
-        const r=Math.random();
-        spawnBarricade(z, r<0.5?0:r<0.82?1:2); return;
+        function pickCover(){ const r=Math.random(); return r<0.30?null:r<0.65?0:r<0.90?1:2; }
+        const tL=pickCover(), tR=pickCover();
+        // Ensure at least one side is covered
+        if(tL!=null || tR!=null){ spawnBarricade(z, tL, tR); return; }
+        spawnBarricade(z, 0, null); return;
     }
     // 20% chance: spawn a standalone moving gate instead of the normal row
     if(Math.random()<0.20){ spawnGate(z, true); return; }
@@ -1649,40 +1650,40 @@ function tickRun(dt){
         gate.coolL=Math.max(0,gate.coolL-dt);
         gate.coolR=Math.max(0,gate.coolR-dt);
 
-        // Animate barricade cover
-        if(gate.cover && !gate.coverRemoved){
-            if(gate.coverHitT>0){
-                gate.coverHitT-=dt;
-                if(gate.coverHitT<=0) gate.coverMat.emissive.setHex(0);
-            }
-            if(gate.coverDead){
-                gate.coverDeadT+=dt;
-                gate.cover.scale.y=Math.max(0,1-gate.coverDeadT*2.8);
-                gate.cover.position.y-=dt*1.8;
-                if(gate.coverDeadT>0.45){
-                    gateGrp.remove(gate.cover);
-                    gateGrp.remove(gate.coverHpSpr);
-                    gateGrp.remove(gate.coverLblSpr);
-                    gate.coverRemoved=true;
+        // Animate per-side barricade covers
+        for(const cov of [gate.coverL, gate.coverR]){
+            if(!cov || cov.removed) continue;
+            if(cov.hitT>0){ cov.hitT-=dt; if(cov.hitT<=0) cov.mat.emissive.setHex(0); }
+            if(cov.dead){
+                cov.deadT+=dt;
+                cov.mesh.scale.y=Math.max(0,1-cov.deadT*2.8);
+                cov.mesh.position.y-=dt*1.8;
+                if(cov.deadT>0.45){
+                    gateGrp.remove(cov.mesh); gateGrp.remove(cov.hpSpr); gateGrp.remove(cov.lSpr);
+                    cov.removed=true;
                 }
             }
-            // Block player if cover alive
-            if(!gate.coverDead && pz>gate.z-0.3 && pz<gate.z+0.3 && Math.abs(px)<3.5){
-                playerDie(); return;
+            // Block player on this side if cover still alive
+            if(!cov.dead && pz>gate.z-0.3 && pz<gate.z+0.3){
+                const side = cov===gate.coverL ? -1 : 1;
+                if(px*side>0 && px*side<3.8){ playerDie(); return; }
             }
         }
 
         // Player walks through gate — apply effect only if player hit the gate
         // For moving gates: only trigger if player is within the panel's X range
         if(!gate.passed && pz > gate.z+0.2){
-            if(gate.cover && !gate.coverRemoved){ /* still blocked */ }
+            // Check if player's side is still blocked by a cover
+            const onLeft = px < 0;
+            const myCov = onLeft ? gate.coverL : gate.coverR;
+            if(myCov && !myCov.removed){ /* still blocked on this side */ }
             else {
             gate.passed=true;
             const slideX = gate.slideGrp ? gate.slideGrp.position.x : 0;
             if(gate.slideGrp){
                 if(Math.abs(px - slideX) <= 1.8 && gate.hitsL > 0) applyEff(gate.eL);
             } else {
-                const side = px < 0 ? 'L' : 'R';
+                const side = onLeft ? 'L' : 'R';
                 const eff = side==='L' ? gate.eL : gate.eR;
                 const hits = side==='L' ? gate.hitsL : gate.hitsR;
                 if(eff && hits > 0) applyEff(eff);
