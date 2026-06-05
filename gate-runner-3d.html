@@ -83,7 +83,12 @@ body { background:#000; overflow:hidden; font-family:'Segoe UI',Arial,sans-serif
   <h1>★ МАГАЗИН ★</h1>
   <p id="shop-sub"></p>
   <div id="shop-coins">🪙 0</div>
-  <div class="sgrid" id="sgrid-upg"></div>
+  <div class="tab-bar">
+    <button class="tab-btn active" id="tab-btn-wep" onclick="shopTab('wep')">🔫 Оружие</button>
+    <button class="tab-btn" id="tab-btn-upg" onclick="shopTab('upg')">⬆ Улучшения</button>
+  </div>
+  <div class="tab-pane active" id="tab-pane-wep"><div class="sgrid" id="sgrid-wep"></div></div>
+  <div class="tab-pane" id="tab-pane-upg"><div class="sgrid" id="sgrid-upg"></div></div>
   <button class="btn" id="shop-next-btn" onclick="nextLevel()">СЛЕДУЮЩИЙ УРОВЕНЬ ▶</button>
 </div>
 <div class="ov" id="loss-ov" style="background:radial-gradient(ellipse at 50% 40%,#1a0000 0%,#000 100%)">
@@ -144,7 +149,8 @@ const FWD_SPEED = 6, X_LIMIT = 3.0, X_ACCEL = 22;
 
 // ─── STATE ───
 let GS = 'START', level = 1, coins = 0;
-let upgDmg = 0, upgRate = 0;
+// Gate base-value upgrades (persistent, bought in shop)
+let upgGate = {dmg:0, money:0, range:0, rate:0};
 let px = 0, pz = 0, pvx = 0;
 let permDmg = 0, wepLv = 1, spd = FWD_SPEED, coinsX = 1;
 let camPx = 0, camPz = -7;
@@ -238,8 +244,8 @@ const WEPS=[null,
      shots:1, spread:0,    dmgMult:3,  bScale:1.8, bColor:0x44DDFF, pierce:true},
 ];
 const W=()=>WEPS[wepLv];
-const effDmg=()=>Math.max(1, 1 + upgDmg + Math.floor(permDmg/2)) * dmgX2;
-const effCD=()=>W().cd*(.9**upgRate)*(.9**permRate);
+const effDmg=()=>Math.max(1, 1 + Math.floor(permDmg/2)) * dmgX2;
+const effCD=()=>W().cd*(.9**permRate);
 const effLife=()=>1.2+permRange*0.3;
 
 // ─── PLAYER MESH (weapon only) ───
@@ -436,8 +442,8 @@ let gates=[], gateGrp=new THREE.Group(); scene.add(gateGrp);
 const EFF_TYPES=['dmg','dmg','dmg','money','range','rate'];
 function randomEff(){
     const type=EFF_TYPES[Math.floor(Math.random()*EFF_TYPES.length)];
-    const baseVal=Math.floor(Math.random()*8)-2;  // -2 … +5
-    let incVal; do{ incVal=Math.floor(Math.random()*11)-3; }while(incVal===0); // -3…-1, +1…+7
+    const baseVal=Math.floor(Math.random()*8)-2 + (upgGate[type]||0);
+    let incVal; do{ incVal=Math.floor(Math.random()*11)-3; }while(incVal===0);
     return {id:type, baseVal, incVal, currentVal:baseVal};
 }
 function effLabel(eff){
@@ -830,7 +836,7 @@ function applyEff(eff){
     const v = (eff.currentVal !== undefined) ? eff.currentVal : (eff.val||0);
     const label = effLabel ? effLabel(eff).label : eff.label||'';
     switch(eff.id){
-        case 'dmg':   permDmg=Math.max(-upgDmg, permDmg+v); break;
+        case 'dmg':   permDmg=permDmg+v; break;
         case 'money': coins=Math.max(0, coins+Math.floor((30+level*10)*Math.abs(v))*(v>=0?1:-1)); break;
         case 'range': permRange=Math.max(0, Math.min(10, permRange+v)); break;
         case 'rate':  permRate=Math.max(0, Math.min(10, permRate+v)); break;
@@ -1455,6 +1461,15 @@ function boostCombatHP(pct){
     }
 }
 
+let _shopTab = 'wep';
+function shopTab(t){
+    _shopTab=t;
+    ['wep','upg'].forEach(x=>{
+        document.getElementById('tab-btn-'+x).classList.toggle('active', x===t);
+        document.getElementById('tab-pane-'+x).classList.toggle('active', x===t);
+    });
+}
+
 function openShop(isDeath=false){
     GS='SHOP'; shopDeath=isDeath;
     document.getElementById('shop-sub').textContent=
@@ -1463,28 +1478,23 @@ function openShop(isDeath=false){
                 : `Уровень ${level} пройден!`;
     document.getElementById('shop-coins').textContent=`🪙 ${coins} монет`;
 
-    const gu=document.getElementById('sgrid-upg'); gu.innerHTML='';
+    // ── Weapons tab ──
+    const gw=document.getElementById('sgrid-wep'); gw.innerHTML='';
 
-    // ── Weapon unlock card (if just unlocked) ──
     if(weaponUnlocked){
-        const w=WEPS[weaponUnlocked];
-        const isActive=activeWeapon===weaponUnlocked;
+        const w=WEPS[weaponUnlocked], isActive=activeWeapon===weaponUnlocked;
         const c=document.createElement('div');
         c.className='scard ok'; c.style.borderColor='#FFD700'; c.style.background='rgba(60,40,0,.97)';
         c.innerHTML=`<h3 style="color:#FFD700;font-size:15px">🔓 ${WEP_ICONS[weaponUnlocked]} ${w.name}</h3>
             <p>${SHOP_WEPS_DESC[weaponUnlocked]}</p>
             <div class="cost" style="color:#FFD700">РАЗБЛОКИРОВАНО!</div>`;
-        const b=document.createElement('button'); b.className='btn btn-g';
-        b.style.borderColor='#FFD700';
+        const b=document.createElement('button'); b.className='btn btn-g'; b.style.borderColor='#FFD700';
         if(isActive){ b.textContent='✓ Активно'; b.disabled=true; }
-        else{ b.textContent='Выбрать';
-            b.onclick=()=>{ activeWeapon=weaponUnlocked; openShop(shopDeath); }; }
-        c.appendChild(b); gu.appendChild(c);
+        else{ b.textContent='Выбрать'; b.onclick=()=>{ activeWeapon=weaponUnlocked; openShop(shopDeath); }; }
+        c.appendChild(b); gw.appendChild(c);
     }
-
-    // ── Owned weapons (can switch) ──
     for(const lv of [...ownedWeapons].sort()){
-        if(lv===weaponUnlocked) continue; // already shown above
+        if(lv===weaponUnlocked) continue;
         const w=WEPS[lv]; if(!w) continue;
         const isActive=activeWeapon===lv;
         const c=document.createElement('div');
@@ -1494,30 +1504,37 @@ function openShop(isDeath=false){
         const b=document.createElement('button'); b.className='btn btn-g';
         if(isActive){ b.textContent='✓ Активно'; b.disabled=true; }
         else{ b.textContent='Выбрать'; b.onclick=()=>{ activeWeapon=lv; openShop(shopDeath); }; }
-        c.appendChild(b); gu.appendChild(c);
+        c.appendChild(b); gw.appendChild(c);
     }
 
-    // ── Upgrades ──
-    const upgs=[
-        {k:'dmg', name:'🔥 Урон',            desc:'+1 к урону',    cur:upgDmg,  cost:80+upgDmg*35},
-        {k:'rate',name:'⚡ Скорострельность', desc:'−10% задержки', cur:upgRate, cost:80+upgRate*35},
+    // ── Upgrades tab ──
+    const gu=document.getElementById('sgrid-upg'); gu.innerHTML='';
+    const GATE_UPGS=[
+        {k:'dmg',   icon:'🔥', name:'Урон ворот',         desc:'Начальное значение ворот урона +1'},
+        {k:'money', icon:'🪙', name:'Деньги ворот',        desc:'Начальное значение денежных ворот +1'},
+        {k:'range', icon:'🎯', name:'Дальность ворот',     desc:'Начальное значение ворот дальности +1'},
+        {k:'rate',  icon:'⚡', name:'Скорость ворот',      desc:'Начальное значение ворот скорости +1'},
     ];
-    for(const u of upgs){
-        const ok=coins>=u.cost&&u.cur<10;
+    for(const u of GATE_UPGS){
+        const cur=upgGate[u.k], MAX=10;
+        const cost=Math.round(60*(1+cur*0.7));
+        const ok=coins>=cost&&cur<MAX;
         const c=document.createElement('div'); c.className='scard'+(ok?' ok':'');
-        c.innerHTML=`<h3>${u.name}</h3><p>${u.desc}<br>Ур.: ${u.cur}/10</p><div class="cost">${u.cost} 🪙</div>`;
+        c.innerHTML=`<h3>${u.icon} ${u.name}</h3>
+            <p>${u.desc}<br>Уровень: <b>${cur}/${MAX}</b></p>
+            <div class="cost">${cur>=MAX?'МАКС':cost+' 🪙'}</div>`;
         const b=document.createElement('button'); b.className='btn btn-g';
-        b.disabled=!ok; b.textContent=u.cur>=10?'Макс.':(ok?'Купить':'Мало 🪙');
+        b.disabled=!ok; b.textContent=cur>=MAX?'Макс.':(ok?'Купить':'Мало 🪙');
         b.onclick=()=>{
-            if(coins<u.cost||u.cur>=10) return;
-            coins-=u.cost;
-            if(u.k==='dmg') upgDmg++;
-            if(u.k==='rate') upgRate++;
-            openShop(shopDeath);
+            if(coins<cost||upgGate[u.k]>=MAX) return;
+            coins-=cost; upgGate[u.k]++;
+            document.getElementById('shop-coins').textContent=`🪙 ${coins} монет`;
+            openShop(shopDeath); shopTab('upg');
         };
         c.appendChild(b); gu.appendChild(c);
     }
 
+    shopTab(_shopTab);
     document.getElementById('shop-next-btn').textContent =
         isDeath ? '↺ ПОВТОРИТЬ УРОВЕНЬ' : 'СЛЕДУЮЩИЙ УРОВЕНЬ ▶';
     show('shop-ov');
@@ -1541,7 +1558,7 @@ const hide=id=>document.getElementById(id).classList.remove('vis');
 
 function startGame(){
     hide('start-ov'); hide('victory-ov'); hide('loss-ov');
-    level=1;coins=0;upgDmg=0;upgRate=0;
+    level=1;coins=0;upgGate={dmg:0,money:0,range:0,rate:0};_shopTab='wep';
     ownedWeapons=new Set([1]); activeWeapon=1; combatHPMult=1;
     buildStaticWorld();
     startLevel();
@@ -1551,7 +1568,7 @@ function startLevel(){
     hide('shop-ov'); hide('loss-ov');
     GS='RUN'; winTriggered=false; shopOpened=false;
     px=0; pz=0; pvx=0; camPx=0; camPz=-7;
-    // Reset ALL run-phase gains — only shop upgrades (upgDmg/upgRate) persist
+    // Reset ALL run-phase gains — only upgGate persists across levels
     permDmg=0; tripleShot=0; dmgX2=1; moneyX2=1; permRange=0; permRate=0;
     wepLv=activeWeapon; spd=FWD_SPEED; coinsX=1;
     plyWalkT=0; gunFlash=0; effPopT=0; runFireT=0;
