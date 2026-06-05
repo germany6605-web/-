@@ -950,7 +950,7 @@ function makeTirWallTex(){
 }
 function beginTir(diffMult){
     document.getElementById('tir-diff-modal').style.display='none';
-    tirActive=true; tirT=0; tirScore=0; tirSpawnT=0.4; tirFrozenPz=pz; tirDiffMult=diffMult;
+    tirActive=true; tirT=0; tirScore=0; tirSpawnT=0.4; tirFrozenPz=pz; tirDiffMult=diffMult; tirPendingZ=null;
 
     // Spawn wall
     const wallZ = tirFrozenPz + 10;
