@@ -1828,7 +1828,6 @@ function tickRun(dt){
 
     // Move forward (freeze during tir or difficulty selection)
     if(!tirActive && !tirPendingZ) pz += spd * dt;
-    else if(tirActive) pz = tirFrozenPz;
 
     // Gun bob anim
     plyWalkT += dt*6;
@@ -1841,7 +1840,7 @@ function tickRun(dt){
 
     // Camera smooth follow (closer)
     camPx += (px - camPx) * Math.min(1, dt*8);
-    if(!tirActive) camPz += (pz - 4 - camPz) * Math.min(1, dt*6);
+    camPz += (pz - 4 - camPz) * Math.min(1, dt*6);
     cam.position.set(camPx, 3.4, camPz);
     cam.lookAt(camPx*.4+px*.6, 1.0, pz+6);
 
