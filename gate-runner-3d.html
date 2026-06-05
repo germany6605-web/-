@@ -35,7 +35,35 @@ body { background:#000; overflow:hidden; font-family:'Segoe UI',Arial,sans-serif
 .btn-g:disabled { background:#111; border-color:#333; color:#444; cursor:not-allowed; }
 #shop-coins { font-size:19px; color:#FFD700; margin-bottom:12px; }
 
-/* Shop tabs */
+/* Gear system */
+.gear-grid { display:grid; grid-template-columns:repeat(3,72px); gap:6px; margin:0 auto 14px; }
+.gcell { width:72px; height:72px; border:2px solid #334; border-radius:8px;
+  background:#0a0f1a; cursor:pointer; display:flex; flex-direction:column;
+  align-items:center; justify-content:center; position:relative; user-select:none; }
+.gcell:hover { border-color:#556; }
+.gcell.g-has { border-color:#774400; background:#150a00; }
+.gcell.g-sel { border-color:#FFD700 !important; background:#1a1000 !important; box-shadow:0 0 10px #FFD70066; }
+.gcell.g-merge { border-color:#44FF88 !important; background:#00150a !important; }
+.gcell .g-icon { font-size:26px; line-height:1; }
+.gcell .g-lv { font-size:11px; font-weight:bold; margin-top:2px; }
+.gear-slots { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:14px; max-width:600px; width:100%; }
+.gslot { border:2px solid #336; border-radius:8px; background:#08101a; padding:8px 4px;
+  text-align:center; cursor:pointer; min-height:78px; display:flex; flex-direction:column;
+  align-items:center; justify-content:center; gap:3px; }
+.gslot:hover { border-color:#558; }
+.gslot.gs-has { border-color:#774400; background:#150a00; }
+.gslot.gs-act { border-color:#4488FF !important; box-shadow:0 0 8px #4488FF66; }
+.gslot .gs-name { font-size:10px; color:#888; }
+.gslot .gs-gear { font-size:22px; line-height:1; }
+.gslot .gs-lv { font-size:11px; font-weight:bold; }
+.mod-wep-bar { display:flex; gap:6px; flex-wrap:wrap; justify-content:center; margin-bottom:12px; max-width:620px; }
+.mod-wbtn { padding:5px 12px; font-size:12px; border:2px solid #334; border-radius:6px;
+  background:#0a1020; color:#888; cursor:pointer; }
+.mod-wbtn:hover { border-color:#556; }
+.mod-wbtn.active { border-color:#FFD700; color:#FFD700; background:#1a1000; }
+.mod-actions { display:flex; gap:10px; align-items:center; justify-content:center; flex-wrap:wrap; margin-bottom:10px; }
+.gear-bonus-info { font-size:11px; color:#aaa; text-align:center; max-width:320px; line-height:1.6; margin-bottom:8px; }
+
 .tab-bar { display:flex; gap:8px; margin-bottom:16px; }
 .tab-btn { padding:9px 28px; font-size:15px; font-weight:bold; border-radius:8px 8px 0 0;
     border:2px solid #334; border-bottom:none; background:#0a1020; color:#888; cursor:pointer; }
@@ -102,9 +130,11 @@ body { background:#000; overflow:hidden; font-family:'Segoe UI',Arial,sans-serif
   <div class="tab-bar">
     <button class="tab-btn active" id="tab-btn-wep" onclick="shopTab('wep')">🔫 Оружие</button>
     <button class="tab-btn" id="tab-btn-upg" onclick="shopTab('upg')">⬆ Улучшения</button>
+    <button class="tab-btn" id="tab-btn-mod" onclick="shopTab('mod')">⚙ Моды</button>
   </div>
   <div class="tab-pane active" id="tab-pane-wep"><div class="sgrid" id="sgrid-wep"></div></div>
   <div class="tab-pane" id="tab-pane-upg"><div class="sgrid" id="sgrid-upg"></div></div>
+  <div class="tab-pane" id="tab-pane-mod"><div id="mod-tab-root" style="display:flex;flex-direction:column;align-items:center;width:100%"></div></div>
   <button class="btn" id="shop-next-btn" onclick="nextLevel()">СЛЕДУЮЩИЙ УРОВЕНЬ ▶</button>
 </div>
 <div class="ov" id="loss-ov" style="background:radial-gradient(ellipse at 50% 40%,#1a0000 0%,#000 100%)">
@@ -299,9 +329,9 @@ const WEPS=[null,
      shots:1, spread:0,     dmgMult:50,   bScale:4.0, bColor:0xFF00AA, pierce:true},
 ];
 const W=()=>WEPS[wepLv];
-const effDmg=()=>Math.max(1, 1 + Math.floor(permDmg/2)) * dmgX2;
+const effDmg=()=>Math.max(1, (1 + Math.floor(permDmg/2)) * dmgX2 * (1 + gearBoltBonus()));
 const effCD=()=>W().cd*(.9**permRate);
-const effLife=()=>1.2+permRange*0.3;
+const effLife=()=>1.2+permRange*0.3+gearScopeBonus();
 
 // ─── PLAYER MESH (weapon only) ───
 let plyGrp, plyWalkT=0, gunFlash=0;
@@ -373,9 +403,10 @@ const BULL_SPD = 38;
 function fireBulletRun(){
     const w=W();
     const baseShots = w.shots;
-    const extraShots = tripleShot * 2;          // each pickup adds 2 extra bullets
+    const extraShots = tripleShot * 2 + gearMagBonus();
     const shots = baseShots + extraShots;
-    const spread = tripleShot>0 && extraShots>0 ? Math.max(w.spread, 0.12) : w.spread;
+    const silMult = Math.max(0, 1 - gearSilBonus());
+    const spread = (tripleShot>0 && extraShots>0 ? Math.max(w.spread, 0.12) : w.spread) * silMult;
     const tripleExtrasStart = baseShots;        // bullets beyond base are tripleExtra
     for(let i=0;i<shots;i++){
         const angle = shots>1 ? ((i-(shots-1)/2)*spread) + (Math.random()-.5)*spread*.3 : 0;
@@ -1678,10 +1709,170 @@ function boostCombatHP(pct){
 let _shopTab = 'wep';
 function shopTab(t){
     _shopTab=t;
-    ['wep','upg'].forEach(x=>{
+    ['wep','upg','mod'].forEach(x=>{
         document.getElementById('tab-btn-'+x).classList.toggle('active', x===t);
         document.getElementById('tab-pane-'+x).classList.toggle('active', x===t);
     });
+    if(t==='mod') renderModTab();
+}
+
+// ─── GEAR SYSTEM ───
+let gearGrid = new Array(21).fill(null); // null | {level:1-10}
+let weaponGears = {};  // {wepIdx: {silencer,magazine,bolt,scope}} each slot: null|{level}
+let _gearSel = -1;     // selected grid cell index, -1=none
+let _modWep = 1;       // weapon shown in mod tab
+
+const SLOT_DEFS = [
+    {k:'silencer', label:'🔇 Глушитель', bonus:'−8% разброса/ур'},
+    {k:'magazine', label:'📦 Магазин',   bonus:'+1 пуля / 2ур'},
+    {k:'bolt',     label:'⚙ Затвор',    bonus:'+30% урона/ур'},
+    {k:'scope',    label:'🔭 Прицел',    bonus:'+0.2 дальн./ур'},
+];
+
+function gearColor(lv){
+    if(lv>=10) return '#FFD700';
+    if(lv>=7)  return '#4488FF';
+    if(lv>=4)  return '#44FF88';
+    return '#AAAAAA';
+}
+function gearLabel(lv){ return lv>=10 ? '★MAX' : 'Ур.'+lv; }
+function gearIcon(){ return '⚙'; }
+
+function getWepGears(wepIdx){ return weaponGears[wepIdx] || {}; }
+
+// Bonus helpers (used in firing calculations)
+function gearBoltBonus()    { return ((getWepGears(wepLv).bolt    ||{}).level||0)*0.30; }
+function gearMagBonus()     { return Math.floor(((getWepGears(wepLv).magazine||{}).level||0)/2); }
+function gearSilBonus()     { return ((getWepGears(wepLv).silencer||{}).level||0)*0.08; }
+function gearScopeBonus()   { return ((getWepGears(wepLv).scope   ||{}).level||0)*0.20; }
+
+function buyGear(){
+    const cost = 100;
+    if(coins < cost){ return; }
+    const idx = gearGrid.indexOf(null);
+    if(idx === -1){ return; }
+    coins -= cost;
+    gearGrid[idx] = {level:1};
+    document.getElementById('shop-coins').textContent = `🪙 ${coins} монет`;
+    renderModTab();
+}
+
+function gearCellClick(idx){
+    const g = gearGrid[idx];
+    if(!g){
+        // Empty cell — deselect
+        _gearSel = -1;
+        renderModTab(); return;
+    }
+    if(_gearSel === -1){
+        // Select this gear
+        _gearSel = idx;
+        renderModTab(); return;
+    }
+    if(_gearSel === idx){
+        // Deselect
+        _gearSel = -1;
+        renderModTab(); return;
+    }
+    // Another gear selected — try merge
+    const sel = gearGrid[_gearSel];
+    if(sel && sel.level === g.level && g.level < 10){
+        // Merge: target cell goes up, selected cell becomes empty
+        gearGrid[idx] = {level: g.level + 1};
+        gearGrid[_gearSel] = null;
+        _gearSel = -1;
+        renderModTab(); return;
+    }
+    // Different level or max level — just re-select
+    _gearSel = idx;
+    renderModTab();
+}
+
+function gearSlotClick(slotKey){
+    if(_gearSel === -1){
+        // No gear selected — clicking slot does nothing (can't remove)
+        return;
+    }
+    const sel = gearGrid[_gearSel];
+    if(!sel) return;
+    if(!weaponGears[_modWep]) weaponGears[_modWep] = {};
+    // Place gear into slot (old gear destroyed)
+    weaponGears[_modWep][slotKey] = {level: sel.level};
+    gearGrid[_gearSel] = null;
+    _gearSel = -1;
+    renderModTab();
+}
+
+function renderModTab(){
+    const root = document.getElementById('mod-tab-root');
+    root.innerHTML = '';
+
+    // ── Weapon selector ──
+    const wbar = document.createElement('div'); wbar.className='mod-wep-bar';
+    for(const lv of [...ownedWeapons].sort()){
+        const w = WEPS[lv]; if(!w) continue;
+        const btn = document.createElement('button');
+        btn.className = 'mod-wbtn' + (lv===_modWep?' active':'');
+        btn.textContent = (WEP_ICONS[lv]||'🔫') + ' ' + w.name;
+        btn.onclick = ()=>{ _modWep=lv; renderModTab(); };
+        wbar.appendChild(btn);
+    }
+    root.appendChild(wbar);
+
+    // ── 4 gear slots ──
+    const slots = document.createElement('div'); slots.className='gear-slots';
+    const wg = getWepGears(_modWep);
+    for(const sd of SLOT_DEFS){
+        const g = wg[sd.k] || null;
+        const div = document.createElement('div');
+        div.className = 'gslot' + (g?' gs-has':'');
+        div.onclick = ()=>gearSlotClick(sd.k);
+        div.innerHTML = `<div class="gs-name">${sd.label}</div>
+            ${g ? `<div class="gs-gear" style="color:${gearColor(g.level)}">${gearIcon()}</div>
+                   <div class="gs-lv" style="color:${gearColor(g.level)}">${gearLabel(g.level)}</div>`
+                : `<div style="font-size:24px;color:#333">○</div>`}
+            <div style="font-size:9px;color:#555;margin-top:2px">${sd.bonus}</div>`;
+        slots.appendChild(div);
+    }
+    root.appendChild(slots);
+
+    // ── Hint ──
+    const hint = document.createElement('div'); hint.className='gear-bonus-info';
+    hint.innerHTML = _gearSel>=0
+        ? '⚙ Шестерёнка выбрана — нажми на слот чтобы одеть, или на другую шестерёнку того же уровня чтобы объединить'
+        : 'Нажми на шестерёнку чтобы выбрать · 2 одинакового уровня = уровень выше · Снятая шестерёнка уничтожается';
+    root.appendChild(hint);
+
+    // ── Actions row ──
+    const acts = document.createElement('div'); acts.className='mod-actions';
+    const hasFree = gearGrid.includes(null);
+    const buyBtn = document.createElement('button');
+    buyBtn.className='btn btn-g'; buyBtn.style.fontSize='14px'; buyBtn.style.padding='8px 18px';
+    buyBtn.textContent = hasFree ? `Купить ⚙ ур.1 — 100 🪙` : 'Сетка заполнена';
+    buyBtn.disabled = !hasFree || coins < 100;
+    buyBtn.onclick = buyGear;
+    acts.appendChild(buyBtn);
+    root.appendChild(acts);
+
+    // ── 3×7 gear grid ──
+    const grid = document.createElement('div'); grid.className='gear-grid';
+    const selGear = _gearSel >= 0 ? gearGrid[_gearSel] : null;
+    for(let i=0; i<21; i++){
+        const g = gearGrid[i];
+        const cell = document.createElement('div');
+        const isSel = i === _gearSel;
+        const isMerge = selGear && g && !isSel && g.level === selGear.level && g.level < 10;
+        cell.className = 'gcell' + (g?' g-has':'') + (isSel?' g-sel':'') + (isMerge?' g-merge':'');
+        cell.onclick = ()=>gearCellClick(i);
+        if(g){
+            cell.innerHTML = `<div class="g-icon" style="color:${gearColor(g.level)}">${gearIcon()}</div>
+                <div class="g-lv" style="color:${gearColor(g.level)}">${gearLabel(g.level)}</div>`;
+        } else {
+            cell.innerHTML = `<div style="color:#222;font-size:22px">+</div>`;
+        }
+        grid.appendChild(cell);
+    }
+    root.appendChild(grid);
 }
 
 function openShop(isDeath=false){
@@ -1793,6 +1984,7 @@ const hide=id=>document.getElementById(id).classList.remove('vis');
 function startGame(){
     hide('start-ov'); hide('victory-ov'); hide('loss-ov');
     level=1;coins=0;upgGate={dmg:0,money:0,range:0,rate:0};upgTir=0;_shopTab='wep';
+    gearGrid=new Array(21).fill(null); weaponGears={}; _gearSel=-1; _modWep=1;
     ownedWeapons=new Set([1]); activeWeapon=1; combatHPMult=1;
     buildStaticWorld();
     startLevel();
