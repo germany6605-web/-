@@ -36,25 +36,26 @@ body { background:#000; overflow:hidden; font-family:'Segoe UI',Arial,sans-serif
 #shop-coins { font-size:19px; color:#FFD700; margin-bottom:12px; }
 
 /* Gear system */
-.gear-grid { display:grid; grid-template-columns:repeat(3,72px); gap:6px; margin:0 auto 14px; }
-.gcell { width:72px; height:72px; border:2px solid #334; border-radius:8px;
-  background:#0a0f1a; cursor:pointer; display:flex; flex-direction:column;
-  align-items:center; justify-content:center; position:relative; user-select:none; }
+.gear-grid { display:grid; grid-template-columns:repeat(7,68px); gap:6px; margin:0 auto 14px; }
+.gcell { width:68px; height:68px; border:2px solid #334; border-radius:10px;
+  background:radial-gradient(circle at 38% 32%,#1a1a2e,#07080f);
+  cursor:pointer; display:flex; flex-direction:column;
+  align-items:center; justify-content:center; position:relative; user-select:none;
+  transition:border-color .12s, box-shadow .12s; }
 .gcell:hover { border-color:#556; }
-.gcell.g-has { border-color:#774400; background:#150a00; }
-.gcell.g-sel { border-color:#FFD700 !important; background:#1a1000 !important; box-shadow:0 0 10px #FFD70066; }
-.gcell.g-merge { border-color:#44FF88 !important; background:#00150a !important; }
-.gcell .g-icon { font-size:26px; line-height:1; }
-.gcell .g-lv { font-size:11px; font-weight:bold; margin-top:2px; }
-.gear-slots { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:14px; max-width:600px; width:100%; }
+.gcell.g-has { border-color:#774400; background:radial-gradient(circle at 38% 32%,#1e1000,#0a0500); }
+.gcell.g-sel { border-color:#FFD700 !important; box-shadow:0 0 14px #FFD70077 !important; }
+.gcell.g-merge { border-color:#44FF88 !important; box-shadow:0 0 10px #44FF8866 !important; }
+.gcell.g-no { border-color:#FF4444 !important; box-shadow:0 0 8px #FF444455 !important; cursor:not-allowed; }
+.gcell .g-lv { font-size:10px; font-weight:bold; margin-top:1px; letter-spacing:.5px; }
+.gear-slots { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:14px; max-width:620px; width:100%; }
 .gslot { border:2px solid #336; border-radius:8px; background:#08101a; padding:8px 4px;
   text-align:center; cursor:pointer; min-height:78px; display:flex; flex-direction:column;
-  align-items:center; justify-content:center; gap:3px; }
+  align-items:center; justify-content:center; gap:3px; transition:border-color .12s; }
 .gslot:hover { border-color:#558; }
-.gslot.gs-has { border-color:#774400; background:#150a00; }
-.gslot.gs-act { border-color:#4488FF !important; box-shadow:0 0 8px #4488FF66; }
+.gslot.gs-has { border-color:#774400; background:#0f0800; }
+.gslot.gs-no  { border-color:#FF4444 !important; cursor:not-allowed; }
 .gslot .gs-name { font-size:10px; color:#888; }
-.gslot .gs-gear { font-size:22px; line-height:1; }
 .gslot .gs-lv { font-size:11px; font-weight:bold; }
 .mod-wep-bar { display:flex; gap:6px; flex-wrap:wrap; justify-content:center; margin-bottom:12px; max-width:620px; }
 .mod-wbtn { padding:5px 12px; font-size:12px; border:2px solid #334; border-radius:6px;
@@ -62,7 +63,7 @@ body { background:#000; overflow:hidden; font-family:'Segoe UI',Arial,sans-serif
 .mod-wbtn:hover { border-color:#556; }
 .mod-wbtn.active { border-color:#FFD700; color:#FFD700; background:#1a1000; }
 .mod-actions { display:flex; gap:10px; align-items:center; justify-content:center; flex-wrap:wrap; margin-bottom:10px; }
-.gear-bonus-info { font-size:11px; color:#aaa; text-align:center; max-width:320px; line-height:1.6; margin-bottom:8px; }
+.gear-bonus-info { font-size:11px; color:#aaa; text-align:center; max-width:480px; line-height:1.6; margin-bottom:8px; }
 
 .tab-bar { display:flex; gap:8px; margin-bottom:16px; }
 .tab-btn { padding:9px 28px; font-size:15px; font-weight:bold; border-radius:8px 8px 0 0;
@@ -1736,7 +1737,34 @@ function gearColor(lv){
     return '#AAAAAA';
 }
 function gearLabel(lv){ return lv>=10 ? '★MAX' : 'Ур.'+lv; }
-function gearIcon(){ return '⚙'; }
+function gearSvg(lv, size=38){
+    const c  = gearColor(lv);
+    // Shadow/highlight colours for 3-D effect
+    const hi = lv>=10?'#FFF8AA': lv>=7?'#AAD4FF': lv>=4?'#AAFFCC':'#DDDDDD';
+    const sh = lv>=10?'#886600': lv>=7?'#001844': lv>=4?'#004422':'#333333';
+    const r=size/2, teeth=8, tr=r*.78, ir=r*.52, cr=r*.30;
+    const pts=[];
+    for(let i=0;i<teeth*2;i++){
+        const a=i*Math.PI/teeth - Math.PI/2;
+        const rad = i%2===0 ? tr : ir;
+        pts.push(`${r+Math.cos(a)*rad},${r+Math.sin(a)*rad}`);
+    }
+    return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <radialGradient id="gfill_${lv}" cx="35%" cy="30%" r="65%">
+          <stop offset="0%" stop-color="${hi}"/>
+          <stop offset="100%" stop-color="${sh}"/>
+        </radialGradient>
+        <filter id="gshadow" x="-20%" y="-20%" width="140%" height="140%">
+          <feDropShadow dx="1" dy="2" stdDeviation="1.5" flood-color="${sh}" flood-opacity="0.8"/>
+        </filter>
+      </defs>
+      <polygon points="${pts.join(' ')}" fill="url(#gfill_${lv})" stroke="${c}" stroke-width="1.2"
+        filter="url(#gshadow)" stroke-linejoin="round"/>
+      <circle cx="${r}" cy="${r}" r="${cr}" fill="url(#gfill_${lv})" stroke="${c}" stroke-width="1.2"/>
+      <circle cx="${r-cr*.25}" cy="${r-cr*.3}" r="${cr*.35}" fill="${hi}" opacity="0.55"/>
+    </svg>`;
+}
 
 function getWepGears(wepIdx){ return weaponGears[wepIdx] || {}; }
 
@@ -1789,14 +1817,13 @@ function gearCellClick(idx){
 }
 
 function gearSlotClick(slotKey){
-    if(_gearSel === -1){
-        // No gear selected — clicking slot does nothing (can't remove)
-        return;
-    }
+    if(_gearSel === -1) return;
     const sel = gearGrid[_gearSel];
     if(!sel) return;
+    const existing = (weaponGears[_modWep]||{})[slotKey];
+    // Cannot replace with a lower-level gear
+    if(existing && sel.level < existing.level) return;
     if(!weaponGears[_modWep]) weaponGears[_modWep] = {};
-    // Place gear into slot (old gear destroyed)
     weaponGears[_modWep][slotKey] = {level: sel.level};
     gearGrid[_gearSel] = null;
     _gearSel = -1;
@@ -1822,14 +1849,16 @@ function renderModTab(){
     // ── 4 gear slots ──
     const slots = document.createElement('div'); slots.className='gear-slots';
     const wg = getWepGears(_modWep);
+    const selGearForSlot = _gearSel>=0 ? gearGrid[_gearSel] : null;
     for(const sd of SLOT_DEFS){
         const g = wg[sd.k] || null;
+        const wouldDowngrade = selGearForSlot && g && selGearForSlot.level < g.level;
         const div = document.createElement('div');
-        div.className = 'gslot' + (g?' gs-has':'');
+        div.className = 'gslot' + (g?' gs-has':'') + (wouldDowngrade?' gs-no':'');
         div.onclick = ()=>gearSlotClick(sd.k);
+        div.title = wouldDowngrade ? 'Нельзя заменить на шестерёнку меньшего уровня' : '';
         div.innerHTML = `<div class="gs-name">${sd.label}</div>
-            ${g ? `<div class="gs-gear" style="color:${gearColor(g.level)}">${gearIcon()}</div>
-                   <div class="gs-lv" style="color:${gearColor(g.level)}">${gearLabel(g.level)}</div>`
+            ${g ? `${gearSvg(g.level,34)}<div class="gs-lv" style="color:${gearColor(g.level)}">${gearLabel(g.level)}</div>`
                 : `<div style="font-size:24px;color:#333">○</div>`}
             <div style="font-size:9px;color:#555;margin-top:2px">${sd.bonus}</div>`;
         slots.appendChild(div);
@@ -1854,7 +1883,7 @@ function renderModTab(){
     acts.appendChild(buyBtn);
     root.appendChild(acts);
 
-    // ── 3×7 gear grid ──
+    // ── 7×3 gear grid ──
     const grid = document.createElement('div'); grid.className='gear-grid';
     const selGear = _gearSel >= 0 ? gearGrid[_gearSel] : null;
     for(let i=0; i<21; i++){
@@ -1865,10 +1894,9 @@ function renderModTab(){
         cell.className = 'gcell' + (g?' g-has':'') + (isSel?' g-sel':'') + (isMerge?' g-merge':'');
         cell.onclick = ()=>gearCellClick(i);
         if(g){
-            cell.innerHTML = `<div class="g-icon" style="color:${gearColor(g.level)}">${gearIcon()}</div>
-                <div class="g-lv" style="color:${gearColor(g.level)}">${gearLabel(g.level)}</div>`;
+            cell.innerHTML = `${gearSvg(g.level,40)}<div class="g-lv" style="color:${gearColor(g.level)}">${gearLabel(g.level)}</div>`;
         } else {
-            cell.innerHTML = `<div style="color:#222;font-size:22px">+</div>`;
+            cell.innerHTML = `<div style="color:#222;font-size:20px">+</div>`;
         }
         grid.appendChild(cell);
     }
