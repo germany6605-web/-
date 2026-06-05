@@ -158,6 +158,7 @@ let permRange = 0, permRate = 0;
 let lootPlatforms = [], pickups = [];
 let weaponPlatform = null, weaponUnlocked = 0;
 let combatHPMult = 1;
+let barricades = [];
 
 // ─── INPUT ───
 const keys = {};
@@ -403,6 +404,21 @@ function updateBullets(dt){
                     if(!b.pierce) hit=true;
                     break;
                 }
+            }
+        }
+
+        // Bullet hits barricades
+        if(GS==='RUN' && !hit){
+            for(const bar of barricades){
+                if(bar.dead||bar.removed) continue;
+                if(Math.abs(bz-bar.z)>0.5 || Math.abs(bx)>3.7) continue;
+                bar.hp-=effDmg()*(b.dmgMult||1);
+                bar.hitT=0.12;
+                bar.mat.emissive.setHex(0xFF6600);
+                drawBarricadeHP(bar);
+                if(bar.hp<=0&&!bar.dead){ bar.dead=true; bar.deadT=0; }
+                if(!b.pierce) hit=true;
+                break;
             }
         }
 
@@ -655,6 +671,123 @@ function spawnGateSide(side, z, eff){
 }
 
 // Spawn one row combining any mix of gates, mobs, loot platforms
+// ─── BARRICADES ───
+const BARR_TYPES=[
+    {name:'Дерево',  hpBase:80,  hpLvl:25,  emissive:0x8B4513},
+    {name:'Кирпич',  hpBase:220, hpLvl:65,  emissive:0xCC4422},
+    {name:'Бетон',   hpBase:500, hpLvl:140, emissive:0x888888},
+];
+
+function makeBarricadeTex(type){
+    const cv=document.createElement('canvas'); cv.width=512; cv.height=320;
+    const ctx=cv.getContext('2d');
+    if(type===0){ // wood planks
+        const colors=['#6B3A10','#7A4415','#5C2E0A','#8B4C18','#4A2208'];
+        const plankH=50;
+        for(let y=0;y<320;y+=plankH){
+            ctx.fillStyle=colors[Math.floor(y/plankH)%colors.length];
+            ctx.fillRect(0,y,512,plankH-4);
+            ctx.fillStyle='rgba(0,0,0,0.25)'; ctx.fillRect(0,y+plankH-4,512,4);
+            ctx.strokeStyle='rgba(0,0,0,0.15)'; ctx.lineWidth=1.5;
+            for(let i=0;i<10;i++){
+                const gx=(i*55+Math.floor(y/plankH)*17)%480;
+                ctx.beginPath(); ctx.moveTo(gx,y); ctx.lineTo(gx+8,y+plankH-4); ctx.stroke();
+            }
+        }
+        ctx.fillStyle='#707070';
+        for(let y=22;y<320;y+=50) for(let x=40;x<512;x+=64){
+            ctx.beginPath(); ctx.arc(x,y,5,0,Math.PI*2); ctx.fill();
+            ctx.fillStyle='#555'; ctx.beginPath(); ctx.arc(x,y,3,0,Math.PI*2); ctx.fill();
+            ctx.fillStyle='#707070';
+        }
+    } else if(type===1){ // brick
+        ctx.fillStyle='#5a2210'; ctx.fillRect(0,0,512,320);
+        const bW=56, bH=26;
+        for(let row=0;row*bH<320;row++){
+            const off=(row%2)*bW/2;
+            for(let col=-1;col*bW<512+bW;col++){
+                const hue=5+Math.floor(Math.random()*10), li=30+Math.floor(Math.random()*12);
+                ctx.fillStyle=`hsl(${hue},60%,${li}%)`;
+                ctx.fillRect(col*bW+off+2,row*bH+2,bW-4,bH-4);
+            }
+        }
+        ctx.strokeStyle='rgba(180,155,130,0.45)'; ctx.lineWidth=3;
+        for(let row=0;row*bH<320;row++){
+            ctx.beginPath(); ctx.moveTo(0,row*bH); ctx.lineTo(512,row*bH); ctx.stroke();
+            const off=(row%2)*bW/2;
+            for(let col=-1;col*bW<512+bW;col++){
+                ctx.beginPath(); ctx.moveTo(col*bW+off,row*bH); ctx.lineTo(col*bW+off,(row+1)*bH); ctx.stroke();
+            }
+        }
+    } else { // concrete
+        const grd=ctx.createLinearGradient(0,0,512,320);
+        grd.addColorStop(0,'#8a8a8a'); grd.addColorStop(1,'#6e6e6e');
+        ctx.fillStyle=grd; ctx.fillRect(0,0,512,320);
+        ctx.fillStyle='rgba(255,255,255,0.07)';
+        for(let i=0;i<600;i++) ctx.fillRect(Math.random()*512,Math.random()*320,2+Math.random()*4,2+Math.random()*4);
+        ctx.strokeStyle='rgba(0,0,0,0.45)'; ctx.lineWidth=1.5;
+        for(let i=0;i<7;i++){
+            ctx.beginPath(); let cx=60+i*60,cy=20+Math.random()*280;
+            ctx.moveTo(cx,cy);
+            for(let j=0;j<6;j++){cx+=Math.random()*50-15;cy+=Math.random()*40-5;ctx.lineTo(cx,cy);}
+            ctx.stroke();
+        }
+        ctx.strokeStyle='rgba(200,200,200,0.15)'; ctx.lineWidth=12;
+        for(let y=80;y<320;y+=80){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(512,y);ctx.stroke();}
+    }
+    const t=new THREE.CanvasTexture(cv); t.anisotropy=renderer.capabilities.getMaxAnisotropy(); return t;
+}
+
+function drawBarricadeHP(bar){
+    const pct=Math.max(0,bar.hp/bar.maxHp);
+    bar.hpCtx.clearRect(0,0,256,20);
+    bar.hpCtx.fillStyle='rgba(0,0,0,0.6)'; bar.hpCtx.fillRect(0,0,256,20);
+    bar.hpCtx.fillStyle=pct>0.55?'#44EE44':pct>0.28?'#FFAA00':'#FF2200';
+    bar.hpCtx.fillRect(2,2,Math.round(252*pct),16);
+    bar.hpTex.needsUpdate=true;
+}
+
+function spawnBarricade(z, type){
+    const cfg=BARR_TYPES[type];
+    const hp=Math.round(cfg.hpBase+cfg.hpLvl*level);
+    const W=7.4, H=4.6, D=0.4;
+    const g=new THREE.Group();
+
+    const mat=new THREE.MeshLambertMaterial({map:makeBarricadeTex(type),emissive:new THREE.Color(0)});
+    const body=new THREE.Mesh(new THREE.BoxGeometry(W,H,D),mat);
+    body.position.y=H/2; g.add(body);
+
+    // Top bar
+    const topColors=[0x6B3410,0xAA3311,0x666666];
+    const top=new THREE.Mesh(new THREE.BoxGeometry(W+0.1,0.25,D+0.1),
+        new THREE.MeshLambertMaterial({color:topColors[type]}));
+    top.position.y=H+0.12; g.add(top);
+
+    // HP bar
+    const hpCv=document.createElement('canvas'); hpCv.width=256; hpCv.height=20;
+    const hpCtx=hpCv.getContext('2d');
+    const hpTex=new THREE.CanvasTexture(hpCv);
+    const hpSpr=new THREE.Sprite(new THREE.SpriteMaterial({map:hpTex,depthTest:false,transparent:true}));
+    hpSpr.scale.set(4.0,0.32,1); hpSpr.position.set(0,H+0.65,0); g.add(hpSpr);
+
+    // Name label
+    const lCv=document.createElement('canvas'); lCv.width=256; lCv.height=44;
+    const lCtx=lCv.getContext('2d');
+    lCtx.fillStyle=['#8B4513','#CC4422','#777777'][type]; lCtx.fillRect(0,0,256,44);
+    lCtx.strokeStyle='rgba(255,255,255,0.4)'; lCtx.lineWidth=3; lCtx.strokeRect(1,1,254,42);
+    lCtx.font='bold 28px Arial'; lCtx.textAlign='center'; lCtx.textBaseline='middle';
+    lCtx.fillStyle='#fff'; lCtx.shadowColor='#000'; lCtx.shadowBlur=5;
+    lCtx.fillText(cfg.name,128,22);
+    const lTex=new THREE.CanvasTexture(lCv);
+    const lSpr=new THREE.Sprite(new THREE.SpriteMaterial({map:lTex,depthTest:false,transparent:true}));
+    lSpr.scale.set(3.0,0.52,1); lSpr.position.set(0,H+1.02,0); g.add(lSpr);
+
+    g.position.set(0,0,z); scene.add(g);
+    const bar={g,body,mat,hpCv,hpCtx,hpTex,hpSpr,hp,maxHp:hp,type,z,
+               dead:false,deadT:0,removed:false,hitT:0};
+    drawBarricadeHP(bar); barricades.push(bar); return bar;
+}
+
 function spawnRow(z){
     // Weighted row configs: L and R slot types
     const cfgs=[
@@ -674,6 +807,12 @@ function spawnRow(z){
     let r=Math.random()*total, cfg=cfgs[0];
     for(const c of cfgs){ r-=c.w; if(r<=0){cfg=c;break;} }
 
+    // 15% chance: spawn a barricade
+    if(Math.random()<0.15){
+        const r=Math.random();
+        const type = r<0.5 ? 0 : r<0.82 ? 1 : 2;
+        spawnBarricade(z, type); return;
+    }
     // 20% chance: spawn a standalone moving gate instead of the normal row
     if(Math.random()<0.20){ spawnGate(z, true); return; }
     if(cfg.L==='gate' && cfg.R==='gate'){ spawnGate(z, false); return; }
@@ -1422,6 +1561,7 @@ function startLevel(){
     if(weaponPlatform){ scene.remove(weaponPlatform.g); weaponPlatform=null; }
     if(trophyCup){ scene.remove(trophyCup.g); trophyCup=null; }
 
+    barricades.forEach(b=>scene.remove(b.g)); barricades=[];
     bullets.forEach(b=>scene.remove(b.mesh)); bullets=[];
     enemies.forEach(e=>scene.remove(e.g)); enemies=[];
     mobs.forEach(m=>scene.remove(m.g)); mobs=[];
@@ -1576,6 +1716,25 @@ function tickRun(dt){
         if(lp.rimMat){
             if(lp.rimT>0){ lp.rimT-=dt; lp.rimMat.color.setHex(0xFFFFFF); }
             else { lp.rimMat.color.set(lp.loot.color); }
+        }
+    }
+
+    // Update barricades
+    for(const bar of barricades){
+        if(bar.removed) continue;
+        if(bar.hitT>0){
+            bar.hitT-=dt;
+            if(bar.hitT<=0) bar.mat.emissive.setHex(0);
+        }
+        if(bar.dead){
+            bar.deadT+=dt;
+            bar.g.scale.y=Math.max(0,1-bar.deadT*2.5);
+            bar.g.position.y=-bar.deadT*0.8;
+            if(bar.deadT>0.5){ scene.remove(bar.g); bar.removed=true; }
+        } else {
+            if(pz>=bar.z-0.4 && pz<=bar.z+0.3 && Math.abs(px)<3.4){
+                playerDie(); return;
+            }
         }
     }
 
