@@ -1516,17 +1516,17 @@ function openShop(isDeath=false){
         {k:'rate',  icon:'⚡', name:'Скорость ворот',      desc:'Начальное значение ворот скорости +1'},
     ];
     for(const u of GATE_UPGS){
-        const cur=upgGate[u.k], MAX=10;
+        const cur=upgGate[u.k];
         const cost=Math.round(60*(1+cur*0.7));
-        const ok=coins>=cost&&cur<MAX;
+        const ok=coins>=cost;
         const c=document.createElement('div'); c.className='scard'+(ok?' ok':'');
         c.innerHTML=`<h3>${u.icon} ${u.name}</h3>
-            <p>${u.desc}<br>Уровень: <b>${cur}/${MAX}</b></p>
-            <div class="cost">${cur>=MAX?'МАКС':cost+' 🪙'}</div>`;
+            <p>${u.desc}<br>Уровень: <b>${cur}</b></p>
+            <div class="cost">${cost+' 🪙'}</div>`;
         const b=document.createElement('button'); b.className='btn btn-g';
-        b.disabled=!ok; b.textContent=cur>=MAX?'Макс.':(ok?'Купить':'Мало 🪙');
+        b.disabled=!ok; b.textContent=ok?'Купить':'Мало 🪙';
         b.onclick=()=>{
-            if(coins<cost||upgGate[u.k]>=MAX) return;
+            if(coins<cost) return;
             coins-=cost; upgGate[u.k]++;
             document.getElementById('shop-coins').textContent=`🪙 ${coins} монет`;
             openShop(shopDeath); shopTab('upg');
