@@ -244,6 +244,7 @@ const FWD_SPEED = 6, X_LIMIT = 3.0, X_ACCEL = 22;
 // ─── STATE ───
 let GS = 'START', level = 1, coins = 0;
 let totalWins = 0; // persistent wins counter for obstacle HP scaling
+const COIN_MULT = 0.027; // global coin income multiplier
 // Gate base-value upgrades (persistent, bought in shop)
 let upgGate = {dmg:0, money:0, range:0, rate:0};
 let px = 0, pz = 0, pvx = 0;
@@ -492,7 +493,7 @@ function updateBullets(dt){
                         cov.hitT=0.12;
                         cov.mat.emissive.setHex(0xFF6600);
                         drawCoverHP(cov);
-                        if(cov.hp<=0&&!cov.dead){cov.dead=true;cov.deadT=0;coins+=Math.round(cov.reward*0.7);refreshHUD();}
+                        if(cov.hp<=0&&!cov.dead){cov.dead=true;cov.deadT=0;coins+=Math.round(cov.reward*COIN_MULT);refreshHUD();}
                         if(!b.pierce) hit=true;
                         break;
                     }
@@ -534,7 +535,7 @@ function updateBullets(dt){
                     t.dead=true; t.removed=true;
                     scene.remove(t.mesh);
                     tirScore++;
-                    coins+=Math.round(t.reward*0.7); refreshHUD();
+                    coins+=Math.round(t.reward*COIN_MULT); refreshHUD();
                     if(!b.pierce) hit=true;
                     break;
                 }
@@ -547,7 +548,7 @@ function updateBullets(dt){
                 if(m.dead||m.removed) continue;
                 if(Math.abs(bz-m.g.position.z)<0.55 && Math.abs(bx-m.g.position.x)<0.42){
                     m.hp -= effDmg()*(b.dmgMult||1); m.hitT=.12; drawMobHP(m);
-                    if(m.hp<=0&&!m.dead){ m.dead=true; coins+=Math.round(m.reward*moneyX2*0.7); refreshHUD(); }
+                    if(m.hp<=0&&!m.dead){ m.dead=true; coins+=Math.round(m.reward*moneyX2*COIN_MULT); refreshHUD(); }
                     if(!b.pierce) hit=true;
                     break;
                 }
@@ -566,7 +567,7 @@ function updateBullets(dt){
                     if(lp.hp<=0&&!lp.dead){
                         if(lp.isCombat){
                             lp.dead=true;
-                            const reward=Math.floor((lp.coinReward||30)*moneyX2*0.7);
+                            const reward=Math.floor((lp.coinReward||30)*moneyX2*COIN_MULT);
                             coins+=reward; refreshHUD();
                             showEffPop({label:`+${reward} 🪙`, good:true});
                         }
@@ -1089,7 +1090,7 @@ function endTir(){
     tirActive=false;
     if(tirWall){ scene.remove(tirWall); tirWall=null; }
     for(const t of tirTargets){ if(!t.removed){ scene.remove(t.mesh); t.removed=true; } }
-    const totalCoins=Math.round(tirScore*Math.round((15+level*5)*tirCoinMult*7/12/3*0.5)*0.7);
+    const totalCoins=Math.round(tirScore*Math.round((15+level*5)*tirCoinMult*7/12/3*0.5)*COIN_MULT);
     coins+=totalCoins; refreshHUD();
     if(tirScore>0) showEffPop({label:`🎯 +${totalCoins} монет (${tirScore} мишеней)`, good:true});
     document.getElementById('tir-hud').style.display='none';
@@ -1124,7 +1125,7 @@ function applyEff(eff){
     const label = effLabel ? effLabel(eff).label : eff.label||'';
     switch(eff.id){
         case 'dmg':   permDmg=permDmg+v; break;
-        case 'money': { const wm=1+(totalWins*(0.03+Math.floor(totalWins/10)*0.1))*0.3; coins=Math.max(0, coins+Math.floor(100*Math.abs(v)*wm*0.006/80*0.2)*(v>=0?1:-1)); break; }
+        case 'money': { const wm=1+(totalWins*(0.03+Math.floor(totalWins/10)*0.1))*0.3; coins=Math.max(0, coins+Math.floor(100*Math.abs(v)*wm*COIN_MULT)*(v>=0?1:-1)); break; }
         case 'range': permRange=Math.max(0, Math.min(10, permRange+v)); break;
         case 'rate':  permRate=Math.max(0, Math.min(10, permRate+v)); break;
     }
@@ -1320,7 +1321,7 @@ function applyPickup(loot){
         case 'triple':  tripleShot+=1; break;   // each pickup adds 2 extra bullets
         case 'dmgx2':   dmgX2*=2; break;
         case 'moneyx2': moneyX2*=2; break;
-        case 'coins':   coins+=Math.floor((40+level*20)/30*0.01*0.7)*moneyX2; break;
+        case 'coins':   coins+=Math.floor((40+level*20)/30*COIN_MULT)*moneyX2; break;
     }
     showEffPop({label:loot.label, good:true});
     refreshHUD();
@@ -1580,7 +1581,7 @@ function drawEHP(e){
 }
 
 function killEnemy(e){
-    e.dead=true; coins+=Math.round(e.reward*0.7); refreshHUD();
+    e.dead=true; coins+=Math.round(e.reward*COIN_MULT); refreshHUD();
 }
 
 // ─── COMBAT ZONE ───
@@ -1769,7 +1770,7 @@ function tickFactory(dt){
             if(_diamFrac>=1){ diamonds+=Math.floor(_diamFrac); _diamFrac-=Math.floor(_diamFrac); changed=true; }
         } else {
             l.coinFrac+=lineIncomeCoinsPerSec(li)*dt;
-            if(l.coinFrac>=1){ const add=Math.floor(l.coinFrac*0.7); coins+=add; l.coinFrac-=Math.floor(l.coinFrac); changed=true; }
+            if(l.coinFrac>=1){ const add=Math.floor(l.coinFrac*COIN_MULT); coins+=add; l.coinFrac-=Math.floor(l.coinFrac); changed=true; }
         }
     }
     if(changed) refreshHUD();
@@ -1914,8 +1915,8 @@ const CASES = [
         color:'#336699', borderColor:'#5599CC',
         desc:'Содержит монеты, немного алмазов или шестерёнку низкого уровня.',
         drops:[
-            {w:40, label:'🪙 +350 монет',   fn:()=>{ coins+=350; }},
-            {w:30, label:'🪙 +1050 монет',  fn:()=>{ coins+=1050; }},
+            {w:40, label:'🪙 +10 монет',   fn:()=>{ coins+=10; }},
+            {w:30, label:'🪙 +29 монет',  fn:()=>{ coins+=29; }},
             {w:15, label:'💎 +3 алмаза',    fn:()=>{ diamonds+=3; }},
             {w:10, label:'⚙️ Шестерёнка ур.1', fn:()=>{ giveGear(1); }},
             {w:5,  label:'⚙️ Шестерёнка ур.2', fn:()=>{ giveGear(2); }},
@@ -1926,8 +1927,8 @@ const CASES = [
         color:'#557788', borderColor:'#88BBCC',
         desc:'Больше монет, алмазы, шестерёнки среднего уровня.',
         drops:[
-            {w:25, label:'🪙 +2100 монет',  fn:()=>{ coins+=2100; }},
-            {w:25, label:'🪙 +4900 монет',  fn:()=>{ coins+=4900; }},
+            {w:25, label:'🪙 +57 монет',  fn:()=>{ coins+=57; }},
+            {w:25, label:'🪙 +132 монет',  fn:()=>{ coins+=132; }},
             {w:20, label:'💎 +10 алмазов',  fn:()=>{ diamonds+=10; }},
             {w:15, label:'💎 +20 алмазов',  fn:()=>{ diamonds+=20; }},
             {w:10, label:'⚙️ Шестерёнка ур.3', fn:()=>{ giveGear(3); }},
@@ -1942,7 +1943,7 @@ const CASES = [
         drops:[
             {w:20, label:'💎 +30 алмазов',  fn:()=>{ diamonds+=30; }},
             {w:20, label:'💎 +60 алмазов',  fn:()=>{ diamonds+=60; }},
-            {w:15, label:'🪙 +10500 монет', fn:()=>{ coins+=10500; }},
+            {w:15, label:'🪙 +284 монет', fn:()=>{ coins+=284; }},
             {w:15, label:'⚙️ Шестерёнка ур.4', fn:()=>{ giveGear(4); }},
             {w:12, label:'⚙️ Шестерёнка ур.5', fn:()=>{ giveGear(5); }},
             {w:8,  label:'⚙️ Шестерёнка ур.6', fn:()=>{ giveGear(6); }},
