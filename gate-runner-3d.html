@@ -2837,7 +2837,7 @@ function tickRun(dt){
         m.idleT+=dt*1.8;
         m.g.position.y = Math.sin(m.idleT*1.2)*0.06; // gentle bob
         // Make sprite plane always face the camera
-        if(m.g.children[0]) m.g.children[0].lookAt(camera.position);
+        if(m.g.children[0]) m.g.children[0].lookAt(cam.position);
         if(m.hitT>0) m.hitT-=dt;
         // Player collides with mob → game over
         if(Math.abs(pz-m.g.position.z)<0.55 && Math.abs(px-m.g.position.x)<0.45){
