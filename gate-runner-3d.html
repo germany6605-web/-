@@ -1117,7 +1117,7 @@ function applyEff(eff){
     const label = effLabel ? effLabel(eff).label : eff.label||'';
     switch(eff.id){
         case 'dmg':   permDmg=permDmg+v; break;
-        case 'money': { const wm=1+totalWins*(0.03+Math.floor(totalWins/10)*0.1); coins=Math.max(0, coins+Math.floor((15+level*5)*Math.abs(v)*wm*0.04)*(v>=0?1:-1)); break; }
+        case 'money': { const wm=1+(totalWins*(0.03+Math.floor(totalWins/10)*0.1))*0.3; coins=Math.max(0, coins+Math.floor((15+level*5)*Math.abs(v)*wm*0.006)*(v>=0?1:-1)); break; }
         case 'range': permRange=Math.max(0, Math.min(10, permRange+v)); break;
         case 'rate':  permRate=Math.max(0, Math.min(10, permRate+v)); break;
     }
