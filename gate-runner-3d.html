@@ -905,7 +905,7 @@ function drawCoverHP(cov){
 function makeSideCover(type, xCenter, z, gate){
     const cfg=BARR_TYPES[type];
     const winMult = 1 + totalWins*(0.03 + Math.floor(totalWins/10)*0.1);
-    const hp=Math.round((cfg.hpBase+cfg.hpLvl*level)*winMult);
+    const hp=Math.round((cfg.hpBase+cfg.hpLvl*level)*winMult*0.7);
     const W=3.8, H=4.7, D=0.32;
     const mat=new THREE.MeshLambertMaterial({map:makeBarricadeTex(type),emissive:new THREE.Color(0)});
     const mesh=new THREE.Mesh(new THREE.BoxGeometry(W,H,D),mat);
