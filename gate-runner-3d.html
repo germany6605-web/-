@@ -1332,28 +1332,12 @@ function spawnMob(x, z){
     const g = new THREE.Group();
     const S = 1.9;
 
-    // ── Helpers ──
-    const add=(geo,mat,px,py,pz,rx=0,ry=0,rz=0)=>{
-        const m=new THREE.Mesh(geo,mat);
-        m.position.set(px,py,pz); m.rotation.set(rx,ry,rz); m.castShadow=true; g.add(m); return m;
-    };
-    // ── CapsuleGeometry alias ──
-    // CapsuleGeometry(radius, length, capSegs, radialSegs) — smooth rounded ends, no seams
-    const cap=(r,l,mat,px,py,pz,rx=0,ry=0,rz=0)=>{
-        const m=new THREE.Mesh(new THREE.CapsuleGeometry(r,l,12,24),mat);
-        m.position.set(px,py,pz); m.rotation.set(rx,ry,rz); m.castShadow=true; g.add(m); return m;
-    };
-    const sph=(r,mat,px,py,pz,sx=1,sy=1,sz=1)=>{
-        const m=new THREE.Mesh(new THREE.SphereGeometry(r,28,22),mat);
-        m.position.set(px,py,pz); m.scale.set(sx,sy,sz); m.castShadow=true; g.add(m); return m;
-    };
-
-    // ── Materials — lighter skin ──
+    // Materials
     const M=(col,shi=40,spec=0)=>new THREE.MeshPhongMaterial({color:col,shininess:shi,specular:spec||col});
     const jacket = M(0x4a8c1c,50);
     const pants  = M(0x3a6814,35);
     const vest   = M(0x2a4010,30);
-    const skin   = M(0xFFBB77,65,0xFFDDAA); // lighter, warmer skin
+    const skin   = M(0xFFBB77,65,0xFFDDAA);
     const dark   = M(0x1a1008,15);
     const gray   = M(0x909090,90,0xffffff);
     const brown  = M(0x6a3a10,25);
@@ -1362,7 +1346,7 @@ function spawnMob(x, z){
     const whiteM = new THREE.MeshBasicMaterial({color:0xffffff});
     const redLip = new THREE.MeshPhongMaterial({color:0xcc2200,shininess:40});
 
-    // ── Helpers ──
+    // Helpers
     const add=(geo,mat,px,py,pz,rx=0,ry=0,rz=0)=>{
         const m=new THREE.Mesh(geo,mat);
         m.position.set(px,py,pz); m.rotation.set(rx,ry,rz); m.castShadow=true; g.add(m); return m;
