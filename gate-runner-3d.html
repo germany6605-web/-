@@ -65,7 +65,29 @@ body { background:#000; overflow:hidden; font-family:'Segoe UI',Arial,sans-serif
 .mod-actions { display:flex; gap:10px; align-items:center; justify-content:center; flex-wrap:wrap; margin-bottom:10px; }
 .gear-bonus-info { font-size:11px; color:#aaa; text-align:center; max-width:480px; line-height:1.6; margin-bottom:8px; }
 
-.tab-bar { display:flex; gap:8px; margin-bottom:16px; }
+/* Factory tycoon */
+.fac-root { display:flex; flex-direction:column; align-items:center; width:100%; gap:12px; padding-bottom:10px; }
+.fac-line { background:#08101a; border:2px solid #334; border-radius:12px; padding:14px 16px; width:100%; max-width:720px; }
+.fac-line.owned { border-color:#335533; }
+.fac-line.maxed { border-color:#FFD700; background:radial-gradient(ellipse at 50% 0%,#1a1400,#08101a); }
+.fac-hdr { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
+.fac-title { font-size:15px; font-weight:bold; color:#FFD700; }
+.fac-income { font-size:12px; color:#44FF88; }
+.conveyor { display:flex; align-items:center; gap:4px; overflow-x:auto; padding-bottom:4px; }
+.conv-arrow { color:#334; font-size:20px; flex-shrink:0; }
+.citem { display:flex; flex-direction:column; align-items:center; background:#050d18;
+  border:2px solid #334; border-radius:8px; padding:8px 6px; min-width:90px; flex-shrink:0; }
+.citem.has { border-color:#335533; }
+.citem.maxed { border-color:#FFD700; background:#100e00; }
+.citem-icon { font-size:22px; margin-bottom:2px; }
+.citem-lv { font-size:11px; color:#888; margin-bottom:4px; }
+.citem-lv.maxed { color:#FFD700; }
+.citem-btn { padding:4px 8px; font-size:11px; font-weight:bold; background:#1a3a1a;
+  border:1.5px solid #4CAF50; color:#4CAF50; border-radius:5px; cursor:pointer; white-space:nowrap; }
+.citem-btn:hover { background:#264a26; }
+.citem-btn:disabled { background:#0a0f0a; border-color:#334; color:#444; cursor:not-allowed; }
+.diam-d { color:#88DDFF; font-size:13px; }
+
 .tab-btn { padding:9px 28px; font-size:15px; font-weight:bold; border-radius:8px 8px 0 0;
     border:2px solid #334; border-bottom:none; background:#0a1020; color:#888; cursor:pointer; }
 .tab-btn.active { background:#152040; color:#FFD700; border-color:#FFD700; }
@@ -91,6 +113,7 @@ body { background:#000; overflow:hidden; font-family:'Segoe UI',Arial,sans-serif
     <div id="tleft">
       <div id="lv-d" style="color:#FFD700;font-weight:bold">Уровень 1</div>
       <div id="coins-d">🪙 0</div>
+      <div id="diam-d" class="diam-d">💎 0</div>
     </div>
     <div id="wep-area">
       <div id="wep-name">Пистолет</div>
@@ -132,10 +155,12 @@ body { background:#000; overflow:hidden; font-family:'Segoe UI',Arial,sans-serif
     <button class="tab-btn active" id="tab-btn-wep" onclick="shopTab('wep')">🔫 Оружие</button>
     <button class="tab-btn" id="tab-btn-upg" onclick="shopTab('upg')">⬆ Улучшения</button>
     <button class="tab-btn" id="tab-btn-mod" onclick="shopTab('mod')">⚙ Моды</button>
+    <button class="tab-btn" id="tab-btn-fac" onclick="shopTab('fac')">🏭 Завод</button>
   </div>
   <div class="tab-pane active" id="tab-pane-wep"><div class="sgrid" id="sgrid-wep"></div></div>
   <div class="tab-pane" id="tab-pane-upg"><div class="sgrid" id="sgrid-upg"></div></div>
   <div class="tab-pane" id="tab-pane-mod"><div id="mod-tab-root" style="display:flex;flex-direction:column;align-items:center;width:100%"></div></div>
+  <div class="tab-pane" id="tab-pane-fac"><div class="fac-root" id="fac-tab-root"></div></div>
   <button class="btn" id="shop-next-btn" onclick="nextLevel()">СЛЕДУЮЩИЙ УРОВЕНЬ ▶</button>
 </div>
 <div class="ov" id="loss-ov" style="background:radial-gradient(ellipse at 50% 40%,#1a0000 0%,#000 100%)">
@@ -1664,11 +1689,138 @@ function spawnCombatZone(){
 function refreshHUD(){
     document.getElementById('lv-d').textContent=`Уровень ${level}`;
     document.getElementById('coins-d').textContent=`🪙 ${coins}`;
+    document.getElementById('diam-d').textContent=`💎 ${diamonds}`;
     document.getElementById('wep-name').textContent=W().name;
     const shots = W().shots + tripleShot*2;
     document.getElementById('dmg-d').textContent=`УРН: ${effDmg()} ×${shots}`
         +(tripleShot>0?` 💥×${tripleShot}`:'')+(dmgX2>1?` ⚔️×${dmgX2}`:'')+(moneyX2>1?` 💰×${moneyX2}`:'')
         +(permRange>0?` 🎯+${permRange}`:'')+(permRate>0?` ⚡+${permRate}`:'');
+}
+
+// ─── FACTORY TYCOON ───
+let diamonds = 0, _diamFrac = 0;
+const MACH_COSTS = [100,200,400,700,1200,2000,3500,6000,10000,18000];
+const ENH_COSTS  = [50,100,200,350,600,1000,1750,3000,5000,9000];
+const LINE_COSTS = [1000,10000,100000];
+let factory = [0,1,2].map(()=>({bought:false,machine:0,enh:[0,0,0,0],coinFrac:0}));
+
+function lineInvestment(li){
+    const l=factory[li]; if(!l.bought) return 0;
+    let t=LINE_COSTS[li];
+    for(let n=0;n<l.machine;n++) t+=MACH_COSTS[n];
+    for(const e of l.enh) for(let n=0;n<e;n++) t+=ENH_COSTS[n];
+    return t;
+}
+function lineIsMax(li){
+    const l=factory[li];
+    return l.bought && l.machine===10 && l.enh.every(e=>e===10);
+}
+function lineIncomeCoinsPerSec(li){
+    if(lineIsMax(li)) return 0;
+    return lineInvestment(li)*0.02/3600;
+}
+function lineDiamPerSec(li){
+    return lineIsMax(li) ? 0.2/3600 : 0;
+}
+function fmtIncome(li){
+    if(!factory[li].bought) return '';
+    if(lineIsMax(li)) return '+0.2 💎/ч';
+    const cph=lineInvestment(li)*0.02;
+    return '+'+cph.toFixed(1)+' 🪙/ч';
+}
+
+function tickFactory(dt){
+    let changed=false;
+    for(let li=0;li<3;li++){
+        const l=factory[li]; if(!l.bought) continue;
+        if(lineIsMax(li)){
+            _diamFrac+=lineDiamPerSec(li)*dt;
+            if(_diamFrac>=1){ diamonds+=Math.floor(_diamFrac); _diamFrac-=Math.floor(_diamFrac); changed=true; }
+        } else {
+            l.coinFrac+=lineIncomeCoinsPerSec(li)*dt;
+            if(l.coinFrac>=1){ const add=Math.floor(l.coinFrac); coins+=add; l.coinFrac-=add; changed=true; }
+        }
+    }
+    if(changed) refreshHUD();
+}
+
+function buyLine(li){
+    const cost=LINE_COSTS[li];
+    if(coins<cost||factory[li].bought) return;
+    coins-=cost; factory[li].bought=true;
+    refreshHUD(); renderFactoryTab();
+}
+function upgradeComp(li,comp){
+    // comp: 'machine' or 0..3 for enhancers
+    const l=factory[li]; if(!l.bought) return;
+    if(comp==='machine'){
+        if(l.machine>=10) return;
+        const cost=MACH_COSTS[l.machine];
+        if(coins<cost) return;
+        coins-=cost; l.machine++;
+    } else {
+        const idx=comp;
+        if(l.enh[idx]>=10) return;
+        const cost=ENH_COSTS[l.enh[idx]];
+        if(coins<cost) return;
+        coins-=cost; l.enh[idx]++;
+    }
+    refreshHUD(); renderFactoryTab();
+}
+
+function renderFactoryTab(){
+    const root=document.getElementById('fac-tab-root'); root.innerHTML='';
+    const names=['Линия 1','Линия 2','Линия 3'];
+    for(let li=0;li<3;li++){
+        const l=factory[li];
+        const isMax=lineIsMax(li);
+        const div=document.createElement('div');
+        div.className='fac-line'+(l.bought?' owned':'')+(isMax?' maxed':'');
+
+        // Header
+        const hdr=document.createElement('div'); hdr.className='fac-hdr';
+        hdr.innerHTML=`<span class="fac-title">${isMax?'✨ ':''}`+names[li]+(isMax?' — МАКСИМУМ':'')+`</span>
+            <span class="fac-income">${fmtIncome(li)}</span>`;
+        div.appendChild(hdr);
+
+        if(!l.bought){
+            const btn=document.createElement('button');
+            btn.className='btn btn-g'; btn.style.fontSize='14px';
+            btn.textContent=`Открыть — ${LINE_COSTS[li].toLocaleString()} 🪙`;
+            btn.disabled=coins<LINE_COSTS[li];
+            btn.onclick=()=>buyLine(li);
+            div.appendChild(btn);
+        } else {
+            // Conveyor
+            const conv=document.createElement('div'); conv.className='conveyor';
+
+            const mkItem=(icon,label,lv,cost,onClick)=>{
+                const it=document.createElement('div');
+                it.className='citem'+(lv>0?' has':'')+(lv>=10?' maxed':'');
+                const lvEl=`<div class="citem-lv${lv>=10?' maxed':''}">${lv>=10?'★ МАКС':'Ур.'+lv+'/10'}</div>`;
+                const canUpg=lv<10&&coins>=cost;
+                it.innerHTML=`<div class="citem-icon">${icon}</div><div style="font-size:11px;color:#aaa;margin-bottom:2px">${label}</div>${lvEl}
+                    <button class="citem-btn" ${lv>=10?'disabled':(!canUpg?'disabled':'')} onclick="(${onClick.toString()})()">`
+                    +(lv>=10?'Макс':lv<10?`${cost} 🪙`:'Макс')+`</button>`;
+                return it;
+            };
+
+            // Machine
+            const mCost=l.machine<10?MACH_COSTS[l.machine]:0;
+            conv.appendChild(mkItem('🔧','Станок',l.machine,mCost,()=>upgradeComp(li,'machine')));
+
+            for(let e=0;e<4;e++){
+                const arr=document.createElement('div'); arr.className='conv-arrow'; arr.textContent='→';
+                conv.appendChild(arr);
+                const eCost=l.enh[e]<10?ENH_COSTS[l.enh[e]]:0;
+                const icons=['⚡','🔩','🔥','💡'];
+                const labels=['Усилитель 1','Усилитель 2','Усилитель 3','Усилитель 4'];
+                conv.appendChild(mkItem(icons[e],labels[e],l.enh[e],eCost,()=>upgradeComp(li,e)));
+            }
+            div.appendChild(conv);
+        }
+        root.appendChild(div);
+    }
 }
 
 // ─── SHOP ───
@@ -1710,11 +1862,12 @@ function boostCombatHP(pct){
 let _shopTab = 'wep';
 function shopTab(t){
     _shopTab=t;
-    ['wep','upg','mod'].forEach(x=>{
+    ['wep','upg','mod','fac'].forEach(x=>{
         document.getElementById('tab-btn-'+x).classList.toggle('active', x===t);
         document.getElementById('tab-pane-'+x).classList.toggle('active', x===t);
     });
     if(t==='mod') renderModTab();
+    if(t==='fac') renderFactoryTab();
 }
 
 // ─── GEAR SYSTEM ───
@@ -2019,6 +2172,7 @@ function startGame(){
     hide('start-ov'); hide('victory-ov'); hide('loss-ov');
     level=1;coins=0;upgGate={dmg:0,money:0,range:0,rate:0};upgTir=0;_shopTab='wep';
     gearGrid=new Array(21).fill(null); weaponGears={}; _gearSel=-1; _modWep=1; gearsBought=0;
+    diamonds=0; _diamFrac=0; factory=[0,1,2].map(()=>({bought:false,machine:0,enh:[0,0,0,0],coinFrac:0}));
     ownedWeapons=new Set([1]); activeWeapon=1; combatHPMult=1;
     buildStaticWorld();
     startLevel();
@@ -2299,6 +2453,7 @@ function tickRun(dt){
 // ─── RENDER LOOP ───
 function frame(ts){
     const dt=Math.min((ts-lastT)/1000,.05); lastT=ts;
+    tickFactory(dt);
     if(GS==='RUN') tick(dt);
     renderer.clear();
     renderer.render(scene,cam);
