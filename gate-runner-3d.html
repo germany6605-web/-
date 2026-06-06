@@ -243,6 +243,7 @@ const FWD_SPEED = 6, X_LIMIT = 3.0, X_ACCEL = 22;
 
 // ─── STATE ───
 let GS = 'START', level = 1, coins = 0;
+let totalWins = 0; // persistent wins counter for obstacle HP scaling
 // Gate base-value upgrades (persistent, bought in shop)
 let upgGate = {dmg:0, money:0, range:0, rate:0};
 let px = 0, pz = 0, pvx = 0;
@@ -903,7 +904,8 @@ function drawCoverHP(cov){
 
 function makeSideCover(type, xCenter, z, gate){
     const cfg=BARR_TYPES[type];
-    const hp=Math.round(cfg.hpBase+cfg.hpLvl*level);
+    const winMult = 1 + totalWins*(0.03 + Math.floor(totalWins/10)*0.1);
+    const hp=Math.round((cfg.hpBase+cfg.hpLvl*level)*winMult);
     const W=3.8, H=4.7, D=0.32;
     const mat=new THREE.MeshLambertMaterial({map:makeBarricadeTex(type),emissive:new THREE.Color(0)});
     const mesh=new THREE.Mesh(new THREE.BoxGeometry(W,H,D),mat);
@@ -1027,7 +1029,7 @@ function spawnTirTarget(){
     const x=Math.random()*6.4-3.2;
     mesh.position.set(x,6.0,tirFrozenPz+8);
     scene.add(mesh);
-    const reward=Math.round((15+level*5)*tirCoinMult);
+    const reward=Math.round((15+level*5)*tirCoinMult/12);
     tirTargets.push({mesh,hp:1,dead:false,removed:false,reward});
 }
 
@@ -1080,7 +1082,7 @@ function endTir(){
     tirActive=false;
     if(tirWall){ scene.remove(tirWall); tirWall=null; }
     for(const t of tirTargets){ if(!t.removed){ scene.remove(t.mesh); t.removed=true; } }
-    const totalCoins=tirScore*Math.round((15+level*5)*tirCoinMult);
+    const totalCoins=tirScore*Math.round((15+level*5)*tirCoinMult/12);
     coins+=totalCoins; refreshHUD();
     if(tirScore>0) showEffPop({label:`🎯 +${totalCoins} монет (${tirScore} мишеней)`, good:true});
     document.getElementById('tir-hud').style.display='none';
@@ -2332,7 +2334,7 @@ function openShop(isDeath=false){
 
 function nextLevel(){
     hide('shop-ov');
-    if(!shopDeath) level++;
+    if(!shopDeath){ level++; totalWins++; }
     startLevel();
 }
 
@@ -2348,7 +2350,7 @@ const hide=id=>document.getElementById(id).classList.remove('vis');
 
 function startGame(){
     hide('start-ov'); hide('victory-ov'); hide('loss-ov');
-    level=1;coins=0;upgGate={dmg:0,money:0,range:0,rate:0};upgTir=0;_shopTab='wep';
+    level=1;coins=0;totalWins=0;upgGate={dmg:0,money:0,range:0,rate:0};upgTir=0;_shopTab='wep';
     gearGrid=new Array(21).fill(null); weaponGears={}; _gearSel=-1; _modWep=1; gearsBought=0;
     diamonds=0; _diamFrac=0; factory=[0,1,2].map(()=>({bought:false,machine:0,enh:[0,0,0,0],coinFrac:0}));
     _caseResults={}; Object.values(PROMO_CODES).forEach(p=>p.used=false);
@@ -2490,7 +2492,7 @@ function tickRun(dt){
             // Block player on this side if cover still alive
             if(!cov.dead && pz>gate.z-0.3 && pz<gate.z+0.3){
                 const side = cov===gate.coverL ? -1 : 1;
-                if(px*side>0 && px*side<3.8){ playerDie(); return; }
+                if(px*side>0 && px*side<3.8){ playerDie(true); return; }
             }
         }
 
