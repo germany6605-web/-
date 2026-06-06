@@ -602,7 +602,7 @@ function randomEff(){
 }
 function moneyCoins(v){
     const wm=1+(totalWins*(0.03+Math.floor(totalWins/10)*0.1))*0.3;
-    return Math.floor(100*Math.abs(v)*wm*COIN_MULT)*(v>=0?1:-1);
+    return Math.round(Math.floor(100*Math.abs(v)*wm*COIN_MULT)*moneyX2)*(v>=0?1:-1);
 }
 function effLabel(eff){
     const v=eff.currentVal;
@@ -1128,7 +1128,7 @@ function applyEff(eff){
     const label = effLabel ? effLabel(eff).label : eff.label||'';
     switch(eff.id){
         case 'dmg':   permDmg=permDmg+v; break;
-        case 'money': { coins=Math.max(0, coins+Math.round(moneyCoins(v)*moneyX2)); break; }
+        case 'money': { coins=Math.max(0, coins+moneyCoins(v)); break; }
         case 'range': permRange=Math.max(0, Math.min(10, permRange+v)); break;
         case 'rate':  permRate=Math.max(0, Math.min(10, permRate+v)); break;
     }
