@@ -935,8 +935,7 @@ function makeSideCover(type, xCenter, z, gate){
     gateGrp.add(lSpr); gate.meshes.push(lSpr);
 
     const seqIdx = gate._barrIdx;
-    const moneyWm = (1+(totalWins*(0.03+Math.floor(totalWins/10)*0.1))*0.3) * (1+totalWins*0.03) * (1+totalWins*0.025);
-    const reward = Math.round(5 * (1 + seqIdx*0.25) * moneyWm);
+    const reward = Math.round(5 * (1 + seqIdx*0.25) * (1+totalWins*0.025) * (1+totalWins*0.03));
     return { mesh, mat, hpCtx, hpTex, hpSpr, lSpr, hp, maxHp:hp,
              dead:false, deadT:0, removed:false, hitT:0, reward };
 }
@@ -1031,7 +1030,7 @@ function spawnTirTarget(){
     mesh.position.set(x,6.0,tirFrozenPz+8);
     scene.add(mesh);
     const tirWinMult1 = 1 + totalWins * 0.03;
-    const reward = Math.round(1 * tirCoinMult * tirWinMult1 * COIN_MULT);
+    const reward = Math.round(1 * tirCoinMult * tirWinMult1);
     tirTargets.push({mesh,hp:1,dead:false,removed:false,reward});
 }
 
@@ -1085,7 +1084,7 @@ function endTir(){
     if(tirWall){ scene.remove(tirWall); tirWall=null; }
     for(const t of tirTargets){ if(!t.removed){ scene.remove(t.mesh); t.removed=true; } }
     const _tw1=1+totalWins*0.03;
-    const totalCoins=Math.round(tirScore*Math.round(1*tirCoinMult*_tw1*COIN_MULT));
+    const totalCoins=Math.round(tirScore*Math.round(1*tirCoinMult*_tw1));
     coins+=totalCoins; refreshHUD();
     if(tirScore>0) showEffPop({label:`🎯 +${totalCoins} монет (${tirScore} мишеней)`, good:true});
     document.getElementById('tir-hud').style.display='none';
