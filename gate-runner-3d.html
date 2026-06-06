@@ -1204,68 +1204,68 @@ function spawnMob(x, z){
     const g = new THREE.Group();
     const S = 1.9;
 
-    // Materials — flat cartoon colors
-    const redMat   = new THREE.MeshLambertMaterial({color:0xFF3333});
-    const skinMat  = new THREE.MeshLambertMaterial({color:0xFFBB66});
-    const darkMat  = new THREE.MeshLambertMaterial({color:0x221100});
-    const goldMat  = new THREE.MeshLambertMaterial({color:0xFFCC00});
-    const brownMat = new THREE.MeshLambertMaterial({color:0x5C3010});
-    const grayMat  = new THREE.MeshLambertMaterial({color:0x888888});
+    // Materials — smooth cartoon colors (Phong for specular highlight)
+    const redMat   = new THREE.MeshPhongMaterial({color:0xFF3333, shininess:60});
+    const skinMat  = new THREE.MeshPhongMaterial({color:0xFFBB66, shininess:40});
+    const darkMat  = new THREE.MeshPhongMaterial({color:0x221100, shininess:30});
+    const goldMat  = new THREE.MeshPhongMaterial({color:0xFFCC00, shininess:100, specular:0xFFFFAA});
+    const brownMat = new THREE.MeshPhongMaterial({color:0x5C3010, shininess:20});
+    const grayMat  = new THREE.MeshPhongMaterial({color:0x999999, shininess:80, specular:0xFFFFFF});
     const eyeMat   = new THREE.MeshBasicMaterial({color:0xFF2200});
 
-    // Torso — wide cylinder (barrel-shaped)
-    const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.30*S,0.28*S,0.65*S,12), redMat);
+    // Torso — smooth wide cylinder
+    const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.30*S,0.28*S,0.65*S,32), redMat);
     torso.position.y = 1.0*S; torso.castShadow=true; g.add(torso);
 
-    // Belt — flat torus at waist
-    const belt = new THREE.Mesh(new THREE.TorusGeometry(0.30*S,0.06*S,6,12), darkMat);
+    // Belt — smooth torus at waist
+    const belt = new THREE.Mesh(new THREE.TorusGeometry(0.30*S,0.06*S,12,32), darkMat);
     belt.position.y = 0.70*S; belt.rotation.x=Math.PI/2; g.add(belt);
 
     // Belt buckle
     const buckle = new THREE.Mesh(new THREE.BoxGeometry(0.14*S,0.12*S,0.06*S), goldMat);
     buckle.position.set(0,0.70*S,0.31*S); g.add(buckle);
 
-    // Head — big cartoon sphere
-    const head = new THREE.Mesh(new THREE.SphereGeometry(0.32*S,14,10), skinMat);
+    // Head — big smooth cartoon sphere
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.32*S,32,24), skinMat);
     head.position.y = 1.65*S; head.castShadow=true; g.add(head);
 
-    // Helmet band
-    const helmBand = new THREE.Mesh(new THREE.TorusGeometry(0.32*S,0.09*S,6,14), redMat);
+    // Helmet band — smooth torus
+    const helmBand = new THREE.Mesh(new THREE.TorusGeometry(0.32*S,0.09*S,12,32), redMat);
     helmBand.position.y = 1.78*S; helmBand.rotation.x=Math.PI/2; g.add(helmBand);
 
     // Eyes
-    const eyeGeo = new THREE.SphereGeometry(0.07*S,7,5);
+    const eyeGeo = new THREE.SphereGeometry(0.07*S,16,12);
     const eyeL = new THREE.Mesh(eyeGeo,eyeMat); eyeL.position.set(-0.12*S,1.68*S,0.27*S); g.add(eyeL);
     const eyeR = new THREE.Mesh(eyeGeo,eyeMat); eyeR.position.set( 0.12*S,1.68*S,0.27*S); g.add(eyeR);
 
-    // Arms — cylinders
-    const armGeo = new THREE.CylinderGeometry(0.10*S,0.10*S,0.52*S,8);
+    // Arms — smooth cylinders
+    const armGeo = new THREE.CylinderGeometry(0.10*S,0.10*S,0.52*S,20);
     const armL = new THREE.Mesh(armGeo,skinMat); armL.position.set(-0.44*S,0.96*S,0); armL.rotation.z=0.2; g.add(armL);
     const armR = new THREE.Mesh(armGeo,skinMat); armR.position.set( 0.44*S,0.96*S,0); armR.rotation.z=-0.2; g.add(armR);
 
-    // Fists — spheres
-    const fistGeo = new THREE.SphereGeometry(0.12*S,8,6);
+    // Fists — smooth spheres
+    const fistGeo = new THREE.SphereGeometry(0.12*S,20,16);
     const fistL = new THREE.Mesh(fistGeo,skinMat); fistL.position.set(-0.50*S,0.64*S,0); g.add(fistL);
     const fistR = new THREE.Mesh(fistGeo,skinMat); fistR.position.set( 0.50*S,0.64*S,0); g.add(fistR);
 
-    // Legs — cylinders
-    const legGeo = new THREE.CylinderGeometry(0.11*S,0.10*S,0.55*S,8);
+    // Legs — smooth cylinders
+    const legGeo = new THREE.CylinderGeometry(0.11*S,0.10*S,0.55*S,20);
     const legL = new THREE.Mesh(legGeo,darkMat); legL.position.set(-0.16*S,0.32*S,0); g.add(legL);
     const legR = new THREE.Mesh(legGeo,darkMat); legR.position.set( 0.16*S,0.32*S,0); g.add(legR);
 
-    // Boots — spheres (squished)
-    const bootGeo = new THREE.SphereGeometry(0.14*S,8,6);
+    // Boots — smooth squished spheres
+    const bootGeo = new THREE.SphereGeometry(0.14*S,20,16);
     const bootL = new THREE.Mesh(bootGeo,darkMat); bootL.scale.y=0.6; bootL.position.set(-0.16*S,0.06*S,0.04*S); g.add(bootL);
     const bootR = new THREE.Mesh(bootGeo,darkMat); bootR.scale.y=0.6; bootR.position.set( 0.16*S,0.06*S,0.04*S); g.add(bootR);
 
-    // Club — cylinder handle + sphere head with spikes
-    const clubHandle = new THREE.Mesh(new THREE.CylinderGeometry(0.07*S,0.07*S,0.65*S,8), brownMat);
+    // Club — smooth cylinder handle + sphere head with spikes
+    const clubHandle = new THREE.Mesh(new THREE.CylinderGeometry(0.07*S,0.07*S,0.65*S,20), brownMat);
     clubHandle.position.set(0.58*S,1.05*S,0); clubHandle.rotation.z=-0.5; g.add(clubHandle);
-    const clubBall = new THREE.Mesh(new THREE.SphereGeometry(0.18*S,10,8), grayMat);
+    const clubBall = new THREE.Mesh(new THREE.SphereGeometry(0.18*S,24,18), grayMat);
     clubBall.position.set(0.72*S,1.48*S,0); g.add(clubBall);
     // Club spikes
-    const spikeGeo = new THREE.ConeGeometry(0.05*S,0.18*S,6);
-    const spikeMat = new THREE.MeshLambertMaterial({color:0xCCCCCC});
+    const spikeGeo = new THREE.ConeGeometry(0.05*S,0.18*S,12);
+    const spikeMat = new THREE.MeshPhongMaterial({color:0xCCCCCC, shininess:70});
     [[0,1,0],[0,-1,0],[1,0,0],[-1,0,0],[0,0,1],[0,0,-1]].forEach(([dx,dy,dz])=>{
         const sp=new THREE.Mesh(spikeGeo,spikeMat);
         sp.position.set(0.72*S+dx*0.18*S,1.48*S+dy*0.18*S,dz*0.18*S);
