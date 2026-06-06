@@ -595,7 +595,8 @@ let gates=[], gateGrp=new THREE.Group(); scene.add(gateGrp);
 const EFF_TYPES=['dmg','dmg','dmg','money','range','rate'];
 function randomEff(){
     const type=EFF_TYPES[Math.floor(Math.random()*EFF_TYPES.length)];
-    const baseVal=Math.floor(Math.random()*8)-2 + (upgGate[type]||0);
+    let baseVal=Math.floor(Math.random()*8)-2 + (upgGate[type]||0);
+    if(type==='money' && totalWins<10) baseVal=Math.min(baseVal, 2);
     let incVal; do{ incVal=Math.floor(Math.random()*11)-3; }while(incVal===0);
     return {id:type, baseVal, incVal, currentVal:baseVal};
 }
