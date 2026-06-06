@@ -1320,7 +1320,7 @@ function applyPickup(loot){
         case 'triple':  tripleShot+=1; break;   // each pickup adds 2 extra bullets
         case 'dmgx2':   dmgX2*=2; break;
         case 'moneyx2': moneyX2*=2; break;
-        case 'coins':   coins+=Math.floor((40+level*20)/30*0.05)*moneyX2; break;
+        case 'coins':   coins+=Math.floor((40+level*20)/30*0.01)*moneyX2; break;
     }
     showEffPop({label:loot.label, good:true});
     refreshHUD();
