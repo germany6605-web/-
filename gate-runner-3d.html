@@ -493,7 +493,7 @@ function updateBullets(dt){
                         cov.hitT=0.12;
                         cov.mat.emissive.setHex(0xFF6600);
                         drawCoverHP(cov);
-                        if(cov.hp<=0&&!cov.dead){cov.dead=true;cov.deadT=0;coins+=cov.reward;refreshHUD();}
+                        if(cov.hp<=0&&!cov.dead){cov.dead=true;cov.deadT=0;coins+=Math.round(cov.reward*moneyX2);refreshHUD();}
                         if(!b.pierce) hit=true;
                         break;
                     }
@@ -535,7 +535,7 @@ function updateBullets(dt){
                     t.dead=true; t.removed=true;
                     scene.remove(t.mesh);
                     tirScore++;
-                    coins+=Math.round(t.reward*COIN_MULT); refreshHUD();
+                    coins+=Math.round(t.reward*moneyX2*COIN_MULT); refreshHUD();
                     if(!b.pierce) hit=true;
                     break;
                 }
@@ -1093,7 +1093,7 @@ function endTir(){
     if(tirWall){ scene.remove(tirWall); tirWall=null; }
     for(const t of tirTargets){ if(!t.removed){ scene.remove(t.mesh); t.removed=true; } }
     const _tw1=1+totalWins*0.03;
-    const totalCoins=Math.round(tirScore*Math.round(5*tirCoinMult*_tw1));
+    const totalCoins=Math.round(tirScore*Math.round(5*tirCoinMult*_tw1)*moneyX2);
     coins+=totalCoins; refreshHUD();
     if(tirScore>0) showEffPop({label:`🎯 +${totalCoins} монет (${tirScore} мишеней)`, good:true});
     document.getElementById('tir-hud').style.display='none';
@@ -1128,7 +1128,7 @@ function applyEff(eff){
     const label = effLabel ? effLabel(eff).label : eff.label||'';
     switch(eff.id){
         case 'dmg':   permDmg=permDmg+v; break;
-        case 'money': { coins=Math.max(0, coins+moneyCoins(v)); break; }
+        case 'money': { coins=Math.max(0, coins+Math.round(moneyCoins(v)*moneyX2)); break; }
         case 'range': permRange=Math.max(0, Math.min(10, permRange+v)); break;
         case 'rate':  permRate=Math.max(0, Math.min(10, permRate+v)); break;
     }
@@ -1584,7 +1584,7 @@ function drawEHP(e){
 }
 
 function killEnemy(e){
-    e.dead=true; coins+=Math.round(e.reward*COIN_MULT); refreshHUD();
+    e.dead=true; coins+=Math.round(e.reward*moneyX2*COIN_MULT); refreshHUD();
 }
 
 // ─── COMBAT ZONE ───
