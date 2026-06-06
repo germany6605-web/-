@@ -1332,20 +1332,6 @@ function spawnMob(x, z){
     const g = new THREE.Group();
     const S = 1.9;
 
-    // ── Materials ──
-    const M=(col,shi=40,spec=0)=>new THREE.MeshPhongMaterial({color:col,shininess:shi,specular:spec||col});
-    const jacket = M(0x4a8c1c,50);          // bright military green
-    const pants  = M(0x3a6814,35);          // darker green pants
-    const vest   = M(0x2a4010,30);          // dark tactical vest
-    const skin   = M(0xf4aa6a,60,0xffddaa); // warm skin
-    const dark   = M(0x1a1008,15);          // dark boots/gloves
-    const gray   = M(0x909090,90,0xffffff); // metal club
-    const brown  = M(0x6a3a10,25);          // wood handle
-    const gold   = M(0xffcc00,120,0xffff88);// gold buckle
-    const redM   = M(0xdd2200,70);          // red star
-    const eyeM   = new THREE.MeshBasicMaterial({color:0x111100});
-    const whiteM = new THREE.MeshBasicMaterial({color:0xffffff});
-
     // ── Helpers ──
     const add=(geo,mat,px,py,pz,rx=0,ry=0,rz=0)=>{
         const m=new THREE.Mesh(geo,mat);
@@ -1362,70 +1348,104 @@ function spawnMob(x, z){
         m.position.set(px,py,pz); m.scale.set(sx,sy,sz); m.castShadow=true; g.add(m); return m;
     };
 
+    // ── Materials — lighter skin ──
+    const M=(col,shi=40,spec=0)=>new THREE.MeshPhongMaterial({color:col,shininess:shi,specular:spec||col});
+    const jacket = M(0x4a8c1c,50);
+    const pants  = M(0x3a6814,35);
+    const vest   = M(0x2a4010,30);
+    const skin   = M(0xFFBB77,65,0xFFDDAA); // lighter, warmer skin
+    const dark   = M(0x1a1008,15);
+    const gray   = M(0x909090,90,0xffffff);
+    const brown  = M(0x6a3a10,25);
+    const gold   = M(0xffcc00,120,0xffff88);
+    const eyeM   = new THREE.MeshBasicMaterial({color:0x111100});
+    const whiteM = new THREE.MeshBasicMaterial({color:0xffffff});
+    const redLip = new THREE.MeshPhongMaterial({color:0xcc2200,shininess:40});
+
+    // ── Helpers ──
+    const add=(geo,mat,px,py,pz,rx=0,ry=0,rz=0)=>{
+        const m=new THREE.Mesh(geo,mat);
+        m.position.set(px,py,pz); m.rotation.set(rx,ry,rz); m.castShadow=true; g.add(m); return m;
+    };
+    const cap=(r,l,mat,px,py,pz,rx=0,ry=0,rz=0)=>{
+        const m=new THREE.Mesh(new THREE.CapsuleGeometry(r,l,12,24),mat);
+        m.position.set(px,py,pz); m.rotation.set(rx,ry,rz); m.castShadow=true; g.add(m); return m;
+    };
+    const sph=(r,mat,px,py,pz,sx=1,sy=1,sz=1)=>{
+        const m=new THREE.Mesh(new THREE.SphereGeometry(r,28,22),mat);
+        m.position.set(px,py,pz); m.scale.set(sx,sy,sz); m.castShadow=true; g.add(m); return m;
+    };
+
     // ── BOOTS ──
     sph(0.20*S,dark, -0.18*S,0.13*S,-0.05*S, 1,0.50,1.40);
     sph(0.20*S,dark,  0.18*S,0.13*S,-0.05*S, 1,0.50,1.40);
 
-    // ── LEGS — CapsuleGeometry = perfectly smooth, no joint sphere needed ──
+    // ── LEGS — straight capsules ──
     cap(0.145*S,0.52*S,pants, -0.18*S,0.52*S,0);
     cap(0.145*S,0.52*S,pants,  0.18*S,0.52*S,0);
 
-    // ── HIP — big sphere covering tops of legs + bottom of torso ──
+    // ── HIP ──
     sph(0.35*S,pants, 0,0.98*S,0, 1,0.72,0.88);
 
     // ── BELT ──
     const beltM=new THREE.Mesh(new THREE.TorusGeometry(0.30*S,0.058*S,10,32),dark);
-    beltM.rotation.x=Math.PI/2; beltM.position.set(0,1.02*S,0); beltM.castShadow=true; g.add(beltM);
+    beltM.rotation.x=Math.PI/2; beltM.position.set(0,1.02*S,0); g.add(beltM);
     add(new THREE.BoxGeometry(0.14*S,0.13*S,0.07*S),gold, 0,1.02*S,-0.31*S);
 
-    // ── TORSO — capsule for smooth top+bottom ──
+    // ── TORSO ──
     cap(0.36*S,0.44*S,jacket, 0,1.34*S,0);
     cap(0.34*S,0.34*S,vest,   0,1.36*S,0);
 
-    // ── ARMS — each arm is ONE capsule per segment, shoulder sphere bridges torso→arm ──
-    // Shoulder spheres
-    sph(0.225*S,jacket, -0.44*S,1.58*S,0);
-    sph(0.225*S,jacket,  0.44*S,1.58*S,0);
-    // Upper arm capsule
-    cap(0.120*S,0.26*S,jacket, -0.51*S,1.36*S,0, 0,0, 0.20);
-    cap(0.120*S,0.26*S,jacket,  0.51*S,1.36*S,0, 0,0,-0.20);
-    // Lower arm capsule (elbow handled by capsule round ends overlapping)
-    cap(0.110*S,0.24*S,jacket, -0.55*S,1.10*S,0, 0,0, 0.08);
-    cap(0.110*S,0.24*S,jacket,  0.55*S,1.10*S,0, 0,0,-0.08);
-    // Fist
-    sph(0.145*S,dark, -0.57*S,0.76*S,0);
-    sph(0.145*S,dark,  0.57*S,0.76*S,0);
+    // ── LEFT ARM — straight down ──
+    sph(0.215*S,jacket, -0.44*S,1.56*S,0);             // shoulder
+    cap(0.115*S,0.28*S,jacket, -0.48*S,1.34*S,0);      // upper arm — straight
+    cap(0.105*S,0.26*S,jacket, -0.50*S,1.06*S,0);      // lower arm — straight
+    sph(0.135*S,dark,  -0.50*S,0.80*S,0);              // fist
+
+    // ── RIGHT ARM — raised, holding club ──
+    // Club handle bottom is at ~(0.55, 0.82, 0), so right fist goes there
+    sph(0.215*S,jacket,  0.44*S,1.56*S,0);             // shoulder
+    cap(0.115*S,0.28*S,jacket,  0.52*S,1.42*S,0, 0,0,-0.55); // upper arm angled up+out
+    cap(0.105*S,0.26*S,jacket,  0.60*S,1.18*S,0, 0,0,-0.30); // lower arm
+    sph(0.135*S,dark,   0.60*S,0.90*S,0);              // fist gripping handle
 
     // ── NECK ──
     cap(0.135*S,0.06*S,skin, 0,1.68*S,0);
 
     // ── HEAD ──
     sph(0.38*S,skin, 0,2.04*S,0);
-    // Ears
-    sph(0.09*S,skin, -0.38*S,2.04*S,0, 0.60,1,0.60);
-    sph(0.09*S,skin,  0.38*S,2.04*S,0, 0.60,1,0.60);
+    sph(0.09*S,skin, -0.38*S,2.04*S,0, 0.60,1,0.60);  // ear L
+    sph(0.09*S,skin,  0.38*S,2.04*S,0, 0.60,1,0.60);  // ear R
 
-    // ── FACE (fz = -Z = toward player) ──
+    // ── FACE — larger, clearer features on -Z ──
     const fz=-0.32*S;
-    sph(0.072*S,skin,  0,2.00*S,fz-0.04*S, 1,0.80,0.75); // nose
-    add(new THREE.BoxGeometry(0.17*S,0.055*S,0.055*S),dark, -0.125*S,2.18*S,fz, 0,0, 0.34); // brow L
-    add(new THREE.BoxGeometry(0.17*S,0.055*S,0.055*S),dark,  0.125*S,2.18*S,fz, 0,0,-0.34); // brow R
-    sph(0.085*S,whiteM, -0.14*S,2.08*S,fz+0.01*S); // eye white L
-    sph(0.085*S,whiteM,  0.14*S,2.08*S,fz+0.01*S); // eye white R
-    sph(0.055*S,eyeM,   -0.138*S,2.08*S,fz-0.05*S); // pupil L
-    sph(0.055*S,eyeM,    0.138*S,2.08*S,fz-0.05*S); // pupil R
-    add(new THREE.BoxGeometry(0.22*S,0.05*S,0.05*S),dark, 0,1.87*S,fz-0.01*S); // mouth
+    // Nose — more prominent
+    sph(0.080*S,skin, 0,1.98*S,fz-0.06*S, 1,0.75,0.80);
+    // Brows — thick, clearly angled
+    add(new THREE.BoxGeometry(0.18*S,0.07*S,0.06*S),dark, -0.125*S,2.20*S,fz, 0,0, 0.36);
+    add(new THREE.BoxGeometry(0.18*S,0.07*S,0.06*S),dark,  0.125*S,2.20*S,fz, 0,0,-0.36);
+    // Eye whites — bigger
+    sph(0.095*S,whiteM, -0.145*S,2.09*S,fz+0.01*S);
+    sph(0.095*S,whiteM,  0.145*S,2.09*S,fz+0.01*S);
+    // Pupils — dark
+    sph(0.062*S,eyeM,   -0.142*S,2.09*S,fz-0.06*S);
+    sph(0.062*S,eyeM,    0.142*S,2.09*S,fz-0.06*S);
+    // Mouth — red lips
+    add(new THREE.BoxGeometry(0.24*S,0.07*S,0.06*S),redLip, 0,1.86*S,fz-0.02*S);
+    // Teeth line
+    add(new THREE.BoxGeometry(0.22*S,0.015*S,0.055*S),whiteM, 0,1.875*S,fz-0.03*S);
 
     // ── HELMET ──
-    sph(0.42*S,jacket, 0,2.14*S,0, 1,0.76,1); // dome (scaled flat on bottom)
+    sph(0.42*S,jacket, 0,2.14*S,0, 1,0.76,1);
     const brim2=new THREE.Mesh(new THREE.TorusGeometry(0.405*S,0.082*S,14,34,Math.PI*1.35),jacket);
     brim2.rotation.x=Math.PI/2; brim2.position.set(0,1.97*S,-0.05*S); g.add(brim2);
     const starMat2=new THREE.MeshPhongMaterial({color:0xff1100,shininess:90});
     add(new THREE.CylinderGeometry(0.092*S,0.092*S,0.034*S,5),starMat2, 0,2.30*S,fz+0.08*S, 0.30,0,0);
 
-    // ── WEAPON ──
-    cap(0.066*S,0.52*S,brown, 0.60*S,1.14*S,0, 0,0,-0.50);
-    sph(0.24*S,gray, 0.77*S,1.66*S,0);
+    // ── WEAPON — club handle from right fist upward ──
+    // Handle: from fist (0.60, 0.90) to ball (0.72, 1.64)
+    cap(0.066*S,0.60*S,brown, 0.65*S,1.22*S,0, 0,0,-0.22);
+    sph(0.24*S,gray, 0.72*S,1.66*S,0);
     const spkG=new THREE.ConeGeometry(0.054*S,0.24*S,10);
     [[0,1,0],[0,-1,0],[1,0,0],[-1,0,0],[0,0,1],[0,0,-1]].forEach(([dx,dy,dz])=>{
         const sp=new THREE.Mesh(spkG,gray);
