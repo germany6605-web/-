@@ -935,7 +935,7 @@ function makeSideCover(type, xCenter, z, gate){
     gateGrp.add(lSpr); gate.meshes.push(lSpr);
 
     const seqIdx = gate._barrIdx;
-    const moneyWm = (1+(totalWins*(0.03+Math.floor(totalWins/10)*0.1))*0.3) * (1+totalWins*0.03);
+    const moneyWm = (1+(totalWins*(0.03+Math.floor(totalWins/10)*0.1))*0.3) * (1+totalWins*0.03) * (1+totalWins*0.025);
     const reward = Math.round(5 * (1 + seqIdx*0.25) * moneyWm);
     return { mesh, mat, hpCtx, hpTex, hpSpr, lSpr, hp, maxHp:hp,
              dead:false, deadT:0, removed:false, hitT:0, reward };
