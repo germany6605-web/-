@@ -2680,6 +2680,7 @@ const show=id=>document.getElementById(id).classList.add('vis');
 const hide=id=>document.getElementById(id).classList.remove('vis');
 
 function startGame(){
+    try {
     hide('start-ov'); hide('victory-ov'); hide('loss-ov');
     level=1;coins=0;totalWins=0;upgGate={dmg:0,money:0,range:0,rate:0};upgTir=0;_shopTab='wep';
     gearGrid=new Array(21).fill(null); weaponGears={}; _gearSel=-1; _modWep=1; gearsBought=0;
@@ -2688,6 +2689,10 @@ function startGame(){
     ownedWeapons=new Set([1]); activeWeapon=1; combatHPMult=1;
     buildStaticWorld();
     startLevel();
+    } catch(e) {
+        document.body.insertAdjacentHTML('beforeend',
+          `<div style="position:fixed;top:0;left:0;right:0;background:red;color:white;z-index:9999;padding:20px;font-size:14px;white-space:pre-wrap">${e.message}\n${e.stack}</div>`);
+    }
 }
 
 function startLevel(){
