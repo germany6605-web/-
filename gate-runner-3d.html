@@ -1148,62 +1148,118 @@ function showEffPop(eff){
 // ─── PATH MOBS ───
 let mobs = [];
 
+function makeMobBodyTex(){
+    const cv=document.createElement('canvas'); cv.width=128; cv.height=128;
+    const c=cv.getContext('2d');
+    // Armour gradient
+    const g=c.createLinearGradient(0,0,0,128);
+    g.addColorStop(0,'#8B1010'); g.addColorStop(0.5,'#CC2020'); g.addColorStop(1,'#5C0000');
+    c.fillStyle=g; c.fillRect(0,0,128,128);
+    // Plate lines
+    c.strokeStyle='rgba(255,80,80,0.35)'; c.lineWidth=3;
+    for(let i=0;i<4;i++){ c.beginPath(); c.moveTo(0,32*i); c.lineTo(128,32*i); c.stroke(); }
+    c.beginPath(); c.moveTo(64,0); c.lineTo(64,128); c.stroke();
+    // Skull emblem
+    c.fillStyle='rgba(255,220,180,0.7)'; c.font='bold 44px Arial';
+    c.textAlign='center'; c.textBaseline='middle';
+    c.shadowColor='#FF0000'; c.shadowBlur=12;
+    c.fillText('💀',64,64);
+    return new THREE.CanvasTexture(cv);
+}
+function makeMobHeadTex(){
+    const cv=document.createElement('canvas'); cv.width=64; cv.height=64;
+    const c=cv.getContext('2d');
+    const g=c.createRadialGradient(32,28,4,32,28,32);
+    g.addColorStop(0,'#DDAA77'); g.addColorStop(1,'#8B5520');
+    c.fillStyle=g; c.fillRect(0,0,64,64);
+    // scars
+    c.strokeStyle='rgba(120,40,0,0.6)'; c.lineWidth=2;
+    c.beginPath(); c.moveTo(20,15); c.lineTo(26,30); c.stroke();
+    c.beginPath(); c.moveTo(38,10); c.lineTo(44,25); c.stroke();
+    return new THREE.CanvasTexture(cv);
+}
+
 function spawnMob(x, z){
     const g = new THREE.Group();
-    const bodyMat = new THREE.MeshLambertMaterial({color:0x8B0000});
-    const skinMat = new THREE.MeshLambertMaterial({color:0xCC8844});
-    const darkMat  = new THREE.MeshLambertMaterial({color:0x440000});
+    const S = 1.9; // scale factor — 2× bigger
+    const bodyTex = makeMobBodyTex();
+    const headTex = makeMobHeadTex();
+    const bodyMat = new THREE.MeshLambertMaterial({map:bodyTex});
+    const skinMat = new THREE.MeshLambertMaterial({map:headTex});
+    const darkMat = new THREE.MeshLambertMaterial({color:0x220000});
+    const gloveMat= new THREE.MeshLambertMaterial({color:0x3A1A00});
 
     // Body
-    const body = new THREE.Mesh(new THREE.BoxGeometry(0.50, 0.65, 0.30), bodyMat);
-    body.position.y = 0.95; body.castShadow=true; g.add(body);
+    const body = new THREE.Mesh(new THREE.BoxGeometry(0.52*S,0.68*S,0.32*S), bodyMat);
+    body.position.y = 0.95*S; body.castShadow=true; g.add(body);
+    // Shoulder pads
+    const padGeo = new THREE.BoxGeometry(0.18*S,0.18*S,0.36*S);
+    const padMat = new THREE.MeshLambertMaterial({color:0xAA1111});
+    const padL = new THREE.Mesh(padGeo,padMat); padL.position.set(-0.38*S,1.22*S,0); g.add(padL);
+    const padR = new THREE.Mesh(padGeo,padMat); padR.position.set( 0.38*S,1.22*S,0); g.add(padR);
     // Head
-    const head = new THREE.Mesh(new THREE.SphereGeometry(0.22, 8, 6), skinMat);
-    head.position.y = 1.57; head.castShadow=true; g.add(head);
+    const head = new THREE.Mesh(new THREE.BoxGeometry(0.44*S,0.44*S,0.40*S), skinMat);
+    head.position.y = 1.62*S; head.castShadow=true; g.add(head);
+    // Helmet
+    const helmMat = new THREE.MeshLambertMaterial({color:0x771111});
+    const helm = new THREE.Mesh(new THREE.BoxGeometry(0.48*S,0.22*S,0.44*S), helmMat);
+    helm.position.y = 1.90*S; g.add(helm);
     // Arms
-    const armGeo = new THREE.BoxGeometry(0.17, 0.52, 0.17);
-    const armL = new THREE.Mesh(armGeo, bodyMat); armL.position.set(-0.34, 0.92, 0); g.add(armL);
-    const armR = new THREE.Mesh(armGeo, bodyMat); armR.position.set( 0.34, 0.92, 0); g.add(armR);
+    const armGeo = new THREE.BoxGeometry(0.20*S,0.54*S,0.20*S);
+    const armL = new THREE.Mesh(armGeo,bodyMat); armL.position.set(-0.38*S,0.94*S,0); g.add(armL);
+    const armR = new THREE.Mesh(armGeo,bodyMat); armR.position.set( 0.38*S,0.94*S,0); g.add(armR);
+    // Gloves
+    const glvGeo = new THREE.BoxGeometry(0.22*S,0.18*S,0.22*S);
+    const glvL = new THREE.Mesh(glvGeo,gloveMat); glvL.position.set(-0.38*S,0.62*S,0); g.add(glvL);
+    const glvR = new THREE.Mesh(glvGeo,gloveMat); glvR.position.set( 0.38*S,0.62*S,0); g.add(glvR);
     // Legs
-    const legGeo = new THREE.BoxGeometry(0.20, 0.50, 0.20);
-    const legL = new THREE.Mesh(legGeo, darkMat); legL.position.set(-0.14, 0.30, 0); g.add(legL);
-    const legR = new THREE.Mesh(legGeo, darkMat); legR.position.set( 0.14, 0.30, 0); g.add(legR);
+    const legGeo = new THREE.BoxGeometry(0.22*S,0.54*S,0.22*S);
+    const legL = new THREE.Mesh(legGeo,darkMat); legL.position.set(-0.15*S,0.30*S,0); g.add(legL);
+    const legR = new THREE.Mesh(legGeo,darkMat); legR.position.set( 0.15*S,0.30*S,0); g.add(legR);
+    // Boots
+    const bootGeo = new THREE.BoxGeometry(0.24*S,0.16*S,0.28*S);
+    const bootMat = new THREE.MeshLambertMaterial({color:0x1A0A00});
+    const bootL = new THREE.Mesh(bootGeo,bootMat); bootL.position.set(-0.15*S,0.08*S,0.03*S); g.add(bootL);
+    const bootR = new THREE.Mesh(bootGeo,bootMat); bootR.position.set( 0.15*S,0.08*S,0.03*S); g.add(bootR);
     // Glowing eyes
-    const eyeMat = new THREE.MeshBasicMaterial({color:0xFF2200});
-    const eyeGeo = new THREE.SphereGeometry(0.048, 6, 4);
-    const eyeL2 = new THREE.Mesh(eyeGeo, eyeMat); eyeL2.position.set(-0.09, 1.59, 0.20); g.add(eyeL2);
-    const eyeR2 = new THREE.Mesh(eyeGeo, eyeMat); eyeR2.position.set( 0.09, 1.59, 0.20); g.add(eyeR2);
-    // Club / weapon
-    const club = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.55, 0.12),
-        new THREE.MeshLambertMaterial({color:0x5C3317}));
-    club.position.set(0.50, 1.10, 0); club.rotation.z = -0.4; g.add(club);
+    const eyeMat = new THREE.MeshBasicMaterial({color:0xFF3300});
+    const eyeGeo = new THREE.SphereGeometry(0.07*S,6,4);
+    const eyeL2 = new THREE.Mesh(eyeGeo,eyeMat); eyeL2.position.set(-0.11*S,1.64*S,0.21*S); g.add(eyeL2);
+    const eyeR2 = new THREE.Mesh(eyeGeo,eyeMat); eyeR2.position.set( 0.11*S,1.64*S,0.21*S); g.add(eyeR2);
+    // Club
+    const clubMat = new THREE.MeshLambertMaterial({color:0x4A2800});
+    const club = new THREE.Mesh(new THREE.BoxGeometry(0.14*S,0.70*S,0.14*S),clubMat);
+    club.position.set(0.55*S,1.10*S,0); club.rotation.z=-0.4; g.add(club);
+    const clubHead = new THREE.Mesh(new THREE.BoxGeometry(0.22*S,0.22*S,0.22*S),
+        new THREE.MeshLambertMaterial({color:0x888888}));
+    clubHead.position.set(0.64*S,1.50*S,0); g.add(clubHead);
 
     // HP bar sprite
     const hpCv=document.createElement('canvas'); hpCv.width=64; hpCv.height=12;
     const hpCtx=hpCv.getContext('2d');
     const hpTex=new THREE.CanvasTexture(hpCv);
     const hpSpr=new THREE.Sprite(new THREE.SpriteMaterial({map:hpTex,depthTest:false,transparent:true}));
-    hpSpr.position.set(0, 2.15, 0); hpSpr.scale.set(1.1, 0.18, 1); g.add(hpSpr);
+    hpSpr.position.set(0,2.3*S,0); hpSpr.scale.set(1.6,0.22,1); g.add(hpSpr);
 
-    g.position.set(x, 0, z); scene.add(g);
+    g.position.set(x,0,z); scene.add(g);
 
-    const maxHp = Math.max(1, 5 + level*3);
-    const reward = 15 + level * 8;
-    const mob = {g, hpCv, hpCtx, hpTex, hpSpr,
-        maxHp, hp:maxHp, dead:false, deadT:0, removed:false, hitT:0,
-        reward, idleT:Math.random()*Math.PI*2};
+    const maxHp = Math.max(1, 5+level*3);
+    const reward = 15+level*8;
+    const mob = {g,hpCv,hpCtx,hpTex,hpSpr,
+        maxHp,hp:maxHp,dead:false,deadT:0,removed:false,hitT:0,
+        reward,idleT:Math.random()*Math.PI*2};
     drawMobHP(mob);
 
-    // Coin reward label above mob
+    // Coin reward label
     const labelCv=document.createElement('canvas'); labelCv.width=128; labelCv.height=40;
     const lCtx=labelCv.getContext('2d');
     lCtx.font='bold 28px Arial'; lCtx.textAlign='center'; lCtx.textBaseline='middle';
     lCtx.fillStyle='#FFD700'; lCtx.shadowColor='rgba(0,0,0,.8)'; lCtx.shadowBlur=6;
-    lCtx.fillText('🪙 '+reward, 64, 20);
+    lCtx.fillText('🪙 '+reward,64,20);
     const labelTex=new THREE.CanvasTexture(labelCv);
     labelTex.anisotropy=renderer.capabilities.getMaxAnisotropy();
     const labelSpr=new THREE.Sprite(new THREE.SpriteMaterial({map:labelTex,depthTest:false,transparent:true}));
-    labelSpr.position.set(0, 2.55, 0); labelSpr.scale.set(1.6, 0.5, 1);
+    labelSpr.position.set(0,2.7*S,0); labelSpr.scale.set(1.8,0.55,1);
     g.add(labelSpr); mob.labelSpr=labelSpr;
 
     mobs.push(mob);
@@ -1224,6 +1280,48 @@ const LOOT_TYPES=[
     {id:'moneyx2', label:'×2 ДЕНЬГИ',  icon:'💰',  color:'#FFD700', good:true},
     {id:'coins',   label:'💵 ДЕНЬГИ',  icon:'💵',  color:'#44FF88', good:true},
 ];
+
+function makeSpinCardTex(loot){
+    const W=256, H=340;
+    const cv=document.createElement('canvas'); cv.width=W; cv.height=H;
+    const c=cv.getContext('2d');
+    // Card background
+    const col = loot.color||'#44FF88';
+    const g=c.createLinearGradient(0,0,0,H);
+    g.addColorStop(0,'#1a1a2e'); g.addColorStop(0.5,col+'44'); g.addColorStop(1,'#0d0d1a');
+    c.fillStyle=g; c.beginPath();
+    c.roundRect(8,8,W-16,H-16,22); c.fill();
+    // Border glow
+    c.strokeStyle=col; c.lineWidth=4;
+    c.shadowColor=col; c.shadowBlur=18;
+    c.beginPath(); c.roundRect(8,8,W-16,H-16,22); c.stroke();
+    c.shadowBlur=0;
+    // Icon
+    c.font='90px Arial'; c.textAlign='center'; c.textBaseline='middle';
+    c.shadowColor='rgba(0,0,0,0.8)'; c.shadowBlur=10;
+    if(loot.id==='coins'){
+        // Draw stacks of money depending on label
+        c.font='72px Arial'; c.fillText('💵',W/2-28,H/2-22);
+        c.font='72px Arial'; c.fillText('💵',W/2+28,H/2+10);
+        c.font='52px Arial'; c.fillText('💵',W/2,H/2-48);
+    } else {
+        c.font='90px Arial'; c.fillText(loot.icon, W/2, H/2-10);
+    }
+    c.shadowBlur=0;
+    // Label
+    c.font='bold 28px Arial'; c.fillStyle='#fff';
+    c.shadowColor='rgba(0,0,0,0.9)'; c.shadowBlur=8;
+    c.fillText(loot.label, W/2, H-42);
+    c.shadowBlur=0;
+    // Shine streak
+    const sh=c.createLinearGradient(40,30,W-40,H-30);
+    sh.addColorStop(0,'rgba(255,255,255,0)');
+    sh.addColorStop(0.45,'rgba(255,255,255,0.12)');
+    sh.addColorStop(0.55,'rgba(255,255,255,0.22)');
+    sh.addColorStop(1,'rgba(255,255,255,0)');
+    c.fillStyle=sh; c.beginPath(); c.roundRect(8,8,W-16,H-16,22); c.fill();
+    const t=new THREE.CanvasTexture(cv); t.anisotropy=renderer.capabilities.getMaxAnisotropy(); return t;
+}
 
 function makeLootPlatTex(loot){
     const S=256;
@@ -1252,39 +1350,46 @@ function spawnLootPlatform(x, z, combatScale, forceLoot){
     const sc = combatScale||1;
     const loot=forceLoot||LOOT_TYPES[Math.floor(Math.random()*LOOT_TYPES.length)];
     const g=new THREE.Group();
-    const R=0.72*sc, h=1.4*sc;   // tall platform
+    const R=1.1*sc, h=1.6*sc;   // bigger platform
 
-    // Hex base (tall)
+    // Hex base
     const stoneTex=makeStoneSideTex();
-    const base=new THREE.Mesh(new THREE.CylinderGeometry(R,R*1.08,h,6),
+    const base=new THREE.Mesh(new THREE.CylinderGeometry(R,R*1.1,h,6),
         new THREE.MeshLambertMaterial({map:stoneTex}));
     base.position.y=h/2; base.castShadow=true; g.add(base);
 
-    // Top cap with loot icon
-    const top=new THREE.Mesh(new THREE.CylinderGeometry(R*0.88,R,0.18*sc,6),
+    // Top cap
+    const top=new THREE.Mesh(new THREE.CylinderGeometry(R*0.9,R,0.22*sc,6),
         [new THREE.MeshLambertMaterial({map:stoneTex}),
          new THREE.MeshLambertMaterial({map:makeLootPlatTex(loot)}),
          new THREE.MeshLambertMaterial({map:stoneTex})]);
-    top.position.y=h+0.09*sc; g.add(top);
+    top.position.y=h+0.11*sc; g.add(top);
 
     // Glowing rim
     const rimMat=new THREE.MeshBasicMaterial({color:new THREE.Color(loot.color)});
-    const rim=new THREE.Mesh(new THREE.TorusGeometry(R*0.9,0.05*sc,4,6),rimMat);
-    rim.rotation.x=Math.PI/2; rim.position.y=h+0.18*sc; g.add(rim);
+    const rim=new THREE.Mesh(new THREE.TorusGeometry(R*0.92,0.07*sc,6,8),rimMat);
+    rim.rotation.x=Math.PI/2; rim.position.y=h+0.22*sc; g.add(rim);
+
+    // Spinning card above platform
+    const cardTex = makeSpinCardTex(loot);
+    const cardMat = new THREE.MeshBasicMaterial({map:cardTex, transparent:true, side:THREE.DoubleSide, depthTest:false});
+    const cardMesh = new THREE.Mesh(new THREE.PlaneGeometry(0.9*sc, 1.2*sc), cardMat);
+    cardMesh.position.y = h + 1.0*sc;
+    g.add(cardMesh);
 
     // HP bar
     const hpCv=document.createElement('canvas'); hpCv.width=96; hpCv.height=14;
     const hpCtx=hpCv.getContext('2d');
     const hpTex=new THREE.CanvasTexture(hpCv);
     const hpSpr=new THREE.Sprite(new THREE.SpriteMaterial({map:hpTex,depthTest:false,transparent:true}));
-    hpSpr.position.set(0, h+0.55*sc, 0); hpSpr.scale.set(1.6*sc, 0.22*sc, 1); g.add(hpSpr);
+    hpSpr.position.set(0, h+1.9*sc, 0); hpSpr.scale.set(1.8*sc, 0.24*sc, 1); g.add(hpSpr);
 
     g.position.set(x,0,z); scene.add(g);
 
     const maxHp=Math.max(8, Math.round(level*8*sc));
     const lp={g,hpCv,hpCtx,hpTex,hpSpr,loot,maxHp,hp:maxHp,
         dead:false,deadT:0,removed:false,rimMat,rimT:0,
-        R,h, isCombat:!!combatScale};
+        R,h,cardMesh, isCombat:!!combatScale};
     drawLootHP(lp); lootPlatforms.push(lp);
 }
 
@@ -2345,7 +2450,7 @@ function openShop(isDeath=false){
 
 function nextLevel(){
     hide('shop-ov');
-    if(!shopDeath){ level++; totalWins++; }
+    if(!shopDeath){ level++; totalWins++; diamonds++; refreshHUD(); }
     startLevel();
 }
 
@@ -2588,6 +2693,8 @@ function tickRun(dt){
             if(lp.rimT>0){ lp.rimT-=dt; lp.rimMat.color.setHex(0xFFFFFF); }
             else { lp.rimMat.color.set(lp.loot.color); }
         }
+        // Spin card
+        if(lp.cardMesh){ lp.cardMesh.rotation.y += dt*1.8; }
     }
 
     // Update pickups + player collision
