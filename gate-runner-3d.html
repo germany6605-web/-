@@ -1582,7 +1582,7 @@ function killEnemy(e){
 const COMBAT_HEX_R = 0.24;           // small pillar radius (15 per row)
 const COMBAT_ROWS = 3;
 const COMBAT_ROW_SPACING = 2.2;
-const COMBAT_START_Z = GATE_SPACING * GATES_PER_LEVEL + 30;
+let COMBAT_START_Z = GATE_SPACING * GATES_PER_LEVEL + 30; // recalculated each level
 // 15 columns spanning road width
 const COMBAT_COL_X = [-3.1, 0, 3.1];  // 3 columns, 30% wider spread
 
@@ -2394,13 +2394,13 @@ function startLevel(){
 
     // Spawn fixed barricades between last gate and combat zone: 3 + totalWins, max 15
     const barrCount = Math.min(15, 3 + totalWins);
-    const barrZoneStart = GATE_SPACING * GATES_PER_LEVEL + 22;
-    const barrZoneEnd   = COMBAT_START_Z - 12;
-    const barrSpacing   = barrCount > 1 ? (barrZoneEnd - barrZoneStart) / (barrCount - 1) : 0;
+    const BARR_SPACING = 9;
+    const barrZoneStart = GATE_SPACING * GATES_PER_LEVEL + 15;
+    COMBAT_START_Z = barrZoneStart + barrCount * BARR_SPACING + 20;
     function pickCover(){ const r=Math.random(); return r<0.30?null:r<0.65?0:r<0.90?1:2; }
     for(let i=0;i<barrCount;i++){
         const tL=pickCover(), tR=pickCover();
-        const bz = barrCount === 1 ? barrZoneStart : barrZoneStart + i * barrSpacing;
+        const bz = barrZoneStart + i * BARR_SPACING;
         if(tL!=null||tR!=null) spawnBarricade(bz, tL, tR);
         else spawnBarricade(bz, 0, null);
     }
