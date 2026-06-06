@@ -1200,79 +1200,192 @@ function makeMobHeadTex(){
     return new THREE.CanvasTexture(cv);
 }
 
+function drawSoldierTex(){
+    const W=256, H=420;
+    const cv=document.createElement('canvas'); cv.width=W; cv.height=H;
+    const c=cv.getContext('2d');
+    // helpers
+    const fill=(col,fn)=>{c.fillStyle=col;c.beginPath();fn();c.fill();};
+    const stroke=(col,lw,fn)=>{c.strokeStyle=col;c.lineWidth=lw;c.beginPath();fn();c.stroke();};
+    const outline=(lw=4)=>{ c.strokeStyle='#1a1a00'; c.lineWidth=lw; };
+
+    // === BOOTS ===
+    fill('#2a1a08',()=>{c.ellipse(85,390,28,18,0,0,Math.PI*2);});
+    fill('#2a1a08',()=>{c.ellipse(171,390,28,18,0,0,Math.PI*2);});
+    outline(3); c.beginPath(); c.ellipse(85,390,28,18,0,0,Math.PI*2); c.stroke();
+    outline(3); c.beginPath(); c.ellipse(171,390,28,18,0,0,Math.PI*2); c.stroke();
+
+    // === LEGS ===
+    fill('#3a5c1a',()=>{ c.roundRect(66,310,38,88,8); });
+    fill('#3a5c1a',()=>{ c.roundRect(152,310,38,88,8); });
+    // dark seam
+    fill('#2a4010',()=>{ c.roundRect(80,310,10,88,4); });
+    fill('#2a4010',()=>{ c.roundRect(166,310,10,88,4); });
+    outline(3); c.beginPath(); c.roundRect(66,310,38,88,8); c.stroke();
+    outline(3); c.beginPath(); c.roundRect(152,310,38,88,8); c.stroke();
+
+    // === BODY / JACKET ===
+    // Main torso shape
+    fill('#4a7a20',()=>{
+        c.moveTo(60,320); c.lineTo(52,200); c.lineTo(80,182); c.lineTo(128,175); c.lineTo(176,182);
+        c.lineTo(204,200); c.lineTo(196,320); c.closePath();
+    });
+    // Dark tactical vest overlay
+    fill('#2a3a18',()=>{
+        c.moveTo(95,320); c.lineTo(88,200); c.lineTo(110,188); c.lineTo(128,185); c.lineTo(146,188);
+        c.lineTo(168,200); c.lineTo(161,320); c.closePath();
+    });
+    // Vest pockets
+    fill('#374d20',()=>{ c.roundRect(100,240,26,22,4); });
+    fill('#374d20',()=>{ c.roundRect(130,240,26,22,4); });
+    // Vest stitching lines
+    c.strokeStyle='#1e2c10'; c.lineWidth=2;
+    c.beginPath(); c.moveTo(128,188); c.lineTo(128,320); c.stroke();
+    // Body outline
+    outline(4); c.beginPath();
+    c.moveTo(60,320); c.lineTo(52,200); c.lineTo(80,182); c.lineTo(128,175); c.lineTo(176,182);
+    c.lineTo(204,200); c.lineTo(196,320); c.closePath(); c.stroke();
+
+    // === COLLAR / NECK ===
+    fill('#f0a060',()=>{ c.roundRect(108,170,40,22,6); });
+    outline(3); c.beginPath(); c.roundRect(108,170,40,22,6); c.stroke();
+
+    // === ARMS ===
+    // Left arm (holding weapon — extended left+down)
+    fill('#4a7a20',()=>{
+        c.moveTo(52,200); c.lineTo(16,260); c.lineTo(30,278); c.lineTo(72,218); c.closePath();
+    });
+    outline(3); c.beginPath();
+    c.moveTo(52,200); c.lineTo(16,260); c.lineTo(30,278); c.lineTo(72,218); c.closePath(); c.stroke();
+    // Right arm (raised, holding gun from the right)
+    fill('#4a7a20',()=>{
+        c.moveTo(204,200); c.lineTo(230,240); c.lineTo(218,260); c.lineTo(190,215); c.closePath();
+    });
+    outline(3); c.beginPath();
+    c.moveTo(204,200); c.lineTo(230,240); c.lineTo(218,260); c.lineTo(190,215); c.closePath(); c.stroke();
+
+    // === GLOVES ===
+    fill('#1a1008',()=>{ c.ellipse(22,270,16,12,0.3,0,Math.PI*2); });
+    fill('#1a1008',()=>{ c.ellipse(224,250,16,12,-0.3,0,Math.PI*2); });
+    outline(3); c.beginPath(); c.ellipse(22,270,16,12,0.3,0,Math.PI*2); c.stroke();
+    outline(3); c.beginPath(); c.ellipse(224,250,16,12,-0.3,0,Math.PI*2); c.stroke();
+
+    // === WEAPON (rifle) ===
+    // Stock
+    fill('#5c3010',()=>{ c.roundRect(180,250,50,14,4); });
+    // Barrel
+    fill('#707070',()=>{ c.roundRect(8,258,185,10,3); });
+    fill('#888',()=>{ c.roundRect(8,260,185,4,2); }); // highlight on barrel
+    // Grip
+    fill('#3a1a08',()=>{ c.roundRect(200,262,18,26,4); });
+    // Trigger guard
+    c.strokeStyle='#555'; c.lineWidth=3;
+    c.beginPath(); c.arc(208,272,10,0,Math.PI); c.stroke();
+    // Muzzle flash
+    const mf=c.createRadialGradient(8,263,0,8,263,22);
+    mf.addColorStop(0,'rgba(255,255,200,1)');
+    mf.addColorStop(0.3,'rgba(255,180,0,0.9)');
+    mf.addColorStop(1,'rgba(255,80,0,0)');
+    fill(mf,()=>{ c.ellipse(8,263,22,14,0,0,Math.PI*2); });
+    // Outline barrel+stock
+    outline(3); c.beginPath(); c.roundRect(8,258,185,10,3); c.stroke();
+    outline(3); c.beginPath(); c.roundRect(180,250,50,14,4); c.stroke();
+
+    // === HEAD ===
+    // Shadow under chin
+    fill('rgba(0,0,0,0.2)',()=>{ c.ellipse(128,174,36,8,0,0,Math.PI*2); });
+    // Face
+    fill('#f0a060',()=>{ c.ellipse(128,140,42,46,0,0,Math.PI*2); });
+    // Ear left
+    fill('#e09050',()=>{ c.ellipse(86,145,10,13,0,0,Math.PI*2); });
+    fill('#e09050',()=>{ c.ellipse(170,145,10,13,0,0,Math.PI*2); });
+    outline(3); c.beginPath(); c.ellipse(86,145,10,13,0,0,Math.PI*2); c.stroke();
+    outline(3); c.beginPath(); c.ellipse(170,145,10,13,0,0,Math.PI*2); c.stroke();
+    // Face outline
+    outline(4); c.beginPath(); c.ellipse(128,140,42,46,0,0,Math.PI*2); c.stroke();
+
+    // === HELMET ===
+    // Brim
+    fill('#3a6010',()=>{
+        c.beginPath(); c.ellipse(128,110,58,12,0,0,Math.PI*2);
+    });
+    // Main helmet dome
+    fill('#4a7a20',()=>{
+        c.beginPath(); c.arc(128,110,50,-Math.PI,0);
+        c.lineTo(178,116); c.lineTo(80,116); c.closePath();
+    });
+    // Highlight on helmet
+    const hhl=c.createLinearGradient(100,76,155,110);
+    hhl.addColorStop(0,'rgba(255,255,255,0.35)'); hhl.addColorStop(1,'rgba(255,255,255,0)');
+    fill(hhl,()=>{ c.arc(128,110,46,-Math.PI+0.3,-0.3); c.closePath(); });
+    // Helmet outline
+    outline(4); c.beginPath();
+    c.arc(128,110,50,-Math.PI,0); c.lineTo(178,116); c.lineTo(80,116); c.closePath(); c.stroke();
+    outline(3); c.beginPath(); c.ellipse(128,110,58,12,0,0,Math.PI*2); c.stroke();
+    // Red star badge
+    fill('#cc0000',()=>{
+        const cx=128,cy=98,r=9,ir=4,pts=5;
+        for(let i=0;i<pts*2;i++){
+            const a=i*Math.PI/pts-Math.PI/2, rr=i%2?ir:r;
+            i===0?c.moveTo(cx+rr*Math.cos(a),cy+rr*Math.sin(a)):c.lineTo(cx+rr*Math.cos(a),cy+rr*Math.sin(a));
+        } c.closePath();
+    });
+    outline(2); c.beginPath();
+    const cx2=128,cy2=98,r2=9,ir2=4,pts2=5;
+    for(let i=0;i<pts2*2;i++){
+        const a=i*Math.PI/pts2-Math.PI/2, rr=i%2?ir2:r2;
+        i===0?c.moveTo(cx2+rr*Math.cos(a),cy2+rr*Math.sin(a)):c.lineTo(cx2+rr*Math.cos(a),cy2+rr*Math.sin(a));
+    } c.closePath(); c.stroke();
+
+    // === FACE DETAILS ===
+    // Angry eyebrows
+    c.strokeStyle='#3a1a00'; c.lineWidth=5; c.lineCap='round';
+    c.beginPath(); c.moveTo(102,122); c.lineTo(120,118); c.stroke();
+    c.beginPath(); c.moveTo(136,118); c.lineTo(154,122); c.stroke();
+    // Eyes
+    fill('#3a1a00',()=>{ c.ellipse(112,132,9,8,0,0,Math.PI*2); });
+    fill('#3a1a00',()=>{ c.ellipse(144,132,9,8,0,0,Math.PI*2); });
+    // Pupils (white highlight)
+    fill('#fff',()=>{ c.ellipse(115,129,3,3,0,0,Math.PI*2); });
+    fill('#fff',()=>{ c.ellipse(147,129,3,3,0,0,Math.PI*2); });
+    // Nose
+    fill('#d08040',()=>{ c.ellipse(128,148,7,5,0,0,Math.PI*2); });
+    // Angry mouth (teeth)
+    fill('#cc2200',()=>{ c.roundRect(112,157,32,10,4); });
+    fill('#fff',()=>{
+        for(let i=0;i<4;i++){ c.rect(114+i*8,157,6,8); }
+    });
+    outline(2); c.beginPath(); c.roundRect(112,157,32,10,4); c.stroke();
+
+    // === SHOULDER PATCHES (stars) ===
+    ['#ffcc00'].forEach(col=>{
+        [72,184].forEach(px=>{
+            fill(col,()=>{
+                const cx=px,cy=196,r=8,ir=4,pts=5;
+                for(let i=0;i<pts*2;i++){
+                    const a=i*Math.PI/pts-Math.PI/2, rr=i%2?ir:r;
+                    i===0?c.moveTo(cx+rr*Math.cos(a),cy+rr*Math.sin(a)):c.lineTo(cx+rr*Math.cos(a),cy+rr*Math.sin(a));
+                } c.closePath();
+            });
+        });
+    });
+
+    const t=new THREE.CanvasTexture(cv);
+    t.anisotropy=renderer.capabilities.getMaxAnisotropy();
+    return t;
+}
+
 function spawnMob(x, z){
     const g = new THREE.Group();
     const S = 1.9;
 
-    // Materials — smooth cartoon colors (Phong for specular highlight)
-    const redMat   = new THREE.MeshPhongMaterial({color:0xFF3333, shininess:60});
-    const skinMat  = new THREE.MeshPhongMaterial({color:0xFFBB66, shininess:40});
-    const darkMat  = new THREE.MeshPhongMaterial({color:0x221100, shininess:30});
-    const goldMat  = new THREE.MeshPhongMaterial({color:0xFFCC00, shininess:100, specular:0xFFFFAA});
-    const brownMat = new THREE.MeshPhongMaterial({color:0x5C3010, shininess:20});
-    const grayMat  = new THREE.MeshPhongMaterial({color:0x999999, shininess:80, specular:0xFFFFFF});
-    const eyeMat   = new THREE.MeshBasicMaterial({color:0xFF2200});
-
-    // Torso — smooth wide cylinder
-    const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.30*S,0.28*S,0.65*S,32), redMat);
-    torso.position.y = 1.0*S; torso.castShadow=true; g.add(torso);
-
-    // Belt — smooth torus at waist
-    const belt = new THREE.Mesh(new THREE.TorusGeometry(0.30*S,0.06*S,12,32), darkMat);
-    belt.position.y = 0.70*S; belt.rotation.x=Math.PI/2; g.add(belt);
-
-    // Belt buckle
-    const buckle = new THREE.Mesh(new THREE.BoxGeometry(0.14*S,0.12*S,0.06*S), goldMat);
-    buckle.position.set(0,0.70*S,0.31*S); g.add(buckle);
-
-    // Head — big smooth cartoon sphere
-    const head = new THREE.Mesh(new THREE.SphereGeometry(0.32*S,32,24), skinMat);
-    head.position.y = 1.65*S; head.castShadow=true; g.add(head);
-
-    // Helmet band — smooth torus
-    const helmBand = new THREE.Mesh(new THREE.TorusGeometry(0.32*S,0.09*S,12,32), redMat);
-    helmBand.position.y = 1.78*S; helmBand.rotation.x=Math.PI/2; g.add(helmBand);
-
-    // Eyes
-    const eyeGeo = new THREE.SphereGeometry(0.07*S,16,12);
-    const eyeL = new THREE.Mesh(eyeGeo,eyeMat); eyeL.position.set(-0.12*S,1.68*S,0.27*S); g.add(eyeL);
-    const eyeR = new THREE.Mesh(eyeGeo,eyeMat); eyeR.position.set( 0.12*S,1.68*S,0.27*S); g.add(eyeR);
-
-    // Arms — smooth cylinders
-    const armGeo = new THREE.CylinderGeometry(0.10*S,0.10*S,0.52*S,20);
-    const armL = new THREE.Mesh(armGeo,skinMat); armL.position.set(-0.44*S,0.96*S,0); armL.rotation.z=0.2; g.add(armL);
-    const armR = new THREE.Mesh(armGeo,skinMat); armR.position.set( 0.44*S,0.96*S,0); armR.rotation.z=-0.2; g.add(armR);
-
-    // Fists — smooth spheres
-    const fistGeo = new THREE.SphereGeometry(0.12*S,20,16);
-    const fistL = new THREE.Mesh(fistGeo,skinMat); fistL.position.set(-0.50*S,0.64*S,0); g.add(fistL);
-    const fistR = new THREE.Mesh(fistGeo,skinMat); fistR.position.set( 0.50*S,0.64*S,0); g.add(fistR);
-
-    // Legs — smooth cylinders
-    const legGeo = new THREE.CylinderGeometry(0.11*S,0.10*S,0.55*S,20);
-    const legL = new THREE.Mesh(legGeo,darkMat); legL.position.set(-0.16*S,0.32*S,0); g.add(legL);
-    const legR = new THREE.Mesh(legGeo,darkMat); legR.position.set( 0.16*S,0.32*S,0); g.add(legR);
-
-    // Boots — smooth squished spheres
-    const bootGeo = new THREE.SphereGeometry(0.14*S,20,16);
-    const bootL = new THREE.Mesh(bootGeo,darkMat); bootL.scale.y=0.6; bootL.position.set(-0.16*S,0.06*S,0.04*S); g.add(bootL);
-    const bootR = new THREE.Mesh(bootGeo,darkMat); bootR.scale.y=0.6; bootR.position.set( 0.16*S,0.06*S,0.04*S); g.add(bootR);
-
-    // Club — smooth cylinder handle + sphere head with spikes
-    const clubHandle = new THREE.Mesh(new THREE.CylinderGeometry(0.07*S,0.07*S,0.65*S,20), brownMat);
-    clubHandle.position.set(0.58*S,1.05*S,0); clubHandle.rotation.z=-0.5; g.add(clubHandle);
-    const clubBall = new THREE.Mesh(new THREE.SphereGeometry(0.18*S,24,18), grayMat);
-    clubBall.position.set(0.72*S,1.48*S,0); g.add(clubBall);
-    // Club spikes
-    const spikeGeo = new THREE.ConeGeometry(0.05*S,0.18*S,12);
-    const spikeMat = new THREE.MeshPhongMaterial({color:0xCCCCCC, shininess:70});
-    [[0,1,0],[0,-1,0],[1,0,0],[-1,0,0],[0,0,1],[0,0,-1]].forEach(([dx,dy,dz])=>{
-        const sp=new THREE.Mesh(spikeGeo,spikeMat);
-        sp.position.set(0.72*S+dx*0.18*S,1.48*S+dy*0.18*S,dz*0.18*S);
-        const axis=new THREE.Vector3(dx,dy,dz);
-        sp.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),axis);
-        g.add(sp);
-    });
+    // Single billboard sprite with full painted soldier texture
+    const tex = drawSoldierTex();
+    const mat = new THREE.MeshBasicMaterial({map:tex, transparent:true, alphaTest:0.1, side:THREE.DoubleSide});
+    const plane = new THREE.Mesh(new THREE.PlaneGeometry(2.2*S, 2.2*S*(420/256)), mat);
+    plane.position.y = 1.1*S;
+    plane.castShadow = false;
+    g.add(plane);
 
     // HP bar sprite
     const hpCv=document.createElement('canvas'); hpCv.width=64; hpCv.height=12;
@@ -2720,9 +2833,11 @@ function tickRun(dt){
             } else { scene.remove(m.g); m.removed=true; }
             continue;
         }
-        // Idle bounce + arm swing
+        // Idle bounce + billboard face camera
         m.idleT+=dt*1.8;
-        m.g.children[6] && (m.g.children[6].rotation.z = -0.4+Math.sin(m.idleT)*0.25); // club sway
+        m.g.position.y = Math.sin(m.idleT*1.2)*0.06; // gentle bob
+        // Make sprite plane always face the camera
+        if(m.g.children[0]) m.g.children[0].lookAt(camera.position);
         if(m.hitT>0) m.hitT-=dt;
         // Player collides with mob → game over
         if(Math.abs(pz-m.g.position.z)<0.55 && Math.abs(px-m.g.position.x)<0.45){
