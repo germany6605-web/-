@@ -1346,94 +1346,86 @@ function spawnMob(x, z){
     const eyeM   = new THREE.MeshBasicMaterial({color:0x111100});
     const whiteM = new THREE.MeshBasicMaterial({color:0xffffff});
 
-    // ── Helper ──
-    const add=(geo,mat,px,py,pz,rx=0,ry=0,rz=0,sx=1,sy=1,sz=1)=>{
+    // ── Helpers ──
+    const add=(geo,mat,px,py,pz,rx=0,ry=0,rz=0)=>{
         const m=new THREE.Mesh(geo,mat);
-        m.position.set(px,py,pz); m.rotation.set(rx,ry,rz); m.scale.set(sx,sy,sz);
-        m.castShadow=true; g.add(m); return m;
+        m.position.set(px,py,pz); m.rotation.set(rx,ry,rz); m.castShadow=true; g.add(m); return m;
+    };
+    // ── CapsuleGeometry alias ──
+    // CapsuleGeometry(radius, length, capSegs, radialSegs) — smooth rounded ends, no seams
+    const cap=(r,l,mat,px,py,pz,rx=0,ry=0,rz=0)=>{
+        const m=new THREE.Mesh(new THREE.CapsuleGeometry(r,l,12,24),mat);
+        m.position.set(px,py,pz); m.rotation.set(rx,ry,rz); m.castShadow=true; g.add(m); return m;
+    };
+    const sph=(r,mat,px,py,pz,sx=1,sy=1,sz=1)=>{
+        const m=new THREE.Mesh(new THREE.SphereGeometry(r,28,22),mat);
+        m.position.set(px,py,pz); m.scale.set(sx,sy,sz); m.castShadow=true; g.add(m); return m;
     };
 
     // ── BOOTS ──
-    add(new THREE.SphereGeometry(0.20*S,24,18), dark, -0.18*S,0.13*S,-0.05*S, 0,0,0, 1,0.50,1.4);
-    add(new THREE.SphereGeometry(0.20*S,24,18), dark,  0.18*S,0.13*S,-0.05*S, 0,0,0, 1,0.50,1.4);
+    sph(0.20*S,dark, -0.18*S,0.13*S,-0.05*S, 1,0.50,1.40);
+    sph(0.20*S,dark,  0.18*S,0.13*S,-0.05*S, 1,0.50,1.40);
 
-    // ── LEGS — one continuous piece per leg via overlapping cylinders+spheres ──
-    // Lower leg
-    add(new THREE.CylinderGeometry(0.145*S,0.130*S,0.44*S,24), pants, -0.18*S,0.41*S,0);
-    add(new THREE.CylinderGeometry(0.145*S,0.130*S,0.44*S,24), pants,  0.18*S,0.41*S,0);
-    // Knee — big enough to overlap both cylinders completely
-    add(new THREE.SphereGeometry(0.165*S,24,18), pants, -0.18*S,0.63*S,0);
-    add(new THREE.SphereGeometry(0.165*S,24,18), pants,  0.18*S,0.63*S,0);
-    // Upper leg
-    add(new THREE.CylinderGeometry(0.175*S,0.155*S,0.34*S,24), pants, -0.18*S,0.80*S,0);
-    add(new THREE.CylinderGeometry(0.175*S,0.155*S,0.34*S,24), pants,  0.18*S,0.80*S,0);
+    // ── LEGS — CapsuleGeometry = perfectly smooth, no joint sphere needed ──
+    cap(0.145*S,0.52*S,pants, -0.18*S,0.52*S,0);
+    cap(0.145*S,0.52*S,pants,  0.18*S,0.52*S,0);
 
-    // ── HIP SPHERE — big, covers top of legs + bottom of torso ──
-    add(new THREE.SphereGeometry(0.36*S,28,22), pants, 0,0.98*S,0, 0,0,0, 1,0.68,0.90);
+    // ── HIP — big sphere covering tops of legs + bottom of torso ──
+    sph(0.35*S,pants, 0,0.98*S,0, 1,0.72,0.88);
 
     // ── BELT ──
-    add(new THREE.TorusGeometry(0.30*S,0.058*S,10,32), dark, 0,1.02*S,0, Math.PI/2);
-    add(new THREE.BoxGeometry(0.14*S,0.13*S,0.07*S), gold, 0,1.02*S,-0.31*S);
+    const beltM=new THREE.Mesh(new THREE.TorusGeometry(0.30*S,0.058*S,10,32),dark);
+    beltM.rotation.x=Math.PI/2; beltM.position.set(0,1.02*S,0); beltM.castShadow=true; g.add(beltM);
+    add(new THREE.BoxGeometry(0.14*S,0.13*S,0.07*S),gold, 0,1.02*S,-0.31*S);
 
-    // ── TORSO ──
-    add(new THREE.CylinderGeometry(0.37*S,0.32*S,0.68*S,32), jacket, 0,1.34*S,0);
-    add(new THREE.CylinderGeometry(0.35*S,0.30*S,0.54*S,32), vest,   0,1.36*S,0);
+    // ── TORSO — capsule for smooth top+bottom ──
+    cap(0.36*S,0.44*S,jacket, 0,1.34*S,0);
+    cap(0.34*S,0.34*S,vest,   0,1.36*S,0);
 
-    // ── SHOULDER SPHERES — large, seamlessly merge arms into torso ──
-    add(new THREE.SphereGeometry(0.235*S,24,20), jacket, -0.44*S,1.58*S,0);
-    add(new THREE.SphereGeometry(0.235*S,24,20), jacket,  0.44*S,1.58*S,0);
-
-    // ── UPPER ARMS ──
-    add(new THREE.CylinderGeometry(0.135*S,0.125*S,0.38*S,22), jacket, -0.52*S,1.35*S,0, 0,0, 0.18);
-    add(new THREE.CylinderGeometry(0.135*S,0.125*S,0.38*S,22), jacket,  0.52*S,1.35*S,0, 0,0,-0.18);
-
-    // ── ELBOW SPHERES — large enough to hide joint ──
-    add(new THREE.SphereGeometry(0.145*S,22,18), jacket, -0.57*S,1.14*S,0);
-    add(new THREE.SphereGeometry(0.145*S,22,18), jacket,  0.57*S,1.14*S,0);
-
-    // ── LOWER ARMS ──
-    add(new THREE.CylinderGeometry(0.120*S,0.110*S,0.34*S,22), jacket, -0.57*S,0.94*S,0, 0,0, 0.06);
-    add(new THREE.CylinderGeometry(0.120*S,0.110*S,0.34*S,22), jacket,  0.57*S,0.94*S,0, 0,0,-0.06);
-
-    // ── FIST SPHERES ──
-    add(new THREE.SphereGeometry(0.150*S,22,18), dark, -0.58*S,0.74*S,0);
-    add(new THREE.SphereGeometry(0.150*S,22,18), dark,  0.58*S,0.74*S,0);
+    // ── ARMS — each arm is ONE capsule per segment, shoulder sphere bridges torso→arm ──
+    // Shoulder spheres
+    sph(0.225*S,jacket, -0.44*S,1.58*S,0);
+    sph(0.225*S,jacket,  0.44*S,1.58*S,0);
+    // Upper arm capsule
+    cap(0.120*S,0.26*S,jacket, -0.51*S,1.36*S,0, 0,0, 0.20);
+    cap(0.120*S,0.26*S,jacket,  0.51*S,1.36*S,0, 0,0,-0.20);
+    // Lower arm capsule (elbow handled by capsule round ends overlapping)
+    cap(0.110*S,0.24*S,jacket, -0.55*S,1.10*S,0, 0,0, 0.08);
+    cap(0.110*S,0.24*S,jacket,  0.55*S,1.10*S,0, 0,0,-0.08);
+    // Fist
+    sph(0.145*S,dark, -0.57*S,0.76*S,0);
+    sph(0.145*S,dark,  0.57*S,0.76*S,0);
 
     // ── NECK ──
-    add(new THREE.CylinderGeometry(0.135*S,0.165*S,0.18*S,22), skin, 0,1.72*S,0);
+    cap(0.135*S,0.06*S,skin, 0,1.68*S,0);
 
     // ── HEAD ──
-    add(new THREE.SphereGeometry(0.38*S,34,28), skin, 0,2.04*S,0);
+    sph(0.38*S,skin, 0,2.04*S,0);
     // Ears
-    add(new THREE.SphereGeometry(0.095*S,18,14), skin, -0.38*S,2.04*S,0, 0,0,0, 0.60,1,0.60);
-    add(new THREE.SphereGeometry(0.095*S,18,14), skin,  0.38*S,2.04*S,0, 0,0,0, 0.60,1,0.60);
+    sph(0.09*S,skin, -0.38*S,2.04*S,0, 0.60,1,0.60);
+    sph(0.09*S,skin,  0.38*S,2.04*S,0, 0.60,1,0.60);
 
-    // ── FACE (fz = -Z = toward camera) ──
+    // ── FACE (fz = -Z = toward player) ──
     const fz=-0.32*S;
-    // Nose
-    add(new THREE.SphereGeometry(0.072*S,16,12), skin, 0,2.00*S,fz-0.04*S, 0,0,0, 1,0.80,0.75);
-    // Brows
-    add(new THREE.BoxGeometry(0.17*S,0.055*S,0.055*S), dark, -0.125*S,2.18*S,fz, 0,0, 0.34);
-    add(new THREE.BoxGeometry(0.17*S,0.055*S,0.055*S), dark,  0.125*S,2.18*S,fz, 0,0,-0.34);
-    // Eyes
-    add(new THREE.SphereGeometry(0.085*S,18,14), whiteM, -0.14*S,2.08*S,fz+0.01*S);
-    add(new THREE.SphereGeometry(0.085*S,18,14), whiteM,  0.14*S,2.08*S,fz+0.01*S);
-    add(new THREE.SphereGeometry(0.055*S,16,12), eyeM,   -0.138*S,2.08*S,fz-0.05*S);
-    add(new THREE.SphereGeometry(0.055*S,16,12), eyeM,    0.138*S,2.08*S,fz-0.05*S);
-    // Mouth
-    add(new THREE.BoxGeometry(0.22*S,0.05*S,0.05*S), dark, 0,1.87*S,fz-0.01*S);
+    sph(0.072*S,skin,  0,2.00*S,fz-0.04*S, 1,0.80,0.75); // nose
+    add(new THREE.BoxGeometry(0.17*S,0.055*S,0.055*S),dark, -0.125*S,2.18*S,fz, 0,0, 0.34); // brow L
+    add(new THREE.BoxGeometry(0.17*S,0.055*S,0.055*S),dark,  0.125*S,2.18*S,fz, 0,0,-0.34); // brow R
+    sph(0.085*S,whiteM, -0.14*S,2.08*S,fz+0.01*S); // eye white L
+    sph(0.085*S,whiteM,  0.14*S,2.08*S,fz+0.01*S); // eye white R
+    sph(0.055*S,eyeM,   -0.138*S,2.08*S,fz-0.05*S); // pupil L
+    sph(0.055*S,eyeM,    0.138*S,2.08*S,fz-0.05*S); // pupil R
+    add(new THREE.BoxGeometry(0.22*S,0.05*S,0.05*S),dark, 0,1.87*S,fz-0.01*S); // mouth
 
     // ── HELMET ──
-    add(new THREE.SphereGeometry(0.42*S,34,24,0,Math.PI*2,0,Math.PI*0.58), jacket, 0,2.14*S,0);
-    // Brim — wraps front
-    add(new THREE.TorusGeometry(0.405*S,0.082*S,14,34,Math.PI*1.35), jacket, 0,1.97*S,-0.05*S, Math.PI/2);
-    // Red star
+    sph(0.42*S,jacket, 0,2.14*S,0, 1,0.76,1); // dome (scaled flat on bottom)
+    const brim2=new THREE.Mesh(new THREE.TorusGeometry(0.405*S,0.082*S,14,34,Math.PI*1.35),jacket);
+    brim2.rotation.x=Math.PI/2; brim2.position.set(0,1.97*S,-0.05*S); g.add(brim2);
     const starMat2=new THREE.MeshPhongMaterial({color:0xff1100,shininess:90});
-    add(new THREE.CylinderGeometry(0.092*S,0.092*S,0.034*S,5), starMat2, 0,2.30*S,fz+0.08*S, 0.30,0,0);
+    add(new THREE.CylinderGeometry(0.092*S,0.092*S,0.034*S,5),starMat2, 0,2.30*S,fz+0.08*S, 0.30,0,0);
 
     // ── WEAPON ──
-    add(new THREE.CylinderGeometry(0.066*S,0.066*S,0.78*S,18), brown, 0.60*S,1.14*S,0, 0,0,-0.50);
-    add(new THREE.SphereGeometry(0.24*S,26,22), gray, 0.77*S,1.66*S,0);
+    cap(0.066*S,0.52*S,brown, 0.60*S,1.14*S,0, 0,0,-0.50);
+    sph(0.24*S,gray, 0.77*S,1.66*S,0);
     const spkG=new THREE.ConeGeometry(0.054*S,0.24*S,10);
     [[0,1,0],[0,-1,0],[1,0,0],[-1,0,0],[0,0,1],[0,0,-1]].forEach(([dx,dy,dz])=>{
         const sp=new THREE.Mesh(spkG,gray);
