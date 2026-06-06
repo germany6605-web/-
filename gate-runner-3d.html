@@ -600,9 +600,17 @@ function randomEff(){
     let incVal; do{ incVal=Math.floor(Math.random()*11)-3; }while(incVal===0);
     return {id:type, baseVal, incVal, currentVal:baseVal};
 }
+function moneyCoins(v){
+    const wm=1+(totalWins*(0.03+Math.floor(totalWins/10)*0.1))*0.3;
+    return Math.floor(100*Math.abs(v)*wm*COIN_MULT)*(v>=0?1:-1);
+}
 function effLabel(eff){
     const v=eff.currentVal;
-    const typeLabel=eff.id==='money'?'ДЕНЬГИ':eff.id==='range'?'ДАЛЬН':eff.id==='rate'?'СКОР':'УРН';
+    if(eff.id==='money'){
+        const c=moneyCoins(v);
+        return {val:v, good:v>=0, label:(c>=0?'+':'')+c+' 🪙'};
+    }
+    const typeLabel=eff.id==='range'?'ДАЛЬН':eff.id==='rate'?'СКОР':'УРН';
     return {val:v, good:v>=0, label:(v>=0?'+':'')+v+' '+typeLabel};
 }
 
@@ -666,8 +674,9 @@ function makeGateTex(eff){
     x.strokeStyle='rgba(255,255,255,0.2)'; x.lineWidth=2;
     x.beginPath(); x.moveTo(40,220); x.lineTo(W-40,220); x.stroke();
 
-    // Value (big, with shadow)
-    const valStr=(v>=0?'+':'')+v;
+    // Value (big, with shadow) — for money show actual coins
+    const dispV = eff.id==='money' ? moneyCoins(v) : v;
+    const valStr=(dispV>=0?'+':'')+dispV;
     x.shadowColor='rgba(0,0,0,0.9)'; x.shadowBlur=16;
     x.font='bold 200px Arial Black,Arial';
     x.fillStyle=good?'#AAFFCC':'#FFAAAA';
@@ -1119,7 +1128,7 @@ function applyEff(eff){
     const label = effLabel ? effLabel(eff).label : eff.label||'';
     switch(eff.id){
         case 'dmg':   permDmg=permDmg+v; break;
-        case 'money': { const wm=1+(totalWins*(0.03+Math.floor(totalWins/10)*0.1))*0.3; coins=Math.max(0, coins+Math.floor(100*Math.abs(v)*wm*COIN_MULT)*(v>=0?1:-1)); break; }
+        case 'money': { coins=Math.max(0, coins+moneyCoins(v)); break; }
         case 'range': permRange=Math.max(0, Math.min(10, permRange+v)); break;
         case 'rate':  permRate=Math.max(0, Math.min(10, permRate+v)); break;
     }
