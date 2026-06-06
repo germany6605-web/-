@@ -1493,15 +1493,15 @@ function makeSpinCardTex(loot){
     // Cartoon card body — bright white-ish with colour tint
     const bg=c.createLinearGradient(0,0,0,H);
     bg.addColorStop(0,'#FFFFFF'); bg.addColorStop(0.5,col+'55'); bg.addColorStop(1,'#F0F0F0');
-    c.fillStyle=bg; c.beginPath(); c.roundRect(6,6,W-12,H-12,28); c.fill();
+    c.fillStyle=bg; c.beginPath(); rrect(c,6,6,W-12,H-12,28); c.fill();
     // Bold coloured border — cartoon style
     c.strokeStyle=col; c.lineWidth=10;
     c.shadowColor=col; c.shadowBlur=20;
-    c.beginPath(); c.roundRect(6,6,W-12,H-12,28); c.stroke();
+    c.beginPath(); rrect(c,6,6,W-12,H-12,28); c.stroke();
     c.shadowBlur=0;
     // Inner white outline
     c.strokeStyle='rgba(255,255,255,0.9)'; c.lineWidth=4;
-    c.beginPath(); c.roundRect(18,18,W-36,H-36,20); c.stroke();
+    c.beginPath(); rrect(c,18,18,W-36,H-36,20); c.stroke();
     // Dot pattern background
     c.fillStyle='rgba(0,0,0,0.04)';
     for(let dx=24;dx<W-12;dx+=22) for(let dy=24;dy<H-12;dy+=22){
@@ -1521,7 +1521,7 @@ function makeSpinCardTex(loot){
     // Label pill
     const lw=Math.min(W-40,loot.label.length*14+32);
     c.fillStyle=col;
-    c.beginPath(); c.roundRect((W-lw)/2,H-66,lw,40,20); c.fill();
+    c.beginPath(); rrect(c,(W-lw)/2,H-66,lw,40,20); c.fill();
     c.font=`bold ${loot.label.length>12?20:24}px Arial`;
     c.fillStyle='#fff';
     c.shadowColor='rgba(0,0,0,0.5)'; c.shadowBlur=4;
@@ -1530,7 +1530,7 @@ function makeSpinCardTex(loot){
     // Top shine
     const sh=c.createLinearGradient(0,6,0,H/2);
     sh.addColorStop(0,'rgba(255,255,255,0.55)'); sh.addColorStop(1,'rgba(255,255,255,0)');
-    c.fillStyle=sh; c.beginPath(); c.roundRect(6,6,W-12,H/2-6,28); c.fill();
+    c.fillStyle=sh; c.beginPath(); rrect(c,6,6,W-12,H/2-6,28); c.fill();
     const t=new THREE.CanvasTexture(cv); t.anisotropy=renderer.capabilities.getMaxAnisotropy(); return t;
 }
 
@@ -1614,25 +1614,49 @@ function drawLootHP(lp){
 
 function killLootPlatform(lp){
     lp.dead=true;
-    // Spawn pickup orb
-    const col=new THREE.Color(lp.loot.color);
-    const orb=new THREE.Mesh(
-        new THREE.SphereGeometry(0.22,10,8),
-        new THREE.MeshBasicMaterial({color:col, transparent:true, opacity:0.92})
-    );
-    orb.position.copy(lp.g.position); orb.position.y=0.5;
-    scene.add(orb);
-    // Label sprite on orb
-    const lCv=document.createElement('canvas'); lCv.width=160; lCv.height=48;
-    const lx=lCv.getContext('2d');
-    lx.font='bold 26px Arial'; lx.textAlign='center'; lx.textBaseline='middle';
-    lx.fillStyle=lp.loot.color; lx.shadowColor='rgba(0,0,0,.9)'; lx.shadowBlur=6;
-    lx.fillText(lp.loot.icon+' '+lp.loot.label, 80, 24);
-    const lTex=new THREE.CanvasTexture(lCv); lTex.anisotropy=renderer.capabilities.getMaxAnisotropy();
-    const lSpr=new THREE.Sprite(new THREE.SpriteMaterial({map:lTex,depthTest:false,transparent:true}));
-    lSpr.position.set(0,0.7,0); lSpr.scale.set(2.2,0.66,1);
-    orb.add(lSpr);
-    pickups.push({mesh:orb,loot:lp.loot,bobT:Math.random()*Math.PI*2,collected:false});
+    const pickup = new THREE.Group();
+    pickup.position.copy(lp.g.position); pickup.position.y=0.15;
+    scene.add(pickup);
+
+    if(lp.loot.id==='coins'){
+        // Stack of coins
+        const cR=0.30, cH=0.10;
+        const coinMat = new THREE.MeshLambertMaterial({color:0xFFD700});
+        const coinEdge = new THREE.MeshLambertMaterial({color:0xBB8800});
+        const coinGeo = new THREE.CylinderGeometry(cR,cR,cH,16);
+        const positions=[
+            [0,0,0],[0.08,cH,0.05],[-0.05,cH*2,-0.04],[0.03,cH*3,0.02],
+            [0.06,cH*4,-0.03],[-0.04,cH*5,0.06],[0,cH*6,0]
+        ];
+        for(const [px,py,pz] of positions){
+            const coin=new THREE.Mesh(coinGeo,[coinEdge,coinMat,coinEdge]);
+            coin.position.set(px,py,pz);
+            coin.rotation.y=Math.random()*Math.PI;
+            coin.castShadow=true; pickup.add(coin);
+        }
+        // Coin label sprite above
+        const lCv=document.createElement('canvas'); lCv.width=160; lCv.height=48;
+        const lx=lCv.getContext('2d');
+        lx.font='bold 24px Arial'; lx.textAlign='center'; lx.textBaseline='middle';
+        lx.fillStyle='#FFD700'; lx.shadowColor='rgba(0,0,0,.9)'; lx.shadowBlur=6;
+        lx.fillText('💰 ДЕНЬГИ', 80, 24);
+        const lTex=new THREE.CanvasTexture(lCv); lTex.anisotropy=renderer.capabilities.getMaxAnisotropy();
+        const lSpr=new THREE.Sprite(new THREE.SpriteMaterial({map:lTex,depthTest:false,transparent:true}));
+        lSpr.position.set(0,1.1,0); lSpr.scale.set(2.2,0.66,1);
+        pickup.add(lSpr);
+    } else {
+        // Floating card pickup
+        const cardTex=makeSpinCardTex(lp.loot);
+        const cardMat=new THREE.MeshBasicMaterial({map:cardTex,transparent:true,side:THREE.DoubleSide,depthTest:false});
+        const card=new THREE.Mesh(new THREE.PlaneGeometry(0.7,0.93),cardMat);
+        card.position.y=0.5; pickup.add(card);
+        // Glow ring below card
+        const ringMat=new THREE.MeshBasicMaterial({color:new THREE.Color(lp.loot.color),transparent:true,opacity:0.6});
+        const ring=new THREE.Mesh(new THREE.TorusGeometry(0.28,0.04,6,16),ringMat);
+        ring.rotation.x=Math.PI/2; ring.position.y=0.05; pickup.add(ring);
+    }
+
+    pickups.push({mesh:pickup,loot:lp.loot,bobT:Math.random()*Math.PI*2,collected:false});
 }
 
 function applyPickup(loot){
