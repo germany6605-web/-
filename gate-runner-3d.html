@@ -1039,7 +1039,7 @@ function spawnTirTarget(){
     mesh.position.set(x,6.0,tirFrozenPz+8);
     scene.add(mesh);
     const tirWinMult1 = 1 + totalWins * 0.03;
-    const reward = Math.round(1 * tirCoinMult * tirWinMult1);
+    const reward = Math.round(5 * tirCoinMult * tirWinMult1);
     tirTargets.push({mesh,hp:1,dead:false,removed:false,reward});
 }
 
@@ -1093,7 +1093,7 @@ function endTir(){
     if(tirWall){ scene.remove(tirWall); tirWall=null; }
     for(const t of tirTargets){ if(!t.removed){ scene.remove(t.mesh); t.removed=true; } }
     const _tw1=1+totalWins*0.03;
-    const totalCoins=Math.round(tirScore*Math.round(1*tirCoinMult*_tw1));
+    const totalCoins=Math.round(tirScore*Math.round(5*tirCoinMult*_tw1));
     coins+=totalCoins; refreshHUD();
     if(tirScore>0) showEffPop({label:`🎯 +${totalCoins} монет (${tirScore} мишеней)`, good:true});
     document.getElementById('tir-hud').style.display='none';
