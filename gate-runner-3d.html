@@ -1797,11 +1797,16 @@ function renderFactoryTab(){
             const mkItem=(icon,label,lv,cost,onClick)=>{
                 const it=document.createElement('div');
                 it.className='citem'+(lv>0?' has':'')+(lv>=10?' maxed':'');
-                const lvEl=`<div class="citem-lv${lv>=10?' maxed':''}">${lv>=10?'★ МАКС':'Ур.'+lv+'/10'}</div>`;
                 const canUpg=lv<10&&coins>=cost;
-                it.innerHTML=`<div class="citem-icon">${icon}</div><div style="font-size:11px;color:#aaa;margin-bottom:2px">${label}</div>${lvEl}
-                    <button class="citem-btn" ${lv>=10?'disabled':(!canUpg?'disabled':'')} onclick="(${onClick.toString()})()">`
-                    +(lv>=10?'Макс':lv<10?`${cost} 🪙`:'Макс')+`</button>`;
+                it.innerHTML=`<div class="citem-icon">${icon}</div>
+                    <div style="font-size:11px;color:#aaa;margin-bottom:2px">${label}</div>
+                    <div class="citem-lv${lv>=10?' maxed':''}">${lv>=10?'★ МАКС':'Ур.'+lv+'/10'}</div>`;
+                const btn=document.createElement('button');
+                btn.className='citem-btn';
+                btn.disabled=lv>=10||!canUpg;
+                btn.textContent=lv>=10?'Макс':`${cost} 🪙`;
+                btn.onclick=onClick;
+                it.appendChild(btn);
                 return it;
             };
 
