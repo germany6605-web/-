@@ -1332,80 +1332,112 @@ function spawnMob(x, z){
     const g = new THREE.Group();
     const S = 1.9;
 
-    // Materials
-    const green  = new THREE.MeshPhongMaterial({color:0x4a7a20, shininess:40});
-    const dkgreen= new THREE.MeshPhongMaterial({color:0x2a4a10, shininess:30});
-    const skin   = new THREE.MeshPhongMaterial({color:0xf0a060, shininess:50});
-    const dark   = new THREE.MeshPhongMaterial({color:0x1a1008, shininess:20});
-    const gray   = new THREE.MeshPhongMaterial({color:0x888888, shininess:80, specular:0xffffff});
-    const brown  = new THREE.MeshPhongMaterial({color:0x5c3010, shininess:20});
-    const red    = new THREE.MeshPhongMaterial({color:0xcc0000, shininess:60});
-    const gold   = new THREE.MeshPhongMaterial({color:0xffcc00, shininess:100, specular:0xffffaa});
+    // ── Materials ──
+    const M=(col,shi=40,spec=0)=>new THREE.MeshPhongMaterial({color:col,shininess:shi,specular:spec||col});
+    const jacket = M(0x4a8c1c,50);          // bright military green
+    const pants  = M(0x3a6814,35);          // darker green pants
+    const vest   = M(0x2a4010,30);          // dark tactical vest
+    const skin   = M(0xf4aa6a,60,0xffddaa); // warm skin
+    const dark   = M(0x1a1008,15);          // dark boots/gloves
+    const gray   = M(0x909090,90,0xffffff); // metal club
+    const brown  = M(0x6a3a10,25);          // wood handle
+    const gold   = M(0xffcc00,120,0xffff88);// gold buckle
+    const redM   = M(0xdd2200,70);          // red star
+    const eyeM   = new THREE.MeshBasicMaterial({color:0x111100});
+    const whiteM = new THREE.MeshBasicMaterial({color:0xffffff});
 
-    // Legs
-    const legG = new THREE.CylinderGeometry(0.13*S,0.12*S,0.58*S,20);
-    const legL = new THREE.Mesh(legG,dkgreen); legL.position.set(-0.17*S,0.33*S,0); g.add(legL);
-    const legR = new THREE.Mesh(legG,dkgreen); legR.position.set( 0.17*S,0.33*S,0); g.add(legR);
-    // Boots
-    const bootG = new THREE.SphereGeometry(0.16*S,20,14);
-    const bootL = new THREE.Mesh(bootG,dark); bootL.scale.set(1,0.55,1.2); bootL.position.set(-0.17*S,0.05*S,0.04*S); g.add(bootL);
-    const bootR = new THREE.Mesh(bootG,dark); bootR.scale.set(1,0.55,1.2); bootR.position.set( 0.17*S,0.05*S,0.04*S); g.add(bootR);
-    // Torso
-    const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.28*S,0.25*S,0.68*S,24), green);
-    torso.position.y = 1.0*S; g.add(torso);
-    // Vest
-    const vest = new THREE.Mesh(new THREE.CylinderGeometry(0.29*S,0.26*S,0.42*S,24), dkgreen);
-    vest.position.y = 1.06*S; g.add(vest);
-    // Belt
-    const belt = new THREE.Mesh(new THREE.TorusGeometry(0.27*S,0.055*S,8,24), dark);
-    belt.rotation.x=Math.PI/2; belt.position.y=0.70*S; g.add(belt);
-    // Belt buckle
-    const buckle = new THREE.Mesh(new THREE.BoxGeometry(0.13*S,0.10*S,0.05*S), gold);
-    buckle.position.set(0,0.70*S,0.28*S); g.add(buckle);
-    // Arms
-    const armG = new THREE.CylinderGeometry(0.10*S,0.09*S,0.54*S,18);
-    const armL = new THREE.Mesh(armG,green); armL.position.set(-0.42*S,0.96*S,0); armL.rotation.z=0.18; g.add(armL);
-    const armR = new THREE.Mesh(armG,green); armR.position.set( 0.42*S,0.96*S,0); armR.rotation.z=-0.18; g.add(armR);
-    // Fists/gloves
-    const fistG = new THREE.SphereGeometry(0.12*S,18,14);
-    const fistL = new THREE.Mesh(fistG,dark); fistL.position.set(-0.48*S,0.62*S,0); g.add(fistL);
-    const fistR = new THREE.Mesh(fistG,dark); fistR.position.set( 0.48*S,0.62*S,0); g.add(fistR);
-    // Neck
-    const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.10*S,0.12*S,0.14*S,16), skin);
-    neck.position.y=1.40*S; g.add(neck);
-    // Head
-    const head = new THREE.Mesh(new THREE.SphereGeometry(0.30*S,28,22), skin);
-    head.position.y=1.70*S; g.add(head);
-    // Angry brows (dark flat boxes)
-    const browG = new THREE.BoxGeometry(0.14*S,0.04*S,0.04*S);
-    const browL = new THREE.Mesh(browG,dark); browL.position.set(-0.10*S,1.82*S,0.27*S); browL.rotation.z= 0.25; g.add(browL);
-    const browR = new THREE.Mesh(browG,dark); browR.position.set( 0.10*S,1.82*S,0.27*S); browR.rotation.z=-0.25; g.add(browR);
-    // Eyes
-    const eyeG = new THREE.SphereGeometry(0.055*S,12,10);
-    const eyeMat = new THREE.MeshBasicMaterial({color:0x1a0800});
-    const eyeL = new THREE.Mesh(eyeG,eyeMat); eyeL.position.set(-0.11*S,1.73*S,0.26*S); g.add(eyeL);
-    const eyeR = new THREE.Mesh(eyeG,eyeMat); eyeR.position.set( 0.11*S,1.73*S,0.26*S); g.add(eyeR);
-    // Helmet
-    const helm = new THREE.Mesh(new THREE.SphereGeometry(0.34*S,28,18,0,Math.PI*2,0,Math.PI*0.6), green);
-    helm.position.y=1.78*S; g.add(helm);
+    // ── Helper ──
+    const add=(geo,mat,px,py,pz,rx=0,ry=0,rz=0,sx=1,sy=1,sz=1)=>{
+        const m=new THREE.Mesh(geo,mat);
+        m.position.set(px,py,pz); m.rotation.set(rx,ry,rz); m.scale.set(sx,sy,sz);
+        m.castShadow=true; g.add(m); return m;
+    };
+
+    // ── FEET & LEGS ──
+    // Boots (rounded squished sphere)
+    add(new THREE.SphereGeometry(0.18*S,20,14), dark, -0.18*S,0.10*S, 0.04*S, 0,0,0, 1,0.55,1.3);
+    add(new THREE.SphereGeometry(0.18*S,20,14), dark,  0.18*S,0.10*S, 0.04*S, 0,0,0, 1,0.55,1.3);
+    // Lower legs
+    add(new THREE.CylinderGeometry(0.13*S,0.11*S,0.38*S,20), pants, -0.18*S,0.38*S,0);
+    add(new THREE.CylinderGeometry(0.13*S,0.11*S,0.38*S,20), pants,  0.18*S,0.38*S,0);
+    // Knee pad
+    add(new THREE.SphereGeometry(0.135*S,16,12), pants, -0.18*S,0.57*S,0.03*S);
+    add(new THREE.SphereGeometry(0.135*S,16,12), pants,  0.18*S,0.57*S,0.03*S);
+    // Upper legs / thighs
+    add(new THREE.CylinderGeometry(0.155*S,0.135*S,0.32*S,20), pants, -0.18*S,0.74*S,0);
+    add(new THREE.CylinderGeometry(0.155*S,0.135*S,0.32*S,20), pants,  0.18*S,0.74*S,0);
+
+    // ── BELT ──
+    add(new THREE.TorusGeometry(0.30*S,0.06*S,10,28), dark, 0,0.90*S,0, Math.PI/2);
+    add(new THREE.BoxGeometry(0.14*S,0.13*S,0.06*S), gold, 0,0.90*S,0.31*S);
+
+    // ── TORSO ──
+    // Jacket body — slightly wider at shoulders
+    add(new THREE.CylinderGeometry(0.32*S,0.27*S,0.60*S,28), jacket, 0,1.22*S,0);
+    // Vest overlay (front half only — slightly narrower)
+    add(new THREE.CylinderGeometry(0.30*S,0.26*S,0.50*S,28), vest, 0,1.24*S,0.04*S);
+
+    // ── SHOULDERS ──
+    add(new THREE.SphereGeometry(0.175*S,20,16), jacket, -0.38*S,1.50*S,0);
+    add(new THREE.SphereGeometry(0.175*S,20,16), jacket,  0.38*S,1.50*S,0);
+
+    // ── ARMS ──
+    // Upper arms — angled slightly outward
+    const uaL=add(new THREE.CylinderGeometry(0.115*S,0.105*S,0.38*S,18), jacket, -0.46*S,1.28*S,0, 0,0, 0.22);
+    const uaR=add(new THREE.CylinderGeometry(0.115*S,0.105*S,0.38*S,18), jacket,  0.46*S,1.28*S,0, 0,0,-0.22);
+    // Elbow sphere
+    add(new THREE.SphereGeometry(0.11*S,16,12), jacket, -0.52*S,1.08*S,0);
+    add(new THREE.SphereGeometry(0.11*S,16,12), jacket,  0.52*S,1.08*S,0);
+    // Lower arms
+    add(new THREE.CylinderGeometry(0.10*S,0.09*S,0.34*S,18), jacket, -0.52*S,0.88*S,0, 0,0, 0.10);
+    add(new THREE.CylinderGeometry(0.10*S,0.09*S,0.34*S,18), jacket,  0.52*S,0.88*S,0, 0,0,-0.10);
+    // Gloves / fists
+    add(new THREE.SphereGeometry(0.13*S,18,14), dark, -0.54*S,0.68*S,0);
+    add(new THREE.SphereGeometry(0.13*S,18,14), dark,  0.54*S,0.68*S,0);
+
+    // ── NECK ──
+    add(new THREE.CylinderGeometry(0.11*S,0.14*S,0.14*S,18), skin, 0,1.56*S,0);
+
+    // ── HEAD ──
+    const headMesh=add(new THREE.SphereGeometry(0.34*S,30,24), skin, 0,1.90*S,0);
+    // Ears
+    add(new THREE.SphereGeometry(0.085*S,14,12), skin, -0.34*S,1.90*S,0, 0,0,0, 0.7,1,0.7);
+    add(new THREE.SphereGeometry(0.085*S,14,12), skin,  0.34*S,1.90*S,0, 0,0,0, 0.7,1,0.7);
+    // Nose
+    add(new THREE.SphereGeometry(0.065*S,12,10), skin, 0,1.86*S,0.33*S, 0,0,0, 1,0.8,0.7);
+
+    // ── FACE ──
+    // Brows (angry, angled)
+    add(new THREE.BoxGeometry(0.15*S,0.045*S,0.045*S), dark,  -0.115*S,2.06*S,0.30*S, 0,0, 0.30);
+    add(new THREE.BoxGeometry(0.15*S,0.045*S,0.045*S), dark,   0.115*S,2.06*S,0.30*S, 0,0,-0.30);
+    // Eyes (white + dark pupil)
+    add(new THREE.SphereGeometry(0.075*S,14,10), whiteM, -0.125*S,1.97*S,0.29*S);
+    add(new THREE.SphereGeometry(0.075*S,14,10), whiteM,  0.125*S,1.97*S,0.29*S);
+    add(new THREE.SphereGeometry(0.048*S,12,10), eyeM,  -0.120*S,1.97*S,0.33*S);
+    add(new THREE.SphereGeometry(0.048*S,12,10), eyeM,   0.120*S,1.97*S,0.33*S);
+    // Mouth (angry line)
+    add(new THREE.BoxGeometry(0.18*S,0.04*S,0.04*S), dark, 0,1.77*S,0.31*S);
+
+    // ── HELMET ──
+    const helmMesh=add(new THREE.SphereGeometry(0.38*S,30,20,0,Math.PI*2,0,Math.PI*0.58), jacket, 0,2.00*S,0);
     // Helmet brim
-    const brim = new THREE.Mesh(new THREE.TorusGeometry(0.32*S,0.07*S,8,28,Math.PI*1.15), green);
-    brim.rotation.x=Math.PI/2; brim.position.set(0,1.66*S,0.05*S); g.add(brim);
-    // Star on helmet
-    const starMat = new THREE.MeshPhongMaterial({color:0xff2200, shininess:60});
-    const starG = new THREE.CylinderGeometry(0.07*S,0.07*S,0.025*S,5);
-    const star = new THREE.Mesh(starG, starMat); star.position.set(0,1.86*S,0.32*S); star.rotation.x=0.3; g.add(star);
-    // Club handle
-    const clubH = new THREE.Mesh(new THREE.CylinderGeometry(0.06*S,0.06*S,0.70*S,16), brown);
-    clubH.position.set(0.55*S,1.05*S,0); clubH.rotation.z=-0.5; g.add(clubH);
-    // Club ball
-    const clubB = new THREE.Mesh(new THREE.SphereGeometry(0.20*S,20,16), gray);
-    clubB.position.set(0.70*S,1.50*S,0); g.add(clubB);
-    // Spikes on club
-    const spikeG = new THREE.ConeGeometry(0.045*S,0.20*S,10);
+    add(new THREE.TorusGeometry(0.365*S,0.075*S,10,30,Math.PI*1.25), jacket, 0,1.84*S,0.06*S, Math.PI/2);
+    // Chin strap
+    add(new THREE.BoxGeometry(0.04*S,0.25*S,0.04*S), dark, -0.28*S,1.78*S,0.18*S, 0,0, 0.5);
+    add(new THREE.BoxGeometry(0.04*S,0.25*S,0.04*S), dark,  0.28*S,1.78*S,0.18*S, 0,0,-0.5);
+    // Red star on helmet (5-point — use thin cylinder, star shape via scale trick)
+    const starMat2 = new THREE.MeshPhongMaterial({color:0xff2200,shininess:70});
+    const starD = new THREE.CylinderGeometry(0.085*S,0.085*S,0.03*S,5);
+    add(starD, starMat2, 0,2.16*S,0.34*S, 0.35,0,0);
+
+    // ── WEAPON (club) ──
+    add(new THREE.CylinderGeometry(0.065*S,0.065*S,0.72*S,16), brown, 0.58*S,1.10*S,0, 0,0,-0.48);
+    const ball=add(new THREE.SphereGeometry(0.22*S,22,18), gray, 0.74*S,1.58*S,0);
+    // Spikes
+    const spkG=new THREE.ConeGeometry(0.05*S,0.22*S,10);
     [[0,1,0],[0,-1,0],[1,0,0],[-1,0,0],[0,0,1],[0,0,-1]].forEach(([dx,dy,dz])=>{
-        const sp=new THREE.Mesh(spikeG,gray);
-        sp.position.set(0.70*S+dx*0.18*S, 1.50*S+dy*0.18*S, dz*0.18*S);
+        const sp=new THREE.Mesh(spkG,gray);
+        sp.position.set(0.74*S+dx*0.20*S,1.58*S+dy*0.20*S,dz*0.20*S);
         sp.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),new THREE.Vector3(dx,dy,dz));
         g.add(sp);
     });
