@@ -493,7 +493,7 @@ function updateBullets(dt){
                         cov.hitT=0.12;
                         cov.mat.emissive.setHex(0xFF6600);
                         drawCoverHP(cov);
-                        if(cov.hp<=0&&!cov.dead){cov.dead=true;cov.deadT=0;coins+=Math.round(cov.reward*COIN_MULT);refreshHUD();}
+                        if(cov.hp<=0&&!cov.dead){cov.dead=true;cov.deadT=0;coins+=cov.reward;refreshHUD();}
                         if(!b.pierce) hit=true;
                         break;
                     }
@@ -936,7 +936,7 @@ function makeSideCover(type, xCenter, z, gate){
 
     const seqIdx = gate._barrIdx;
     const moneyWm = (1+(totalWins*(0.03+Math.floor(totalWins/10)*0.1))*0.3) * (1+totalWins*0.03);
-    const reward = Math.round(5 * (1 + seqIdx*0.25) * moneyWm * 0.7);
+    const reward = Math.round(5 * (1 + seqIdx*0.25) * moneyWm);
     return { mesh, mat, hpCtx, hpTex, hpSpr, lSpr, hp, maxHp:hp,
              dead:false, deadT:0, removed:false, hitT:0, reward };
 }
@@ -1031,8 +1031,7 @@ function spawnTirTarget(){
     mesh.position.set(x,6.0,tirFrozenPz+8);
     scene.add(mesh);
     const tirWinMult1 = 1 + totalWins * 0.03;
-    const tirWinMult2 = 1 + totalWins * 0.025;
-    const reward = Math.round((1 * tirCoinMult * tirWinMult1 + 5 * tirWinMult2) * COIN_MULT);
+    const reward = Math.round(1 * tirCoinMult * tirWinMult1 * COIN_MULT);
     tirTargets.push({mesh,hp:1,dead:false,removed:false,reward});
 }
 
@@ -1085,8 +1084,8 @@ function endTir(){
     tirActive=false;
     if(tirWall){ scene.remove(tirWall); tirWall=null; }
     for(const t of tirTargets){ if(!t.removed){ scene.remove(t.mesh); t.removed=true; } }
-    const _tw1=1+totalWins*0.03, _tw2=1+totalWins*0.025;
-    const totalCoins=Math.round(tirScore*Math.round((1*tirCoinMult*_tw1+5*_tw2)*COIN_MULT));
+    const _tw1=1+totalWins*0.03;
+    const totalCoins=Math.round(tirScore*Math.round(1*tirCoinMult*_tw1*COIN_MULT));
     coins+=totalCoins; refreshHUD();
     if(tirScore>0) showEffPop({label:`🎯 +${totalCoins} монет (${tirScore} мишеней)`, good:true});
     document.getElementById('tir-hud').style.display='none';
