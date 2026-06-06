@@ -905,7 +905,7 @@ function drawCoverHP(cov){
 function makeSideCover(type, xCenter, z, gate){
     const cfg=BARR_TYPES[type];
     const winMult = 1 + totalWins*(0.03 + Math.floor(totalWins/10)*0.1);
-    const hp=Math.round((cfg.hpBase+cfg.hpLvl*level)*winMult*0.7);
+    const hp=Math.round((cfg.hpBase+cfg.hpLvl*level)*winMult*0.665);
     const W=3.8, H=4.7, D=0.32;
     const mat=new THREE.MeshLambertMaterial({map:makeBarricadeTex(type),emissive:new THREE.Color(0)});
     const mesh=new THREE.Mesh(new THREE.BoxGeometry(W,H,D),mat);
@@ -1117,7 +1117,7 @@ function applyEff(eff){
     const label = effLabel ? effLabel(eff).label : eff.label||'';
     switch(eff.id){
         case 'dmg':   permDmg=permDmg+v; break;
-        case 'money': { const wm=1+totalWins*(0.03+Math.floor(totalWins/10)*0.1); coins=Math.max(0, coins+Math.floor((15+level*5)*Math.abs(v)*wm*0.4)*(v>=0?1:-1)); break; }
+        case 'money': { const wm=1+totalWins*(0.03+Math.floor(totalWins/10)*0.1); coins=Math.max(0, coins+Math.floor((15+level*5)*Math.abs(v)*wm*0.04)*(v>=0?1:-1)); break; }
         case 'range': permRange=Math.max(0, Math.min(10, permRange+v)); break;
         case 'rate':  permRate=Math.max(0, Math.min(10, permRate+v)); break;
     }
