@@ -1200,192 +1200,143 @@ function makeMobHeadTex(){
     return new THREE.CanvasTexture(cv);
 }
 
-function drawSoldierTex(){
+// Shared soldier texture — created once, reused for all mobs
+let _soldierTex = null;
+function getSoldierTex(){
+    if(_soldierTex) return _soldierTex;
     const W=256, H=420;
     const cv=document.createElement('canvas'); cv.width=W; cv.height=H;
     const c=cv.getContext('2d');
-    // helpers
+    // rounded rect helper that works in all browsers
+    function rr(x,y,w,h,r){
+        c.moveTo(x+r,y); c.lineTo(x+w-r,y); c.arcTo(x+w,y,x+w,y+r,r);
+        c.lineTo(x+w,y+h-r); c.arcTo(x+w,y+h,x+w-r,y+h,r);
+        c.lineTo(x+r,y+h); c.arcTo(x,y+h,x,y+h-r,r);
+        c.lineTo(x,y+r); c.arcTo(x,y,x+r,y,r); c.closePath();
+    }
     const fill=(col,fn)=>{c.fillStyle=col;c.beginPath();fn();c.fill();};
-    const stroke=(col,lw,fn)=>{c.strokeStyle=col;c.lineWidth=lw;c.beginPath();fn();c.stroke();};
-    const outline=(lw=4)=>{ c.strokeStyle='#1a1a00'; c.lineWidth=lw; };
+    const ol=(lw)=>{ c.strokeStyle='#1a1a00'; c.lineWidth=lw; };
 
     // === BOOTS ===
     fill('#2a1a08',()=>{c.ellipse(85,390,28,18,0,0,Math.PI*2);});
     fill('#2a1a08',()=>{c.ellipse(171,390,28,18,0,0,Math.PI*2);});
-    outline(3); c.beginPath(); c.ellipse(85,390,28,18,0,0,Math.PI*2); c.stroke();
-    outline(3); c.beginPath(); c.ellipse(171,390,28,18,0,0,Math.PI*2); c.stroke();
+    ol(3); c.beginPath(); c.ellipse(85,390,28,18,0,0,Math.PI*2); c.stroke();
+    ol(3); c.beginPath(); c.ellipse(171,390,28,18,0,0,Math.PI*2); c.stroke();
 
     // === LEGS ===
-    fill('#3a5c1a',()=>{ c.roundRect(66,310,38,88,8); });
-    fill('#3a5c1a',()=>{ c.roundRect(152,310,38,88,8); });
-    // dark seam
-    fill('#2a4010',()=>{ c.roundRect(80,310,10,88,4); });
-    fill('#2a4010',()=>{ c.roundRect(166,310,10,88,4); });
-    outline(3); c.beginPath(); c.roundRect(66,310,38,88,8); c.stroke();
-    outline(3); c.beginPath(); c.roundRect(152,310,38,88,8); c.stroke();
+    fill('#3a5c1a',()=>{ rr(66,310,38,88,8); });
+    fill('#3a5c1a',()=>{ rr(152,310,38,88,8); });
+    fill('#2a4010',()=>{ rr(78,310,10,88,3); });
+    fill('#2a4010',()=>{ rr(164,310,10,88,3); });
+    ol(3); c.beginPath(); rr(66,310,38,88,8); c.stroke();
+    ol(3); c.beginPath(); rr(152,310,38,88,8); c.stroke();
 
     // === BODY / JACKET ===
-    // Main torso shape
     fill('#4a7a20',()=>{
         c.moveTo(60,320); c.lineTo(52,200); c.lineTo(80,182); c.lineTo(128,175); c.lineTo(176,182);
         c.lineTo(204,200); c.lineTo(196,320); c.closePath();
     });
-    // Dark tactical vest overlay
     fill('#2a3a18',()=>{
         c.moveTo(95,320); c.lineTo(88,200); c.lineTo(110,188); c.lineTo(128,185); c.lineTo(146,188);
         c.lineTo(168,200); c.lineTo(161,320); c.closePath();
     });
     // Vest pockets
-    fill('#374d20',()=>{ c.roundRect(100,240,26,22,4); });
-    fill('#374d20',()=>{ c.roundRect(130,240,26,22,4); });
-    // Vest stitching lines
+    fill('#374d20',()=>{ rr(100,240,26,22,4); });
+    fill('#374d20',()=>{ rr(130,240,26,22,4); });
     c.strokeStyle='#1e2c10'; c.lineWidth=2;
     c.beginPath(); c.moveTo(128,188); c.lineTo(128,320); c.stroke();
-    // Body outline
-    outline(4); c.beginPath();
+    ol(4); c.beginPath();
     c.moveTo(60,320); c.lineTo(52,200); c.lineTo(80,182); c.lineTo(128,175); c.lineTo(176,182);
     c.lineTo(204,200); c.lineTo(196,320); c.closePath(); c.stroke();
 
     // === COLLAR / NECK ===
-    fill('#f0a060',()=>{ c.roundRect(108,170,40,22,6); });
-    outline(3); c.beginPath(); c.roundRect(108,170,40,22,6); c.stroke();
+    fill('#f0a060',()=>{ rr(108,170,40,22,6); });
+    ol(3); c.beginPath(); rr(108,170,40,22,6); c.stroke();
 
     // === ARMS ===
-    // Left arm (holding weapon — extended left+down)
-    fill('#4a7a20',()=>{
-        c.moveTo(52,200); c.lineTo(16,260); c.lineTo(30,278); c.lineTo(72,218); c.closePath();
-    });
-    outline(3); c.beginPath();
-    c.moveTo(52,200); c.lineTo(16,260); c.lineTo(30,278); c.lineTo(72,218); c.closePath(); c.stroke();
-    // Right arm (raised, holding gun from the right)
-    fill('#4a7a20',()=>{
-        c.moveTo(204,200); c.lineTo(230,240); c.lineTo(218,260); c.lineTo(190,215); c.closePath();
-    });
-    outline(3); c.beginPath();
-    c.moveTo(204,200); c.lineTo(230,240); c.lineTo(218,260); c.lineTo(190,215); c.closePath(); c.stroke();
+    fill('#4a7a20',()=>{ c.moveTo(52,200); c.lineTo(16,260); c.lineTo(30,278); c.lineTo(72,218); c.closePath(); });
+    ol(3); c.beginPath(); c.moveTo(52,200); c.lineTo(16,260); c.lineTo(30,278); c.lineTo(72,218); c.closePath(); c.stroke();
+    fill('#4a7a20',()=>{ c.moveTo(204,200); c.lineTo(230,240); c.lineTo(218,260); c.lineTo(190,215); c.closePath(); });
+    ol(3); c.beginPath(); c.moveTo(204,200); c.lineTo(230,240); c.lineTo(218,260); c.lineTo(190,215); c.closePath(); c.stroke();
 
     // === GLOVES ===
     fill('#1a1008',()=>{ c.ellipse(22,270,16,12,0.3,0,Math.PI*2); });
     fill('#1a1008',()=>{ c.ellipse(224,250,16,12,-0.3,0,Math.PI*2); });
-    outline(3); c.beginPath(); c.ellipse(22,270,16,12,0.3,0,Math.PI*2); c.stroke();
-    outline(3); c.beginPath(); c.ellipse(224,250,16,12,-0.3,0,Math.PI*2); c.stroke();
+    ol(3); c.beginPath(); c.ellipse(22,270,16,12,0.3,0,Math.PI*2); c.stroke();
+    ol(3); c.beginPath(); c.ellipse(224,250,16,12,-0.3,0,Math.PI*2); c.stroke();
 
     // === WEAPON (rifle) ===
-    // Stock
-    fill('#5c3010',()=>{ c.roundRect(180,250,50,14,4); });
-    // Barrel
-    fill('#707070',()=>{ c.roundRect(8,258,185,10,3); });
-    fill('#888',()=>{ c.roundRect(8,260,185,4,2); }); // highlight on barrel
-    // Grip
-    fill('#3a1a08',()=>{ c.roundRect(200,262,18,26,4); });
-    // Trigger guard
+    fill('#5c3010',()=>{ rr(180,250,50,14,4); });
+    fill('#707070',()=>{ c.rect(8,258,185,10); });
+    fill('#999',()=>{ c.rect(8,260,185,4); });
+    fill('#3a1a08',()=>{ rr(200,262,18,26,4); });
     c.strokeStyle='#555'; c.lineWidth=3;
     c.beginPath(); c.arc(208,272,10,0,Math.PI); c.stroke();
-    // Muzzle flash
     const mf=c.createRadialGradient(8,263,0,8,263,22);
-    mf.addColorStop(0,'rgba(255,255,200,1)');
-    mf.addColorStop(0.3,'rgba(255,180,0,0.9)');
-    mf.addColorStop(1,'rgba(255,80,0,0)');
+    mf.addColorStop(0,'rgba(255,255,200,1)'); mf.addColorStop(0.3,'rgba(255,180,0,0.9)'); mf.addColorStop(1,'rgba(255,80,0,0)');
     fill(mf,()=>{ c.ellipse(8,263,22,14,0,0,Math.PI*2); });
-    // Outline barrel+stock
-    outline(3); c.beginPath(); c.roundRect(8,258,185,10,3); c.stroke();
-    outline(3); c.beginPath(); c.roundRect(180,250,50,14,4); c.stroke();
+    ol(3); c.beginPath(); c.rect(8,258,185,10); c.stroke();
+    ol(3); c.beginPath(); rr(180,250,50,14,4); c.stroke();
 
     // === HEAD ===
-    // Shadow under chin
     fill('rgba(0,0,0,0.2)',()=>{ c.ellipse(128,174,36,8,0,0,Math.PI*2); });
-    // Face
     fill('#f0a060',()=>{ c.ellipse(128,140,42,46,0,0,Math.PI*2); });
-    // Ear left
     fill('#e09050',()=>{ c.ellipse(86,145,10,13,0,0,Math.PI*2); });
     fill('#e09050',()=>{ c.ellipse(170,145,10,13,0,0,Math.PI*2); });
-    outline(3); c.beginPath(); c.ellipse(86,145,10,13,0,0,Math.PI*2); c.stroke();
-    outline(3); c.beginPath(); c.ellipse(170,145,10,13,0,0,Math.PI*2); c.stroke();
-    // Face outline
-    outline(4); c.beginPath(); c.ellipse(128,140,42,46,0,0,Math.PI*2); c.stroke();
+    ol(3); c.beginPath(); c.ellipse(86,145,10,13,0,0,Math.PI*2); c.stroke();
+    ol(3); c.beginPath(); c.ellipse(170,145,10,13,0,0,Math.PI*2); c.stroke();
+    ol(4); c.beginPath(); c.ellipse(128,140,42,46,0,0,Math.PI*2); c.stroke();
 
     // === HELMET ===
-    // Brim
-    fill('#3a6010',()=>{
-        c.beginPath(); c.ellipse(128,110,58,12,0,0,Math.PI*2);
-    });
-    // Main helmet dome
-    fill('#4a7a20',()=>{
-        c.beginPath(); c.arc(128,110,50,-Math.PI,0);
-        c.lineTo(178,116); c.lineTo(80,116); c.closePath();
-    });
-    // Highlight on helmet
+    fill('#3a6010',()=>{ c.ellipse(128,110,58,12,0,0,Math.PI*2); });
+    fill('#4a7a20',()=>{ c.arc(128,110,50,-Math.PI,0); c.lineTo(178,116); c.lineTo(80,116); c.closePath(); });
     const hhl=c.createLinearGradient(100,76,155,110);
     hhl.addColorStop(0,'rgba(255,255,255,0.35)'); hhl.addColorStop(1,'rgba(255,255,255,0)');
     fill(hhl,()=>{ c.arc(128,110,46,-Math.PI+0.3,-0.3); c.closePath(); });
-    // Helmet outline
-    outline(4); c.beginPath();
-    c.arc(128,110,50,-Math.PI,0); c.lineTo(178,116); c.lineTo(80,116); c.closePath(); c.stroke();
-    outline(3); c.beginPath(); c.ellipse(128,110,58,12,0,0,Math.PI*2); c.stroke();
-    // Red star badge
-    fill('#cc0000',()=>{
-        const cx=128,cy=98,r=9,ir=4,pts=5;
-        for(let i=0;i<pts*2;i++){
-            const a=i*Math.PI/pts-Math.PI/2, rr=i%2?ir:r;
-            i===0?c.moveTo(cx+rr*Math.cos(a),cy+rr*Math.sin(a)):c.lineTo(cx+rr*Math.cos(a),cy+rr*Math.sin(a));
+    ol(4); c.beginPath(); c.arc(128,110,50,-Math.PI,0); c.lineTo(178,116); c.lineTo(80,116); c.closePath(); c.stroke();
+    ol(3); c.beginPath(); c.ellipse(128,110,58,12,0,0,Math.PI*2); c.stroke();
+    // Red star
+    const star=(cx,cy,r,ir)=>{
+        for(let i=0;i<10;i++){
+            const a=i*Math.PI/5-Math.PI/2, rv=i%2?ir:r;
+            i===0?c.moveTo(cx+rv*Math.cos(a),cy+rv*Math.sin(a)):c.lineTo(cx+rv*Math.cos(a),cy+rv*Math.sin(a));
         } c.closePath();
-    });
-    outline(2); c.beginPath();
-    const cx2=128,cy2=98,r2=9,ir2=4,pts2=5;
-    for(let i=0;i<pts2*2;i++){
-        const a=i*Math.PI/pts2-Math.PI/2, rr=i%2?ir2:r2;
-        i===0?c.moveTo(cx2+rr*Math.cos(a),cy2+rr*Math.sin(a)):c.lineTo(cx2+rr*Math.cos(a),cy2+rr*Math.sin(a));
-    } c.closePath(); c.stroke();
+    };
+    fill('#cc0000',()=>{ star(128,98,9,4); });
+    ol(2); c.beginPath(); star(128,98,9,4); c.stroke();
 
     // === FACE DETAILS ===
-    // Angry eyebrows
     c.strokeStyle='#3a1a00'; c.lineWidth=5; c.lineCap='round';
     c.beginPath(); c.moveTo(102,122); c.lineTo(120,118); c.stroke();
     c.beginPath(); c.moveTo(136,118); c.lineTo(154,122); c.stroke();
-    // Eyes
     fill('#3a1a00',()=>{ c.ellipse(112,132,9,8,0,0,Math.PI*2); });
     fill('#3a1a00',()=>{ c.ellipse(144,132,9,8,0,0,Math.PI*2); });
-    // Pupils (white highlight)
     fill('#fff',()=>{ c.ellipse(115,129,3,3,0,0,Math.PI*2); });
     fill('#fff',()=>{ c.ellipse(147,129,3,3,0,0,Math.PI*2); });
-    // Nose
     fill('#d08040',()=>{ c.ellipse(128,148,7,5,0,0,Math.PI*2); });
-    // Angry mouth (teeth)
-    fill('#cc2200',()=>{ c.roundRect(112,157,32,10,4); });
-    fill('#fff',()=>{
-        for(let i=0;i<4;i++){ c.rect(114+i*8,157,6,8); }
-    });
-    outline(2); c.beginPath(); c.roundRect(112,157,32,10,4); c.stroke();
+    fill('#cc2200',()=>{ c.rect(112,157,32,10); });
+    fill('#fff',()=>{ for(let i=0;i<4;i++) c.rect(114+i*8,157,6,8); });
+    ol(2); c.beginPath(); c.rect(112,157,32,10); c.stroke();
 
-    // === SHOULDER PATCHES (stars) ===
-    ['#ffcc00'].forEach(col=>{
-        [72,184].forEach(px=>{
-            fill(col,()=>{
-                const cx=px,cy=196,r=8,ir=4,pts=5;
-                for(let i=0;i<pts*2;i++){
-                    const a=i*Math.PI/pts-Math.PI/2, rr=i%2?ir:r;
-                    i===0?c.moveTo(cx+rr*Math.cos(a),cy+rr*Math.sin(a)):c.lineTo(cx+rr*Math.cos(a),cy+rr*Math.sin(a));
-                } c.closePath();
-            });
-        });
+    // === SHOULDER STARS ===
+    [72,184].forEach(sx=>{
+        fill('#ffcc00',()=>{ star(sx,196,8,4); });
     });
 
-    const t=new THREE.CanvasTexture(cv);
-    t.anisotropy=renderer.capabilities.getMaxAnisotropy();
-    return t;
+    _soldierTex = new THREE.CanvasTexture(cv);
+    _soldierTex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+    return _soldierTex;
 }
 
 function spawnMob(x, z){
     const g = new THREE.Group();
     const S = 1.9;
 
-    // Single billboard sprite with full painted soldier texture
-    const tex = drawSoldierTex();
-    const mat = new THREE.MeshBasicMaterial({map:tex, transparent:true, alphaTest:0.1, side:THREE.DoubleSide});
-    const plane = new THREE.Mesh(new THREE.PlaneGeometry(2.2*S, 2.2*S*(420/256)), mat);
-    plane.position.y = 1.1*S;
-    plane.castShadow = false;
-    g.add(plane);
+    // Billboard sprite — THREE.Sprite always faces camera automatically
+    const spr = new THREE.Sprite(new THREE.SpriteMaterial({map:getSoldierTex(), transparent:true, alphaTest:0.05}));
+    spr.scale.set(2.2*S, 2.2*S*(420/256), 1);
+    spr.position.y = 1.85*S;
+    g.add(spr);
 
     // HP bar sprite
     const hpCv=document.createElement('canvas'); hpCv.width=64; hpCv.height=12;
@@ -2833,11 +2784,9 @@ function tickRun(dt){
             } else { scene.remove(m.g); m.removed=true; }
             continue;
         }
-        // Idle bounce + billboard face camera
+        // Idle bounce
         m.idleT+=dt*1.8;
-        m.g.position.y = Math.sin(m.idleT*1.2)*0.06; // gentle bob
-        // Make sprite plane always face the camera
-        if(m.g.children[0]) m.g.children[0].lookAt(cam.position);
+        m.g.position.y = Math.sin(m.idleT*1.2)*0.06;
         if(m.hitT>0) m.hitT-=dt;
         // Player collides with mob → game over
         if(Math.abs(pz-m.g.position.z)<0.55 && Math.abs(px-m.g.position.x)<0.45){
