@@ -492,7 +492,7 @@ function updateBullets(dt){
                         cov.hitT=0.12;
                         cov.mat.emissive.setHex(0xFF6600);
                         drawCoverHP(cov);
-                        if(cov.hp<=0&&!cov.dead){cov.dead=true;cov.deadT=0;}
+                        if(cov.hp<=0&&!cov.dead){cov.dead=true;cov.deadT=0;coins+=cov.reward;refreshHUD();}
                         if(!b.pierce) hit=true;
                         break;
                     }
@@ -905,7 +905,9 @@ function drawCoverHP(cov){
 function makeSideCover(type, xCenter, z, gate){
     const cfg=BARR_TYPES[type];
     const winMult = 1 + totalWins*(0.03 + Math.floor(totalWins/10)*0.1);
-    const hp=Math.round((cfg.hpBase+cfg.hpLvl*level)*winMult*0.665);
+    const lvl = level/3;
+    const seqMult = 1 + gate._barrIdx*0.25; // each subsequent obstacle: +25% HP
+    const hp=Math.round((cfg.hpBase+cfg.hpLvl*lvl)*winMult*0.665*seqMult);
     const W=3.8, H=4.7, D=0.32;
     const mat=new THREE.MeshLambertMaterial({map:makeBarricadeTex(type),emissive:new THREE.Color(0)});
     const mesh=new THREE.Mesh(new THREE.BoxGeometry(W,H,D),mat);
@@ -930,13 +932,18 @@ function makeSideCover(type, xCenter, z, gate){
     lSpr.scale.set(1.8,0.52,1); lSpr.position.set(xCenter,H+1.0,z-0.1);
     gateGrp.add(lSpr); gate.meshes.push(lSpr);
 
+    const seqIdx = gate._barrIdx;
+    const moneyWm = 1+(totalWins*(0.03+Math.floor(totalWins/10)*0.1))*0.3;
+    const reward = Math.round(5 * (1 + seqIdx*0.25) * moneyWm);
     return { mesh, mat, hpCtx, hpTex, hpSpr, lSpr, hp, maxHp:hp,
-             dead:false, deadT:0, removed:false, hitT:0 };
+             dead:false, deadT:0, removed:false, hitT:0, reward };
 }
 
+let _barrSpawnCount = 0;
 function spawnBarricade(z, typeL, typeR){
     spawnGate(z, false);
     const gate=gates[gates.length-1];
+    gate._barrIdx = _barrSpawnCount++;
     gate.coverL = (typeL!=null) ? makeSideCover(typeL, -1.9, z, gate) : null;
     gate.coverR = (typeR!=null) ? makeSideCover(typeR,  1.9, z, gate) : null;
     if(gate.coverL) drawCoverHP(gate.coverL);
@@ -2386,6 +2393,7 @@ function startLevel(){
     gates=[];
 
     // Spawn run-phase rows (gates/mobs/loot) then combat zone — all at level start
+    _barrSpawnCount = 0;
     spawnGate(20);
     for(let i=1;i<GATES_PER_LEVEL;i++) spawnRow(20 + i*GATE_SPACING);
     spawnCombatZone();
