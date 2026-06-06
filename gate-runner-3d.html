@@ -1029,7 +1029,7 @@ function spawnTirTarget(){
     const x=Math.random()*6.4-3.2;
     mesh.position.set(x,6.0,tirFrozenPz+8);
     scene.add(mesh);
-    const reward=Math.round((15+level*5)*tirCoinMult/12);
+    const reward=Math.round((15+level*5)*tirCoinMult*7/12);
     tirTargets.push({mesh,hp:1,dead:false,removed:false,reward});
 }
 
@@ -1082,7 +1082,7 @@ function endTir(){
     tirActive=false;
     if(tirWall){ scene.remove(tirWall); tirWall=null; }
     for(const t of tirTargets){ if(!t.removed){ scene.remove(t.mesh); t.removed=true; } }
-    const totalCoins=tirScore*Math.round((15+level*5)*tirCoinMult/12);
+    const totalCoins=tirScore*Math.round((15+level*5)*tirCoinMult*7/12);
     coins+=totalCoins; refreshHUD();
     if(tirScore>0) showEffPop({label:`🎯 +${totalCoins} монет (${tirScore} мишеней)`, good:true});
     document.getElementById('tir-hud').style.display='none';
@@ -1117,7 +1117,7 @@ function applyEff(eff){
     const label = effLabel ? effLabel(eff).label : eff.label||'';
     switch(eff.id){
         case 'dmg':   permDmg=permDmg+v; break;
-        case 'money': { const wm=1+totalWins*(0.03+Math.floor(totalWins/10)*0.1); coins=Math.max(0, coins+Math.floor((15+level*5)*Math.abs(v)*wm)*(v>=0?1:-1)); break; }
+        case 'money': { const wm=1+totalWins*(0.03+Math.floor(totalWins/10)*0.1); coins=Math.max(0, coins+Math.floor((15+level*5)*Math.abs(v)*wm*0.4)*(v>=0?1:-1)); break; }
         case 'range': permRange=Math.max(0, Math.min(10, permRange+v)); break;
         case 'rate':  permRate=Math.max(0, Math.min(10, permRate+v)); break;
     }
