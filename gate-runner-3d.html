@@ -1149,33 +1149,54 @@ function showEffPop(eff){
 let mobs = [];
 
 function makeMobBodyTex(){
-    const cv=document.createElement('canvas'); cv.width=128; cv.height=128;
+    const cv=document.createElement('canvas'); cv.width=256; cv.height=256;
     const c=cv.getContext('2d');
-    // Armour gradient
-    const g=c.createLinearGradient(0,0,0,128);
-    g.addColorStop(0,'#8B1010'); g.addColorStop(0.5,'#CC2020'); g.addColorStop(1,'#5C0000');
-    c.fillStyle=g; c.fillRect(0,0,128,128);
-    // Plate lines
-    c.strokeStyle='rgba(255,80,80,0.35)'; c.lineWidth=3;
-    for(let i=0;i<4;i++){ c.beginPath(); c.moveTo(0,32*i); c.lineTo(128,32*i); c.stroke(); }
-    c.beginPath(); c.moveTo(64,0); c.lineTo(64,128); c.stroke();
-    // Skull emblem
-    c.fillStyle='rgba(255,220,180,0.7)'; c.font='bold 44px Arial';
-    c.textAlign='center'; c.textBaseline='middle';
-    c.shadowColor='#FF0000'; c.shadowBlur=12;
-    c.fillText('💀',64,64);
+    // Smooth cartoon armour — bright flat red with cel-shading
+    const g=c.createLinearGradient(0,0,0,256);
+    g.addColorStop(0,'#FF4444'); g.addColorStop(0.45,'#DD1111'); g.addColorStop(1,'#880000');
+    c.fillStyle=g; c.fillRect(0,0,256,256);
+    // Light band (cel-shade highlight)
+    const hi=c.createLinearGradient(0,0,256,0);
+    hi.addColorStop(0,'rgba(255,255,255,0)');
+    hi.addColorStop(0.3,'rgba(255,255,255,0.22)');
+    hi.addColorStop(0.6,'rgba(255,255,255,0.08)');
+    hi.addColorStop(1,'rgba(255,255,255,0)');
+    c.fillStyle=hi; c.fillRect(0,0,256,256);
+    // Bold cartoon outline dividers
+    c.strokeStyle='rgba(80,0,0,0.55)'; c.lineWidth=5;
+    c.beginPath(); c.moveTo(0,128); c.lineTo(256,128); c.stroke();
+    c.beginPath(); c.moveTo(128,0); c.lineTo(128,256); c.stroke();
+    // Chest star emblem — cartoon style
+    c.save(); c.translate(128,108);
+    c.fillStyle='#FFD700'; c.shadowColor='#FF8800'; c.shadowBlur=14;
+    c.font='bold 70px Arial'; c.textAlign='center'; c.textBaseline='middle';
+    c.fillText('★',0,0);
+    c.restore();
+    // Bold black outline border
+    c.strokeStyle='rgba(0,0,0,0.4)'; c.lineWidth=8;
+    c.strokeRect(4,4,248,248);
     return new THREE.CanvasTexture(cv);
 }
 function makeMobHeadTex(){
-    const cv=document.createElement('canvas'); cv.width=64; cv.height=64;
+    const cv=document.createElement('canvas'); cv.width=128; cv.height=128;
     const c=cv.getContext('2d');
-    const g=c.createRadialGradient(32,28,4,32,28,32);
-    g.addColorStop(0,'#DDAA77'); g.addColorStop(1,'#8B5520');
-    c.fillStyle=g; c.fillRect(0,0,64,64);
-    // scars
-    c.strokeStyle='rgba(120,40,0,0.6)'; c.lineWidth=2;
-    c.beginPath(); c.moveTo(20,15); c.lineTo(26,30); c.stroke();
-    c.beginPath(); c.moveTo(38,10); c.lineTo(44,25); c.stroke();
+    // Smooth skin — warm peach/orange cartoon
+    const g=c.createLinearGradient(0,0,0,128);
+    g.addColorStop(0,'#FFCC88'); g.addColorStop(0.6,'#EEA055'); g.addColorStop(1,'#CC7733');
+    c.fillStyle=g; c.fillRect(0,0,128,128);
+    // Cel-shade shadow on lower half
+    c.fillStyle='rgba(0,0,0,0.10)'; c.fillRect(0,72,128,56);
+    // Cartoon cheek blush
+    c.fillStyle='rgba(255,120,80,0.30)';
+    c.beginPath(); c.ellipse(28,82,16,10,0,0,Math.PI*2); c.fill();
+    c.beginPath(); c.ellipse(100,82,16,10,0,0,Math.PI*2); c.fill();
+    // Angry brow lines
+    c.strokeStyle='rgba(80,30,0,0.7)'; c.lineWidth=5; c.lineCap='round';
+    c.beginPath(); c.moveTo(28,38); c.lineTo(52,46); c.stroke();
+    c.beginPath(); c.moveTo(100,38); c.lineTo(76,46); c.stroke();
+    // Bold outline
+    c.strokeStyle='rgba(0,0,0,0.35)'; c.lineWidth=6;
+    c.strokeRect(3,3,122,122);
     return new THREE.CanvasTexture(cv);
 }
 
@@ -1285,41 +1306,48 @@ function makeSpinCardTex(loot){
     const W=256, H=340;
     const cv=document.createElement('canvas'); cv.width=W; cv.height=H;
     const c=cv.getContext('2d');
-    // Card background
-    const col = loot.color||'#44FF88';
-    const g=c.createLinearGradient(0,0,0,H);
-    g.addColorStop(0,'#1a1a2e'); g.addColorStop(0.5,col+'44'); g.addColorStop(1,'#0d0d1a');
-    c.fillStyle=g; c.beginPath();
-    c.roundRect(8,8,W-16,H-16,22); c.fill();
-    // Border glow
-    c.strokeStyle=col; c.lineWidth=4;
-    c.shadowColor=col; c.shadowBlur=18;
-    c.beginPath(); c.roundRect(8,8,W-16,H-16,22); c.stroke();
+    const col=loot.color||'#44FF88';
+    // Cartoon card body — bright white-ish with colour tint
+    const bg=c.createLinearGradient(0,0,0,H);
+    bg.addColorStop(0,'#FFFFFF'); bg.addColorStop(0.5,col+'55'); bg.addColorStop(1,'#F0F0F0');
+    c.fillStyle=bg; c.beginPath(); c.roundRect(6,6,W-12,H-12,28); c.fill();
+    // Bold coloured border — cartoon style
+    c.strokeStyle=col; c.lineWidth=10;
+    c.shadowColor=col; c.shadowBlur=20;
+    c.beginPath(); c.roundRect(6,6,W-12,H-12,28); c.stroke();
     c.shadowBlur=0;
-    // Icon
-    c.font='90px Arial'; c.textAlign='center'; c.textBaseline='middle';
-    c.shadowColor='rgba(0,0,0,0.8)'; c.shadowBlur=10;
+    // Inner white outline
+    c.strokeStyle='rgba(255,255,255,0.9)'; c.lineWidth=4;
+    c.beginPath(); c.roundRect(18,18,W-36,H-36,20); c.stroke();
+    // Dot pattern background
+    c.fillStyle='rgba(0,0,0,0.04)';
+    for(let dx=24;dx<W-12;dx+=22) for(let dy=24;dy<H-12;dy+=22){
+        c.beginPath(); c.arc(dx,dy,3,0,Math.PI*2); c.fill();
+    }
+    // Big icon
+    c.textAlign='center'; c.textBaseline='middle';
+    c.shadowColor='rgba(0,0,0,0.25)'; c.shadowBlur=8;
     if(loot.id==='coins'){
-        // Draw stacks of money depending on label
-        c.font='72px Arial'; c.fillText('💵',W/2-28,H/2-22);
-        c.font='72px Arial'; c.fillText('💵',W/2+28,H/2+10);
-        c.font='52px Arial'; c.fillText('💵',W/2,H/2-48);
+        c.font='68px Arial'; c.fillText('💵',W/2-30,H/2-18);
+        c.font='68px Arial'; c.fillText('💵',W/2+30,H/2+14);
+        c.font='50px Arial'; c.fillText('💵',W/2,H/2-52);
     } else {
-        c.font='90px Arial'; c.fillText(loot.icon, W/2, H/2-10);
+        c.font='100px Arial'; c.fillText(loot.icon,W/2,H/2-8);
     }
     c.shadowBlur=0;
-    // Label
-    c.font='bold 28px Arial'; c.fillStyle='#fff';
-    c.shadowColor='rgba(0,0,0,0.9)'; c.shadowBlur=8;
-    c.fillText(loot.label, W/2, H-42);
+    // Label pill
+    const lw=Math.min(W-40,loot.label.length*14+32);
+    c.fillStyle=col;
+    c.beginPath(); c.roundRect((W-lw)/2,H-66,lw,40,20); c.fill();
+    c.font=`bold ${loot.label.length>12?20:24}px Arial`;
+    c.fillStyle='#fff';
+    c.shadowColor='rgba(0,0,0,0.5)'; c.shadowBlur=4;
+    c.fillText(loot.label,W/2,H-46);
     c.shadowBlur=0;
-    // Shine streak
-    const sh=c.createLinearGradient(40,30,W-40,H-30);
-    sh.addColorStop(0,'rgba(255,255,255,0)');
-    sh.addColorStop(0.45,'rgba(255,255,255,0.12)');
-    sh.addColorStop(0.55,'rgba(255,255,255,0.22)');
-    sh.addColorStop(1,'rgba(255,255,255,0)');
-    c.fillStyle=sh; c.beginPath(); c.roundRect(8,8,W-16,H-16,22); c.fill();
+    // Top shine
+    const sh=c.createLinearGradient(0,6,0,H/2);
+    sh.addColorStop(0,'rgba(255,255,255,0.55)'); sh.addColorStop(1,'rgba(255,255,255,0)');
+    c.fillStyle=sh; c.beginPath(); c.roundRect(6,6,W-12,H/2-6,28); c.fill();
     const t=new THREE.CanvasTexture(cv); t.anisotropy=renderer.capabilities.getMaxAnisotropy(); return t;
 }
 
@@ -1582,18 +1610,22 @@ function makeStoneSideTex(){
     const W=256, H=256;
     const cv=document.createElement('canvas'); cv.width=W; cv.height=H;
     const ctx=cv.getContext('2d');
-    // Stone gradient
+    // Cartoon stone — bright, smooth, saturated
     const g=ctx.createLinearGradient(0,0,0,H);
-    g.addColorStop(0,'#B8A070'); g.addColorStop(0.5,'#8A7050'); g.addColorStop(1,'#6A5030');
+    g.addColorStop(0,'#E8C870'); g.addColorStop(0.5,'#C8A040'); g.addColorStop(1,'#906820');
     ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
-    // Horizontal mortar lines
-    ctx.strokeStyle='rgba(0,0,0,.25)'; ctx.lineWidth=3;
-    for(let y=32;y<H;y+=32){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
+    // Cel-shade highlight strip
+    const hi=ctx.createLinearGradient(0,0,W,0);
+    hi.addColorStop(0,'rgba(255,255,255,0.25)'); hi.addColorStop(0.4,'rgba(255,255,255,0.10)'); hi.addColorStop(1,'rgba(255,255,255,0)');
+    ctx.fillStyle=hi; ctx.fillRect(0,0,W,H);
+    // Thick cartoon mortar lines
+    ctx.strokeStyle='rgba(80,45,0,0.55)'; ctx.lineWidth=5;
+    for(let y=40;y<H;y+=40){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
     // Vertical brick joints staggered
-    for(let row=0;row<H/32;row++){
-        const offset=row%2===0?0:42;
-        for(let x=offset;x<W+42;x+=84){
-            ctx.beginPath(); ctx.moveTo(x,row*32); ctx.lineTo(x,(row+1)*32); ctx.stroke();
+    for(let row=0;row<H/40;row++){
+        const offset=row%2===0?0:52;
+        for(let x=offset;x<W+52;x+=104){
+            ctx.beginPath(); ctx.moveTo(x,row*40); ctx.lineTo(x,(row+1)*40); ctx.stroke();
         }
     }
     const t=new THREE.CanvasTexture(cv);
