@@ -2392,13 +2392,15 @@ function startLevel(){
     spawnGate(20);
     for(let i=1;i<GATES_PER_LEVEL;i++) spawnRow(20 + i*GATE_SPACING);
 
-    // Spawn fixed barricades before combat zone: 3 + totalWins, max 15
+    // Spawn fixed barricades between last gate and combat zone: 3 + totalWins, max 15
     const barrCount = Math.min(15, 3 + totalWins);
-    const barrStartZ = GATE_SPACING * GATES_PER_LEVEL + 22;
+    const barrZoneStart = GATE_SPACING * GATES_PER_LEVEL + 22;
+    const barrZoneEnd   = COMBAT_START_Z - 12;
+    const barrSpacing   = barrCount > 1 ? (barrZoneEnd - barrZoneStart) / (barrCount - 1) : 0;
     function pickCover(){ const r=Math.random(); return r<0.30?null:r<0.65?0:r<0.90?1:2; }
     for(let i=0;i<barrCount;i++){
         const tL=pickCover(), tR=pickCover();
-        const bz = barrStartZ + i*8;
+        const bz = barrCount === 1 ? barrZoneStart : barrZoneStart + i * barrSpacing;
         if(tL!=null||tR!=null) spawnBarricade(bz, tL, tR);
         else spawnBarricade(bz, 0, null);
     }
