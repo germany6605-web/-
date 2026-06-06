@@ -1645,15 +1645,14 @@ function killLootPlatform(lp){
         lSpr.position.set(0,1.1,0); lSpr.scale.set(2.2,0.66,1);
         pickup.add(lSpr);
     } else {
-        // Floating card pickup
+        // Floating card pickup — Sprite so it always faces camera
         const cardTex=makeSpinCardTex(lp.loot);
-        const cardMat=new THREE.MeshBasicMaterial({map:cardTex,transparent:true,side:THREE.DoubleSide,depthTest:false});
-        const card=new THREE.Mesh(new THREE.PlaneGeometry(0.7,0.93),cardMat);
-        card.position.y=0.5; pickup.add(card);
+        const card=new THREE.Sprite(new THREE.SpriteMaterial({map:cardTex,transparent:true,depthTest:false}));
+        card.position.y=0.85; card.scale.set(0.9,1.2,1); pickup.add(card);
         // Glow ring below card
-        const ringMat=new THREE.MeshBasicMaterial({color:new THREE.Color(lp.loot.color),transparent:true,opacity:0.6});
-        const ring=new THREE.Mesh(new THREE.TorusGeometry(0.28,0.04,6,16),ringMat);
-        ring.rotation.x=Math.PI/2; ring.position.y=0.05; pickup.add(ring);
+        const ringMat=new THREE.MeshBasicMaterial({color:new THREE.Color(lp.loot.color),transparent:true,opacity:0.7});
+        const ring=new THREE.Mesh(new THREE.TorusGeometry(0.32,0.055,6,20),ringMat);
+        ring.rotation.x=Math.PI/2; ring.position.y=0.08; pickup.add(ring);
     }
 
     pickups.push({mesh:pickup,loot:lp.loot,bobT:Math.random()*Math.PI*2,collected:false});
@@ -1664,7 +1663,7 @@ function applyPickup(loot){
         case 'triple':  tripleShot+=1; break;   // each pickup adds 2 extra bullets
         case 'dmgx2':   dmgX2*=2; break;
         case 'moneyx2': moneyX2*=2; break;
-        case 'coins':   coins+=Math.floor((40+level*20)/30*COIN_MULT)*moneyX2; break;
+        case 'coins':   coins+=Math.round((30+level*15)*moneyX2*COIN_MULT); refreshHUD(); break;
     }
     showEffPop({label:loot.label, good:true});
     refreshHUD();
