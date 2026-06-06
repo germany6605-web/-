@@ -88,6 +88,26 @@ body { background:#000; overflow:hidden; font-family:'Segoe UI',Arial,sans-serif
 .citem-btn:disabled { background:#0a0f0a; border-color:#334; color:#444; cursor:not-allowed; }
 .diam-d { color:#88DDFF; font-size:13px; }
 
+/* Cases tab */
+.cas-card { background:#0d1520; border:2px solid #334; border-radius:14px; padding:18px 20px; margin-bottom:14px; }
+.cas-card h3 { font-size:17px; font-weight:bold; margin-bottom:6px; }
+.cas-card .cas-desc { font-size:12px; color:#aaa; margin-bottom:10px; line-height:1.6; }
+.cas-card .cas-row { display:flex; align-items:center; gap:10px; }
+.cas-open-btn { padding:9px 22px; font-size:14px; font-weight:bold; border-radius:8px; cursor:pointer;
+  border:2px solid #88DDFF; background:#0a1a28; color:#88DDFF; }
+.cas-open-btn:hover { background:#112233; }
+.cas-open-btn:disabled { border-color:#334; color:#444; background:#0a0d10; cursor:not-allowed; }
+.cas-result-banner { background:#111; border:2px solid #FFD700; border-radius:10px; padding:14px 18px;
+  margin-top:14px; font-size:15px; text-align:center; display:none; }
+.cas-result-banner.vis { display:block; }
+.promo-row { display:flex; gap:8px; margin-top:6px; }
+.promo-input { flex:1; padding:8px 12px; border-radius:7px; border:1.5px solid #334; background:#0a0d10;
+  color:#fff; font-size:14px; }
+.promo-btn { padding:8px 16px; font-size:13px; font-weight:bold; border-radius:7px; cursor:pointer;
+  border:2px solid #4CAF50; background:#0d1a0d; color:#4CAF50; }
+.promo-btn:hover { background:#142014; }
+.promo-msg { font-size:12px; margin-top:6px; min-height:16px; }
+
 .tab-btn { padding:9px 28px; font-size:15px; font-weight:bold; border-radius:8px 8px 0 0;
     border:2px solid #334; border-bottom:none; background:#0a1020; color:#888; cursor:pointer; }
 .tab-btn.active { background:#152040; color:#FFD700; border-color:#FFD700; }
@@ -156,11 +176,13 @@ body { background:#000; overflow:hidden; font-family:'Segoe UI',Arial,sans-serif
     <button class="tab-btn" id="tab-btn-upg" onclick="shopTab('upg')">⬆ Улучшения</button>
     <button class="tab-btn" id="tab-btn-mod" onclick="shopTab('mod')">⚙ Моды</button>
     <button class="tab-btn" id="tab-btn-fac" onclick="shopTab('fac')">🏭 Завод</button>
+    <button class="tab-btn" id="tab-btn-cas" onclick="shopTab('cas')">📦 Кейсы</button>
   </div>
   <div class="tab-pane active" id="tab-pane-wep"><div class="sgrid" id="sgrid-wep"></div></div>
   <div class="tab-pane" id="tab-pane-upg"><div class="sgrid" id="sgrid-upg"></div></div>
   <div class="tab-pane" id="tab-pane-mod"><div id="mod-tab-root" style="display:flex;flex-direction:column;align-items:center;width:100%"></div></div>
   <div class="tab-pane" id="tab-pane-fac"><div class="fac-root" id="fac-tab-root"></div></div>
+  <div class="tab-pane" id="tab-pane-cas"><div id="cas-tab-root" style="width:100%;max-width:560px;margin:0 auto;padding:10px 0"></div></div>
   <button class="btn" id="shop-next-btn" onclick="nextLevel()">СЛЕДУЮЩИЙ УРОВЕНЬ ▶</button>
 </div>
 <div class="ov" id="loss-ov" style="background:radial-gradient(ellipse at 50% 40%,#1a0000 0%,#000 100%)">
@@ -1867,12 +1889,163 @@ function boostCombatHP(pct){
 let _shopTab = 'wep';
 function shopTab(t){
     _shopTab=t;
-    ['wep','upg','mod','fac'].forEach(x=>{
+    ['wep','upg','mod','fac','cas'].forEach(x=>{
         document.getElementById('tab-btn-'+x).classList.toggle('active', x===t);
         document.getElementById('tab-pane-'+x).classList.toggle('active', x===t);
     });
     if(t==='mod') renderModTab();
     if(t==='fac') renderFactoryTab();
+    if(t==='cas') renderCasesTab();
+}
+
+// ─── CASES ───
+const CASES = [
+    {
+        id:'basic', name:'Базовый кейс', icon:'📦', cost:5,
+        color:'#336699', borderColor:'#5599CC',
+        desc:'Содержит монеты, немного алмазов или шестерёнку низкого уровня.',
+        drops:[
+            {w:40, label:'🪙 +500 монет',   fn:()=>{ coins+=500; }},
+            {w:30, label:'🪙 +1500 монет',  fn:()=>{ coins+=1500; }},
+            {w:15, label:'💎 +3 алмаза',    fn:()=>{ diamonds+=3; }},
+            {w:10, label:'⚙️ Шестерёнка ур.1', fn:()=>{ giveGear(1); }},
+            {w:5,  label:'⚙️ Шестерёнка ур.2', fn:()=>{ giveGear(2); }},
+        ]
+    },
+    {
+        id:'silver', name:'Серебряный кейс', icon:'🥈', cost:20,
+        color:'#557788', borderColor:'#88BBCC',
+        desc:'Больше монет, алмазы, шестерёнки среднего уровня.',
+        drops:[
+            {w:25, label:'🪙 +3000 монет',  fn:()=>{ coins+=3000; }},
+            {w:25, label:'🪙 +7000 монет',  fn:()=>{ coins+=7000; }},
+            {w:20, label:'💎 +10 алмазов',  fn:()=>{ diamonds+=10; }},
+            {w:15, label:'💎 +20 алмазов',  fn:()=>{ diamonds+=20; }},
+            {w:10, label:'⚙️ Шестерёнка ур.3', fn:()=>{ giveGear(3); }},
+            {w:4,  label:'⚙️ Шестерёнка ур.4', fn:()=>{ giveGear(4); }},
+            {w:1,  label:'⚙️ Шестерёнка ур.5', fn:()=>{ giveGear(5); }},
+        ]
+    },
+    {
+        id:'gold', name:'Золотой кейс', icon:'🏆', cost:60,
+        color:'#8B6914', borderColor:'#FFD700',
+        desc:'Щедрые алмазы, редкие шестерёнки высокого уровня.',
+        drops:[
+            {w:20, label:'💎 +30 алмазов',  fn:()=>{ diamonds+=30; }},
+            {w:20, label:'💎 +60 алмазов',  fn:()=>{ diamonds+=60; }},
+            {w:15, label:'🪙 +15000 монет', fn:()=>{ coins+=15000; }},
+            {w:15, label:'⚙️ Шестерёнка ур.4', fn:()=>{ giveGear(4); }},
+            {w:12, label:'⚙️ Шестерёнка ур.5', fn:()=>{ giveGear(5); }},
+            {w:8,  label:'⚙️ Шестерёнка ур.6', fn:()=>{ giveGear(6); }},
+            {w:6,  label:'⚙️ Шестерёнка ур.7', fn:()=>{ giveGear(7); }},
+            {w:3,  label:'⚙️ Шестерёнка ур.8', fn:()=>{ giveGear(8); }},
+            {w:1,  label:'⚙️ Шестерёнка ур.10 ✨', fn:()=>{ giveGear(10); }},
+        ]
+    }
+];
+
+const PROMO_CODES = { 'BULLET250': { reward: ()=>{ diamonds+=250; }, label:'💎 +250 алмазов', used: false } };
+
+function giveGear(level){
+    // find first empty cell in gearGrid
+    const idx = gearGrid.indexOf(null);
+    if(idx !== -1){ gearGrid[idx] = {level}; return; }
+    // grid full — find lowest level gear and replace if new is higher
+    let minIdx=0;
+    for(let i=1;i<gearGrid.length;i++) if((gearGrid[i]?.level||0)<(gearGrid[minIdx]?.level||0)) minIdx=i;
+    if((gearGrid[minIdx]?.level||0) < level) gearGrid[minIdx]={level};
+}
+
+function rollCase(caseId){
+    const c = CASES.find(x=>x.id===caseId);
+    if(!c || diamonds < c.cost) return null;
+    diamonds -= c.cost;
+    refreshHUD();
+    const total = c.drops.reduce((s,d)=>s+d.w, 0);
+    let r = Math.random()*total;
+    for(const d of c.drops){ r-=d.w; if(r<=0){ d.fn(); refreshHUD(); return d.label; } }
+    const last = c.drops[c.drops.length-1]; last.fn(); refreshHUD(); return last.label;
+}
+
+let _caseResults = {}; // caseId -> last result label
+
+function renderCasesTab(){
+    const root = document.getElementById('cas-tab-root');
+    root.innerHTML = '';
+
+    // Promo code block
+    const promoDiv = document.createElement('div');
+    promoDiv.className = 'cas-card';
+    promoDiv.style.borderColor = '#4CAF50';
+    promoDiv.innerHTML = `<h3 style="color:#4CAF50">🎁 Промокод</h3>
+        <div class="cas-desc">Введи промокод, чтобы получить награду.</div>`;
+    const promoRow = document.createElement('div');
+    promoRow.className = 'promo-row';
+    const promoInput = document.createElement('input');
+    promoInput.className = 'promo-input'; promoInput.placeholder = 'Введи промокод…';
+    const promoBtn = document.createElement('button');
+    promoBtn.className = 'promo-btn'; promoBtn.textContent = 'Применить';
+    const promoMsg = document.createElement('div');
+    promoMsg.className = 'promo-msg';
+    promoBtn.onclick = ()=>{
+        const code = promoInput.value.trim().toUpperCase();
+        const entry = PROMO_CODES[code];
+        if(!entry){ promoMsg.style.color='#FF6666'; promoMsg.textContent='Неверный промокод.'; return; }
+        if(entry.used){ promoMsg.style.color='#FF6666'; promoMsg.textContent='Промокод уже использован.'; return; }
+        entry.used = true; entry.reward();
+        refreshHUD(); renderCasesTab();
+        promoMsg.style.color='#4CAF50'; promoMsg.textContent=`Получено: ${entry.label}`;
+    };
+    promoRow.appendChild(promoInput); promoRow.appendChild(promoBtn);
+    promoDiv.appendChild(promoRow); promoDiv.appendChild(promoMsg);
+    root.appendChild(promoDiv);
+
+    // Case cards
+    for(const c of CASES){
+        const card = document.createElement('div');
+        card.className = 'cas-card';
+        card.style.borderColor = c.borderColor;
+
+        const h3 = document.createElement('h3');
+        h3.style.color = c.borderColor;
+        h3.textContent = `${c.icon} ${c.name}`;
+        card.appendChild(h3);
+
+        const desc = document.createElement('div');
+        desc.className = 'cas-desc';
+        desc.textContent = c.desc;
+        // drop list
+        const dropList = c.drops.map(d=>`${d.label} (${d.w}%)`).join(' · ');
+        const small = document.createElement('div');
+        small.style.cssText = 'font-size:11px;color:#666;margin-bottom:8px';
+        small.textContent = dropList;
+        card.appendChild(desc);
+        card.appendChild(small);
+
+        const row = document.createElement('div');
+        row.className = 'cas-row';
+        const openBtn = document.createElement('button');
+        openBtn.className = 'cas-open-btn';
+        openBtn.disabled = diamonds < c.cost;
+        openBtn.textContent = `Открыть — ${c.cost} 💎`;
+        const resultBanner = document.createElement('div');
+        resultBanner.className = 'cas-result-banner' + (_caseResults[c.id] ? ' vis' : '');
+        resultBanner.textContent = _caseResults[c.id] ? `Выпало: ${_caseResults[c.id]}` : '';
+        openBtn.onclick = ()=>{
+            const label = rollCase(c.id);
+            if(label !== null){
+                _caseResults[c.id] = label;
+                resultBanner.textContent = `Выпало: ${label}`;
+                resultBanner.classList.add('vis');
+                openBtn.disabled = diamonds < c.cost;
+                refreshHUD();
+            }
+        };
+        row.appendChild(openBtn);
+        card.appendChild(row);
+        card.appendChild(resultBanner);
+        root.appendChild(card);
+    }
 }
 
 // ─── GEAR SYSTEM ───
@@ -2178,6 +2351,7 @@ function startGame(){
     level=1;coins=0;upgGate={dmg:0,money:0,range:0,rate:0};upgTir=0;_shopTab='wep';
     gearGrid=new Array(21).fill(null); weaponGears={}; _gearSel=-1; _modWep=1; gearsBought=0;
     diamonds=0; _diamFrac=0; factory=[0,1,2].map(()=>({bought:false,machine:0,enh:[0,0,0,0],coinFrac:0}));
+    _caseResults={}; Object.values(PROMO_CODES).forEach(p=>p.used=false);
     ownedWeapons=new Set([1]); activeWeapon=1; combatHPMult=1;
     buildStaticWorld();
     startLevel();
