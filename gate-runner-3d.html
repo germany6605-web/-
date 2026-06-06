@@ -486,8 +486,8 @@ function updateBullets(dt){
                 if(gate.removed || Math.abs(bz - gate.z) > 1.2) continue;
                 // Barricaded gate: bullets hit per-side cover first (check X range)
                 {
-                    const cov = (bx>=-3.8&&bx<-0.1) ? gate.coverL
-                              : (bx>0.1&&bx<=3.8)   ? gate.coverR : null;
+                    const cov = (bx>=-3.8&&bx<=0) ? gate.coverL
+                              : (bx>=0&&bx<=3.8)   ? gate.coverR : null;
                     if(cov && !cov.removed){
                         cov.hp -= effDmg()*(b.dmgMult||1);
                         cov.hitT=0.12;
@@ -502,7 +502,7 @@ function updateBullets(dt){
                 const slideX = gate.slideGrp ? gate.slideGrp.position.x : 0;
                 const lbx = bx - slideX;
                 const fullWidth = gate.pL && !gate.pR;
-                if(gate.pL && (fullWidth ? (lbx>-1.8&&lbx<1.8) : (lbx<-0.1&&lbx>-3.9))){
+                if(gate.pL && (fullWidth ? (lbx>=-1.8&&lbx<=1.8) : (lbx>=-3.8&&lbx<=0))){
                     if(gate.coolL<=0 || b.tripleExtra){
                         gate.coolL=b.tripleExtra ? Math.min(gate.coolL, 0.02) : 0.25;
                         gate.hitsL++;
@@ -513,7 +513,7 @@ function updateBullets(dt){
                     }
                     if(!b.pierce) hit=true; break;
                 }
-                if(gate.pR && lbx > 0.1 && lbx < 3.9){
+                if(gate.pR && lbx >= 0 && lbx <= 3.8){
                     if(gate.coolR<=0 || b.tripleExtra){
                         gate.coolR=b.tripleExtra ? Math.min(gate.coolR, 0.02) : 0.25;
                         gate.hitsR++;
@@ -2395,11 +2395,11 @@ function startLevel(){
 
     // Spawn fixed barricades before combat zone: 3 + totalWins, max 15
     const barrCount = Math.min(15, 3 + totalWins);
-    const barrStartZ = GATE_SPACING * GATES_PER_LEVEL + 20 - barrCount * 7;
+    const barrStartZ = GATE_SPACING * GATES_PER_LEVEL + 22;
     function pickCover(){ const r=Math.random(); return r<0.30?null:r<0.65?0:r<0.90?1:2; }
     for(let i=0;i<barrCount;i++){
         const tL=pickCover(), tR=pickCover();
-        const bz = barrStartZ + i*7;
+        const bz = barrStartZ + i*8;
         if(tL!=null||tR!=null) spawnBarricade(bz, tL, tR);
         else spawnBarricade(bz, 0, null);
     }
