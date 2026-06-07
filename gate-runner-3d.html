@@ -232,7 +232,7 @@ const sun = new THREE.DirectionalLight(0xFFF0CC, 1.15);
 sun.position.set(-8, 20, -10); sun.castShadow = true;
 sun.shadow.mapSize.set(1024,1024);
 const ssc = sun.shadow.camera;
-ssc.near=1; ssc.far=80; ssc.left=ssc.bottom=-25; ssc.right=ssc.top=25;
+ssc.near=1; ssc.far=120; ssc.left=ssc.bottom=-35; ssc.right=ssc.top=35;
 scene.add(sun);
 
 // ─── CONSTANTS ───
@@ -1829,8 +1829,8 @@ function getCoinFaceTex(){
     const c=cv.getContext('2d');
     // Bright orange-gold radial gradient
     const g=c.createRadialGradient(S*0.36,S*0.32,1,S/2,S/2,S/2);
-    g.addColorStop(0,'#FFE566'); g.addColorStop(0.4,'#FFB800');
-    g.addColorStop(0.75,'#E07800'); g.addColorStop(1,'#A05000');
+    g.addColorStop(0,'#FFFF99'); g.addColorStop(0.3,'#FFD700');
+    g.addColorStop(0.65,'#FF9900'); g.addColorStop(1,'#CC5500');
     c.fillStyle=g; c.beginPath(); c.arc(S/2,S/2,S/2-1,0,Math.PI*2); c.fill();
     // Dark outer rim
     c.strokeStyle='#7A3800'; c.lineWidth=7;
@@ -1858,8 +1858,8 @@ function getCoinFaceTex(){
 
 // Returns [edgeMat, faceMat, edgeMat] for a coin
 function coinMats(){
-    const face=new THREE.MeshPhongMaterial({map:getCoinFaceTex(),shininess:160,specular:0xFFEEBB});
-    const edge=new THREE.MeshPhongMaterial({color:0xDD8800,shininess:120,specular:0xFFCC66,emissive:0x3A1800,emissiveIntensity:0.25});
+    const face=new THREE.MeshPhongMaterial({map:getCoinFaceTex(),shininess:180,specular:0xFFFFDD,emissive:0x885500,emissiveIntensity:0.55});
+    const edge=new THREE.MeshPhongMaterial({color:0xFF9900,shininess:130,specular:0xFFEE88,emissive:0x663300,emissiveIntensity:0.5});
     return [edge,face,edge];
 }
 function coinGeo(r,h){ return new THREE.CylinderGeometry(r,r,h,28); }
@@ -1943,7 +1943,7 @@ function spawnTarget(x, z, hp, sc){
     // Top tier — top face shows HP + coins
     const top = new THREE.Mesh(new THREE.CylinderGeometry(HEX_R*0.82, HEX_R, h2, 6),
         [darkMat, topMat, darkMat]);
-    top.position.y = h1 + h2/2; top.castShadow=true; g.add(top);
+    top.position.y = h1 + h2/2; top.castShadow=true; top.receiveShadow=true; g.add(top);
 
     // Gold rim around top surface
     const rim = new THREE.Mesh(new THREE.TorusGeometry(HEX_R*0.83, 0.045, 4, 6), rimMat);
