@@ -910,7 +910,7 @@ function makeBarricadeTex(type){
 
 function drawCoverHP(cov){
     const pct=Math.max(0,cov.hp/cov.maxHp);
-    const cv=cov.hpCv, x=cov.hpCtx; cv.width=256; cv.height=20;
+    const cv=cov.hpCtx.canvas, x=cov.hpCtx; cv.width=256; cv.height=20;
     x.clearRect(0,0,256,20);
     x.font='bold 16px Arial'; x.textAlign='center'; x.textBaseline='middle';
     x.fillStyle='rgba(0,0,0,0.7)'; x.fillRect(0,0,256,20);
