@@ -936,7 +936,7 @@ function makeSideCover(type, xCenter, z, gate){
     const hpCtx=hpCv.getContext('2d');
     const hpTex=new THREE.CanvasTexture(hpCv);
     const hpSpr=new THREE.Sprite(new THREE.SpriteMaterial({map:hpTex,depthTest:false,transparent:true}));
-    hpSpr.scale.set(2.1,0.32,1); hpSpr.position.set(xCenter,H+0.55,z-0.1);
+    hpSpr.scale.set(1.8,0.28,1); hpSpr.position.set(xCenter,H+0.40,z-0.1);
     gateGrp.add(hpSpr); gate.meshes.push(hpSpr);
 
     const lCv=document.createElement('canvas'); lCv.width=256; lCv.height=44;
@@ -1451,7 +1451,7 @@ function spawnMob(x, z){
     const hpCtx=hpCv.getContext('2d');
     const hpTex=new THREE.CanvasTexture(hpCv);
     const hpSpr=new THREE.Sprite(new THREE.SpriteMaterial({map:hpTex,depthTest:false,transparent:true}));
-    hpSpr.position.set(0,2.3*S,0); hpSpr.scale.set(2.0,0.38,1); g.add(hpSpr);
+    hpSpr.position.set(0,2.1*S,0); hpSpr.scale.set(1.4,0.28,1); g.add(hpSpr);
 
     g.position.set(x,0,z); scene.add(g);
 
@@ -1606,7 +1606,7 @@ function spawnLootPlatform(x, z, combatScale, forceLoot){
     const hpCtx=hpCv.getContext('2d');
     const hpTex=new THREE.CanvasTexture(hpCv);
     const hpSpr=new THREE.Sprite(new THREE.SpriteMaterial({map:hpTex,depthTest:false,transparent:true}));
-    hpSpr.position.set(0, h+1.9*sc, 0); hpSpr.scale.set(2.2*sc, 0.42*sc, 1); g.add(hpSpr);
+    hpSpr.position.set(0, h+1.5*sc, 0); hpSpr.scale.set(1.4*sc, 0.28*sc, 1); g.add(hpSpr);
 
     g.position.set(x,0,z); scene.add(g);
 
@@ -2095,8 +2095,8 @@ function spawnTarget(x, z, hp, sc){
     const hpCtx=hpCv.getContext('2d');
     const hpTex=new THREE.CanvasTexture(hpCv);
     const hpSpr=new THREE.Sprite(new THREE.SpriteMaterial({map:hpTex,depthTest:false,transparent:true}));
-    hpSpr.position.set(0, platY + cH*9 + 0.28, 0);
-    hpSpr.scale.set(2.4, 0.44, 1);
+    hpSpr.position.set(0, platY + 1.0, 0);
+    hpSpr.scale.set(1.2, 0.26, 1);
     g.add(hpSpr);
 
     g.position.set(x,0,z); scene.add(g);
@@ -2199,7 +2199,7 @@ function spawnCombatPlatform(x, z, hp, sc=1, coinMult=1){
     const hpCtx=hpCv.getContext('2d');
     const hpTex2=new THREE.CanvasTexture(hpCv);
     const hpSpr=new THREE.Sprite(new THREE.SpriteMaterial({map:hpTex2,depthTest:false,transparent:true}));
-    hpSpr.position.set(0,h+0.60*sc,0); hpSpr.scale.set(1.4*sc,0.36*sc,1); g.add(hpSpr);
+    hpSpr.position.set(0,h+0.40*sc,0); hpSpr.scale.set(0.9*sc,0.22*sc,1); g.add(hpSpr);
 
     g.position.set(x,0,z); scene.add(g);
 
@@ -2244,7 +2244,7 @@ function spawnMultiplierPlatform(x, z, mult){
     const hpCtx=hpCv.getContext('2d');
     const hpTex2=new THREE.CanvasTexture(hpCv);
     const hpSpr=new THREE.Sprite(new THREE.SpriteMaterial({map:hpTex2,depthTest:false,transparent:true}));
-    hpSpr.position.set(0,h+0.50,0); hpSpr.scale.set(1.4,0.36,1); g.add(hpSpr);
+    hpSpr.position.set(0,h+0.36,0); hpSpr.scale.set(0.9,0.22,1); g.add(hpSpr);
 
     const maxHp=hp;
     const lp={g,hpCv,hpCtx,hpTex:hpTex2,hpSpr,topMesh,topTex,
