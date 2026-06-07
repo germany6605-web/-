@@ -910,10 +910,12 @@ function makeBarricadeTex(type){
 
 function drawCoverHP(cov){
     const pct=Math.max(0,cov.hp/cov.maxHp);
-    cov.hpCtx.clearRect(0,0,256,20);
-    cov.hpCtx.fillStyle='rgba(0,0,0,0.6)'; cov.hpCtx.fillRect(0,0,256,20);
-    cov.hpCtx.fillStyle=pct>0.55?'#44EE44':pct>0.28?'#FFAA00':'#FF2200';
-    cov.hpCtx.fillRect(2,2,Math.round(252*pct),16);
+    const cv=cov.hpCv, x=cov.hpCtx; cv.width=256; cv.height=20;
+    x.clearRect(0,0,256,20);
+    x.font='bold 16px Arial'; x.textAlign='center'; x.textBaseline='middle';
+    x.fillStyle='rgba(0,0,0,0.7)'; x.fillRect(0,0,256,20);
+    x.fillStyle=pct>0.55?'#44EE44':pct>0.28?'#FFAA00':'#FF2200';
+    x.fillText(Math.ceil(cov.hp)+' / '+cov.maxHp, 128, 10);
     cov.hpTex.needsUpdate=true;
 }
 
@@ -1447,7 +1449,7 @@ function spawnMob(x, z){
     const hpCtx=hpCv.getContext('2d');
     const hpTex=new THREE.CanvasTexture(hpCv);
     const hpSpr=new THREE.Sprite(new THREE.SpriteMaterial({map:hpTex,depthTest:false,transparent:true}));
-    hpSpr.position.set(0,2.3*S,0); hpSpr.scale.set(1.6,0.22,1); g.add(hpSpr);
+    hpSpr.position.set(0,2.3*S,0); hpSpr.scale.set(2.0,0.38,1); g.add(hpSpr);
 
     g.position.set(x,0,z); scene.add(g);
 
@@ -1474,11 +1476,14 @@ function spawnMob(x, z){
 }
 
 function drawMobHP(m){
-    const c=m.hpCv, x=m.hpCtx; c.width=64;
-    x.fillStyle='#222'; x.fillRect(0,2,64,8);
+    const c=m.hpCv, x=m.hpCtx; c.width=128; c.height=28;
     const r=Math.max(0,m.hp/m.maxHp);
+    x.clearRect(0,0,128,28);
+    x.fillStyle='rgba(0,0,0,0.7)'; x.fillRect(0,0,128,28);
+    x.font='bold 20px Arial'; x.textAlign='center'; x.textBaseline='middle';
     x.fillStyle=r>.5?'#33cc33':r>.25?'#ffaa00':'#ff3333';
-    x.fillRect(1,3,62*r,6); m.hpTex.needsUpdate=true;
+    x.fillText(Math.ceil(m.hp)+' / '+m.maxHp, 64, 14);
+    m.hpTex.needsUpdate=true;
 }
 
 // ─── LOOT PLATFORMS ───
@@ -1597,7 +1602,7 @@ function spawnLootPlatform(x, z, combatScale, forceLoot){
     const hpCtx=hpCv.getContext('2d');
     const hpTex=new THREE.CanvasTexture(hpCv);
     const hpSpr=new THREE.Sprite(new THREE.SpriteMaterial({map:hpTex,depthTest:false,transparent:true}));
-    hpSpr.position.set(0, h+1.9*sc, 0); hpSpr.scale.set(1.8*sc, 0.24*sc, 1); g.add(hpSpr);
+    hpSpr.position.set(0, h+1.9*sc, 0); hpSpr.scale.set(2.2*sc, 0.42*sc, 1); g.add(hpSpr);
 
     g.position.set(x,0,z); scene.add(g);
 
@@ -1609,11 +1614,14 @@ function spawnLootPlatform(x, z, combatScale, forceLoot){
 }
 
 function drawLootHP(lp){
-    const c=lp.hpCv, x=lp.hpCtx; c.width=96;
-    x.fillStyle='#222'; x.fillRect(0,2,96,10);
+    const c=lp.hpCv, x=lp.hpCtx; c.width=192; c.height=32;
     const r=Math.max(0,lp.hp/lp.maxHp);
+    x.clearRect(0,0,192,32);
+    x.fillStyle='rgba(0,0,0,0.7)'; x.fillRect(0,0,192,32);
+    x.font='bold 22px Arial'; x.textAlign='center'; x.textBaseline='middle';
     x.fillStyle=r>.5?'#33cc33':r>.25?'#ffaa00':'#ff3333';
-    x.fillRect(1,3,94*r,8); lp.hpTex.needsUpdate=true;
+    x.fillText(Math.ceil(lp.hp)+' / '+lp.maxHp, 96, 16);
+    lp.hpTex.needsUpdate=true;
 }
 
 function spawnCoinPile(x, z, reward){
@@ -2082,7 +2090,7 @@ function spawnTarget(x, z, hp, sc){
     const hpTex=new THREE.CanvasTexture(hpCv);
     const hpSpr=new THREE.Sprite(new THREE.SpriteMaterial({map:hpTex,depthTest:false,transparent:true}));
     hpSpr.position.set(0, platY + cH*9 + 0.28, 0);
-    hpSpr.scale.set(1.8, 0.22, 1);
+    hpSpr.scale.set(2.4, 0.44, 1);
     g.add(hpSpr);
 
     g.position.set(x,0,z); scene.add(g);
@@ -2093,11 +2101,16 @@ function spawnTarget(x, z, hp, sc){
 }
 
 function drawEHP(e){
-    const c=e.hpCv,x=e.hpCtx; c.width=128;
-    x.fillStyle='#222'; x.fillRect(0,3,128,12);
+    const c=e.hpCv,x=e.hpCtx; c.width=256; c.height=36;
     const r=Math.max(0,e.hp/e.maxHp);
+    x.clearRect(0,0,256,36);
+    x.fillStyle='rgba(0,0,0,0.7)'; x.fillRect(0,0,256,36);
+    x.font='bold 26px Arial'; x.textAlign='center'; x.textBaseline='middle';
     x.fillStyle=r>.5?'#33cc33':r>.25?'#ffaa00':'#ff3333';
-    x.fillRect(1,4,126*r,10); e.hpTex.needsUpdate=true;
+    const hpLabel=e.hp>=1000?(e.hp/1000).toFixed(1)+'K':Math.ceil(e.hp);
+    const maxLabel=e.maxHp>=1000?(e.maxHp/1000).toFixed(1)+'K':e.maxHp;
+    x.fillText(hpLabel+' / '+maxLabel, 128, 18);
+    e.hpTex.needsUpdate=true;
 }
 
 function killEnemy(e){
@@ -2178,7 +2191,7 @@ function spawnCombatPlatform(x, z, hp, sc=1, coinMult=1){
     const hpCtx=hpCv.getContext('2d');
     const hpTex2=new THREE.CanvasTexture(hpCv);
     const hpSpr=new THREE.Sprite(new THREE.SpriteMaterial({map:hpTex2,depthTest:false,transparent:true}));
-    hpSpr.position.set(0,h+0.55*sc,0); hpSpr.scale.set(0.9*sc,0.12*sc,1); g.add(hpSpr);
+    hpSpr.position.set(0,h+0.60*sc,0); hpSpr.scale.set(1.4*sc,0.36*sc,1); g.add(hpSpr);
 
     g.position.set(x,0,z); scene.add(g);
 
@@ -2223,7 +2236,7 @@ function spawnMultiplierPlatform(x, z, mult){
     const hpCtx=hpCv.getContext('2d');
     const hpTex2=new THREE.CanvasTexture(hpCv);
     const hpSpr=new THREE.Sprite(new THREE.SpriteMaterial({map:hpTex2,depthTest:false,transparent:true}));
-    hpSpr.position.set(0,h+0.42,0); hpSpr.scale.set(0.9,0.12,1); g.add(hpSpr);
+    hpSpr.position.set(0,h+0.50,0); hpSpr.scale.set(1.4,0.36,1); g.add(hpSpr);
 
     const maxHp=hp;
     const lp={g,hpCv,hpCtx,hpTex:hpTex2,hpSpr,topMesh,topTex,
