@@ -1621,16 +1621,13 @@ function killLootPlatform(lp){
     if(lp.loot.id==='coins'){
         // Stack of coins
         const cR=0.32, cH=0.11;
-        const coinMat  = new THREE.MeshPhongMaterial({color:0xFFF066,shininess:120,specular:0xFFFFCC,emissive:0x443300,emissiveIntensity:0.15});
-        const coinEdge = new THREE.MeshPhongMaterial({color:0xEECC33,shininess:80,specular:0xFFEE88});
-        const coinGeo  = new THREE.CylinderGeometry(cR,cR,cH,20);
-        const positions=[[0,0,0],[0.07,cH,0.04],[-0.05,cH*2,-0.03],[0.03,cH*3,0.02],
-                         [0.05,cH*4,-0.04],[-0.04,cH*5,0.05],[0.01,cH*6,0]];
-        for(const [px,py,pz] of positions){
-            const coin=new THREE.Mesh(coinGeo,[coinEdge,coinMat,coinEdge]);
+        const cGeoP=coinGeo(cR,cH);
+        [[0,0,0],[0.07,cH,0.04],[-0.05,cH*2,-0.03],[0.03,cH*3,0.02],
+         [0.05,cH*4,-0.04],[-0.04,cH*5,0.05],[0.01,cH*6,0]].forEach(([px,py,pz])=>{
+            const coin=new THREE.Mesh(cGeoP,coinMats());
             coin.position.set(px,py+0.1,pz); coin.rotation.y=Math.random()*Math.PI;
-            coin.castShadow=true; pickup.add(coin);
-        }
+            coin.castShadow=true; coin.receiveShadow=true; pickup.add(coin);
+        });
     } else {
         // Build card texture with LARGE readable text
         const W=256, H=340;
@@ -1823,6 +1820,48 @@ let enemies=[], combatFT=0;
 // Fixed footprint radius so columns touch; height grows with row
 const HEX_R = 0.92;
 
+// Shared coin face texture — bright cartoon gold with symbol
+let _coinFaceTex = null;
+function getCoinFaceTex(){
+    if(_coinFaceTex) return _coinFaceTex;
+    const S=128;
+    const cv=document.createElement('canvas'); cv.width=S; cv.height=S;
+    const c=cv.getContext('2d');
+    // Gold radial gradient
+    const g=c.createRadialGradient(S*0.38,S*0.35,2,S/2,S/2,S/2);
+    g.addColorStop(0,'#FFFAAA'); g.addColorStop(0.35,'#FFE033');
+    g.addColorStop(0.7,'#FFAA00'); g.addColorStop(1,'#CC7700');
+    c.fillStyle=g; c.beginPath(); c.arc(S/2,S/2,S/2-1,0,Math.PI*2); c.fill();
+    // Outer rim
+    c.strokeStyle='#BB6600'; c.lineWidth=5;
+    c.beginPath(); c.arc(S/2,S/2,S/2-3,0,Math.PI*2); c.stroke();
+    // Inner rim
+    c.strokeStyle='rgba(255,240,100,0.6)'; c.lineWidth=3;
+    c.beginPath(); c.arc(S/2,S/2,S/2-10,0,Math.PI*2); c.stroke();
+    // Symbol — stylized ₿ or star
+    c.fillStyle='rgba(150,70,0,0.55)';
+    c.font=`bold ${Math.round(S*0.52)}px Arial`;
+    c.textAlign='center'; c.textBaseline='middle';
+    c.shadowColor='rgba(80,30,0,0.4)'; c.shadowBlur=4;
+    c.fillText('$',S/2+1,S/2+2);
+    c.shadowBlur=0;
+    // Shine highlight
+    const sh=c.createRadialGradient(S*0.3,S*0.28,0,S*0.38,S*0.35,S*0.32);
+    sh.addColorStop(0,'rgba(255,255,255,0.55)'); sh.addColorStop(1,'rgba(255,255,255,0)');
+    c.fillStyle=sh; c.beginPath(); c.arc(S/2,S/2,S/2-1,0,Math.PI*2); c.fill();
+    _coinFaceTex=new THREE.CanvasTexture(cv);
+    _coinFaceTex.anisotropy=renderer.capabilities.getMaxAnisotropy();
+    return _coinFaceTex;
+}
+
+// Returns [edgeMat, faceMat] for a coin
+function coinMats(){
+    const face=new THREE.MeshPhongMaterial({map:getCoinFaceTex(),shininess:150,specular:0xFFFFDD});
+    const edge=new THREE.MeshPhongMaterial({color:0xFFAA00,shininess:100,specular:0xFFDD88,emissive:0x331800,emissiveIntensity:0.2});
+    return [edge,face,edge];
+}
+function coinGeo(r,h){ return new THREE.CylinderGeometry(r,r,h,28); }
+
 function makeTargetTopTex(hp){
     const S=512;
     const cv=document.createElement('canvas'); cv.width=S; cv.height=S;
@@ -1909,38 +1948,21 @@ function spawnTarget(x, z, hp, sc){
     rim.rotation.x = Math.PI/2; rim.position.y = platY; g.add(rim);
 
     // ── 3D coin pile ──
-    const coinMat  = new THREE.MeshPhongMaterial({color:0xFFF066, shininess:120, specular:0xFFFFCC, emissive:0x443300, emissiveIntensity:0.15});
-    const coinEdge = new THREE.MeshPhongMaterial({color:0xEECC33, shininess:80,  specular:0xFFEE88});
     const cR = 0.11 + sc*0.04, cH = 0.052 + sc*0.012;
-    const coinGeo = new THREE.CylinderGeometry(cR, cR, cH, 16);
-
+    const cGeoT = coinGeo(cR,cH);
+    const addCoin=(px,py,pz,rz=0)=>{
+        const m=new THREE.Mesh(cGeoT,coinMats());
+        m.position.set(px,py,pz); m.rotation.y=Math.random()*Math.PI; m.rotation.z=rz;
+        m.castShadow=true; m.receiveShadow=true; g.add(m);
+    };
     // Scattered base layer
-    const scatter=[
-        [ 0.28, 0,     0.10], [-0.30, 0,  0.15], [ 0.10, 0, -0.28],
-        [-0.18, 0,    -0.22], [ 0.32, 0, -0.12], [-0.08, 0,  0.32],
-        [ 0.22, 0,     0.28], [-0.26, 0, -0.08],
-    ];
-    for(const [cx,,cz] of scatter){
-        const coin=new THREE.Mesh(coinGeo,[coinEdge,coinMat,coinEdge]);
-        coin.position.set(cx*HEX_R*1.1, platY+cH/2, cz*HEX_R*1.1);
-        coin.rotation.y=Math.random()*Math.PI;
-        coin.rotation.z=(Math.random()-.5)*0.6;
-        coin.castShadow=true; coin.receiveShadow=true; g.add(coin);
-    }
+    [[ 0.28,0.10],[-0.30,0.15],[ 0.10,-0.28],[-0.18,-0.22],[ 0.32,-0.12],[-0.08,0.32],[ 0.22,0.28],[-0.26,-0.08]]
+        .forEach(([cx,cz])=>addCoin(cx*HEX_R*1.1, platY+cH/2, cz*HEX_R*1.1, (Math.random()-.5)*0.6));
     // Central upright stack
     const stackH = 4 + Math.floor(sc*3);
-    for(let i=0;i<stackH;i++){
-        const coin=new THREE.Mesh(coinGeo,[coinEdge,coinMat,coinEdge]);
-        coin.position.set((Math.random()-.5)*0.06, platY + cH*(i+0.5), (Math.random()-.5)*0.06);
-        coin.rotation.y=Math.random()*Math.PI;
-        coin.castShadow=true; coin.receiveShadow=true; g.add(coin);
-    }
+    for(let i=0;i<stackH;i++) addCoin((Math.random()-.5)*0.06, platY+cH*(i+0.5), (Math.random()-.5)*0.06);
     // Second smaller stack
-    for(let i=0;i<Math.max(2,stackH-2);i++){
-        const coin=new THREE.Mesh(coinGeo,[coinEdge,coinMat,coinEdge]);
-        coin.position.set(0.22*HEX_R, platY+cH*(i+0.5), 0.18*HEX_R);
-        coin.rotation.y=Math.random()*Math.PI; coin.castShadow=true; coin.receiveShadow=true; g.add(coin);
-    }
+    for(let i=0;i<Math.max(2,stackH-2);i++) addCoin(0.22*HEX_R, platY+cH*(i+0.5), 0.18*HEX_R);
 
     // ── HP bar ──
     const hpCv=document.createElement('canvas'); hpCv.width=128; hpCv.height=18;
@@ -2015,13 +2037,11 @@ function spawnCombatPlatform(x, z, hp, sc=1, coinMult=1){
     topMesh.position.y=h+0.05*sc; g.add(topMesh);
 
     // Coins on top
-    const cMat  = new THREE.MeshPhongMaterial({color:0xFFF066,shininess:120,specular:0xFFFFCC,emissive:0x443300,emissiveIntensity:0.15});
-    const cEdge = new THREE.MeshPhongMaterial({color:0xEECC33,shininess:80, specular:0xFFEE88});
     const cR2=0.10*sc, cH2=0.055*sc;
-    const cGeo=new THREE.CylinderGeometry(cR2,cR2,cH2,16);
+    const cGeoC=coinGeo(cR2,cH2);
     [[0,0],[0.18*R,-0.12*R],[-0.15*R,0.14*R],[0.12*R,0.20*R],[-0.20*R,-0.08*R]].forEach(([cx,cz],i)=>{
         for(let s=0;s<(i===0?3:1);s++){
-            const cm=new THREE.Mesh(cGeo,[cEdge,cMat,cEdge]);
+            const cm=new THREE.Mesh(cGeoC,coinMats());
             cm.position.set(cx+(Math.random()-.5)*0.03,h+0.11*sc+cH2*s,cz+(Math.random()-.5)*0.03);
             cm.rotation.y=Math.random()*Math.PI; cm.castShadow=true; cm.receiveShadow=true; g.add(cm);
         }
