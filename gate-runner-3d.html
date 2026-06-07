@@ -1087,8 +1087,8 @@ function beginTir(diffMult, coinMult){
     // Spawn wall
     const wallZ = tirFrozenPz + 10;
     const wallMat = new THREE.MeshLambertMaterial({map:makeTirWallTex(), side:THREE.FrontSide, depthWrite:true, transparent:false});
-    tirWall = new THREE.Mesh(new THREE.BoxGeometry(14, 12, 0.6), wallMat);
-    tirWall.position.set(0, 6.0, wallZ);
+    tirWall = new THREE.Mesh(new THREE.BoxGeometry(8.2, 7, 0.6), wallMat);
+    tirWall.position.set(0, 3.5, wallZ);
     scene.add(tirWall);
 
     document.getElementById('tir-hud').style.display='block';
