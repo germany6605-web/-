@@ -1621,8 +1621,8 @@ function killLootPlatform(lp){
     if(lp.loot.id==='coins'){
         // Stack of coins
         const cR=0.32, cH=0.11;
-        const coinMat  = new THREE.MeshLambertMaterial({color:0xFFEE55});
-        const coinEdge = new THREE.MeshLambertMaterial({color:0xDDAA22});
+        const coinMat  = new THREE.MeshPhongMaterial({color:0xFFF066,shininess:120,specular:0xFFFFCC,emissive:0x443300,emissiveIntensity:0.15});
+        const coinEdge = new THREE.MeshPhongMaterial({color:0xEECC33,shininess:80,specular:0xFFEE88});
         const coinGeo  = new THREE.CylinderGeometry(cR,cR,cH,20);
         const positions=[[0,0,0],[0.07,cH,0.04],[-0.05,cH*2,-0.03],[0.03,cH*3,0.02],
                          [0.05,cH*4,-0.04],[-0.04,cH*5,0.05],[0.01,cH*6,0]];
@@ -1909,10 +1909,10 @@ function spawnTarget(x, z, hp, sc){
     rim.rotation.x = Math.PI/2; rim.position.y = platY; g.add(rim);
 
     // ── 3D coin pile ──
-    const coinMat  = new THREE.MeshLambertMaterial({color:0xFFEE55});
-    const coinEdge = new THREE.MeshLambertMaterial({color:0xDDAA22});
+    const coinMat  = new THREE.MeshPhongMaterial({color:0xFFF066, shininess:120, specular:0xFFFFCC, emissive:0x443300, emissiveIntensity:0.15});
+    const coinEdge = new THREE.MeshPhongMaterial({color:0xEECC33, shininess:80,  specular:0xFFEE88});
     const cR = 0.11 + sc*0.04, cH = 0.052 + sc*0.012;
-    const coinGeo = new THREE.CylinderGeometry(cR, cR, cH, 12);
+    const coinGeo = new THREE.CylinderGeometry(cR, cR, cH, 16);
 
     // Scattered base layer
     const scatter=[
@@ -1925,7 +1925,7 @@ function spawnTarget(x, z, hp, sc){
         coin.position.set(cx*HEX_R*1.1, platY+cH/2, cz*HEX_R*1.1);
         coin.rotation.y=Math.random()*Math.PI;
         coin.rotation.z=(Math.random()-.5)*0.6;
-        coin.castShadow=true; g.add(coin);
+        coin.castShadow=true; coin.receiveShadow=true; g.add(coin);
     }
     // Central upright stack
     const stackH = 4 + Math.floor(sc*3);
@@ -1933,13 +1933,13 @@ function spawnTarget(x, z, hp, sc){
         const coin=new THREE.Mesh(coinGeo,[coinEdge,coinMat,coinEdge]);
         coin.position.set((Math.random()-.5)*0.06, platY + cH*(i+0.5), (Math.random()-.5)*0.06);
         coin.rotation.y=Math.random()*Math.PI;
-        coin.castShadow=true; g.add(coin);
+        coin.castShadow=true; coin.receiveShadow=true; g.add(coin);
     }
     // Second smaller stack
     for(let i=0;i<Math.max(2,stackH-2);i++){
         const coin=new THREE.Mesh(coinGeo,[coinEdge,coinMat,coinEdge]);
         coin.position.set(0.22*HEX_R, platY+cH*(i+0.5), 0.18*HEX_R);
-        coin.rotation.y=Math.random()*Math.PI; coin.castShadow=true; g.add(coin);
+        coin.rotation.y=Math.random()*Math.PI; coin.castShadow=true; coin.receiveShadow=true; g.add(coin);
     }
 
     // ── HP bar ──
@@ -2015,15 +2015,15 @@ function spawnCombatPlatform(x, z, hp, sc=1, coinMult=1){
     topMesh.position.y=h+0.05*sc; g.add(topMesh);
 
     // Coins on top
-    const cMat  = new THREE.MeshLambertMaterial({color:0xFFEE55});
-    const cEdge = new THREE.MeshLambertMaterial({color:0xDDAA22});
+    const cMat  = new THREE.MeshPhongMaterial({color:0xFFF066,shininess:120,specular:0xFFFFCC,emissive:0x443300,emissiveIntensity:0.15});
+    const cEdge = new THREE.MeshPhongMaterial({color:0xEECC33,shininess:80, specular:0xFFEE88});
     const cR2=0.10*sc, cH2=0.055*sc;
-    const cGeo=new THREE.CylinderGeometry(cR2,cR2,cH2,14);
+    const cGeo=new THREE.CylinderGeometry(cR2,cR2,cH2,16);
     [[0,0],[0.18*R,-0.12*R],[-0.15*R,0.14*R],[0.12*R,0.20*R],[-0.20*R,-0.08*R]].forEach(([cx,cz],i)=>{
         for(let s=0;s<(i===0?3:1);s++){
             const cm=new THREE.Mesh(cGeo,[cEdge,cMat,cEdge]);
             cm.position.set(cx+(Math.random()-.5)*0.03,h+0.11*sc+cH2*s,cz+(Math.random()-.5)*0.03);
-            cm.rotation.y=Math.random()*Math.PI; g.add(cm);
+            cm.rotation.y=Math.random()*Math.PI; cm.castShadow=true; cm.receiveShadow=true; g.add(cm);
         }
     });
 
