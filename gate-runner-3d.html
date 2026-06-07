@@ -760,7 +760,7 @@ function spawnGate(z, moving=false){
         panel.position.set(0,2.05,posZ); target.add(panel); meshes.push(panel);
         const iPlane=new THREE.Mesh(
             new THREE.PlaneGeometry(0.9,0.9),
-            new THREE.MeshBasicMaterial({map:makeIncTex(eff.incVal),transparent:true,side:THREE.DoubleSide,depthTest:false})
+            new THREE.MeshBasicMaterial({map:makeIncTex(eff.incVal),transparent:true,side:THREE.DoubleSide,depthTest:true})
         );
         iPlane.rotation.y=Math.PI;
         iPlane.position.set(0,4.9,posZ); target.add(iPlane); meshes.push(iPlane);
@@ -784,7 +784,7 @@ function spawnGate(z, moving=false){
         mesh.position.set(x,2.05,posZ); target.add(mesh); meshes.push(mesh);
         const iPlane=new THREE.Mesh(
             new THREE.PlaneGeometry(0.9,0.9),
-            new THREE.MeshBasicMaterial({map:makeIncTex(eff.incVal),transparent:true,side:THREE.DoubleSide,depthTest:false})
+            new THREE.MeshBasicMaterial({map:makeIncTex(eff.incVal),transparent:true,side:THREE.DoubleSide,depthTest:true})
         );
         iPlane.rotation.y=Math.PI;
         iPlane.position.set(x,4.9,posZ); target.add(iPlane); meshes.push(iPlane);
@@ -823,7 +823,7 @@ function spawnGateSide(side, z, eff){
     panel.rotation.y=Math.PI;
     panel.position.set(cx,2.05,z); gateGrp.add(panel); meshes.push(panel);
     // Increment sprite above panel
-    const iSpr=new THREE.Sprite(new THREE.SpriteMaterial({map:makeIncTex(eff.incVal),depthTest:false,transparent:true}));
+    const iSpr=new THREE.Sprite(new THREE.SpriteMaterial({map:makeIncTex(eff.incVal),depthTest:true,transparent:true}));
     iSpr.scale.set(0.9,0.9,1); iSpr.position.set(cx,5.1,z); gateGrp.add(iSpr); meshes.push(iSpr);
 
     const mkPole=(x)=>{
@@ -935,7 +935,7 @@ function makeSideCover(type, xCenter, z, gate){
     const hpCv=document.createElement('canvas'); hpCv.width=256; hpCv.height=20;
     const hpCtx=hpCv.getContext('2d');
     const hpTex=new THREE.CanvasTexture(hpCv);
-    const hpSpr=new THREE.Sprite(new THREE.SpriteMaterial({map:hpTex,depthTest:false,transparent:true}));
+    const hpSpr=new THREE.Sprite(new THREE.SpriteMaterial({map:hpTex,depthTest:true,transparent:true}));
     hpSpr.scale.set(1.8,0.28,1); hpSpr.position.set(xCenter,H+0.40,z-0.1);
     gateGrp.add(hpSpr); gate.meshes.push(hpSpr);
 
@@ -947,7 +947,7 @@ function makeSideCover(type, xCenter, z, gate){
     lCtx.fillStyle='#fff'; lCtx.shadowColor='#000'; lCtx.shadowBlur=5;
     lCtx.fillText(cfg.name,128,22);
     const lTex=new THREE.CanvasTexture(lCv);
-    const lSpr=new THREE.Sprite(new THREE.SpriteMaterial({map:lTex,depthTest:false,transparent:true}));
+    const lSpr=new THREE.Sprite(new THREE.SpriteMaterial({map:lTex,depthTest:true,transparent:true}));
     lSpr.scale.set(1.8,0.52,1); lSpr.position.set(xCenter,H+1.0,z-0.1);
     gateGrp.add(lSpr); gate.meshes.push(lSpr);
 
@@ -1032,7 +1032,7 @@ function spawnTirZone(z){
     lx.fillStyle='#FFFFFF'; lx.shadowColor='#4488FF'; lx.shadowBlur=10;
     lx.fillText('🎯 ТИР', 128, 32);
     const lTex=new THREE.CanvasTexture(lCv);
-    const labelSpr=new THREE.Sprite(new THREE.SpriteMaterial({map:lTex,depthTest:false,transparent:true}));
+    const labelSpr=new THREE.Sprite(new THREE.SpriteMaterial({map:lTex,depthTest:true,transparent:true}));
     labelSpr.position.set(0,3.5,z); labelSpr.scale.set(4,1,1);
     scene.add(labelSpr);
 
@@ -1450,7 +1450,7 @@ function spawnMob(x, z){
     const hpCv=document.createElement('canvas'); hpCv.width=64; hpCv.height=12;
     const hpCtx=hpCv.getContext('2d');
     const hpTex=new THREE.CanvasTexture(hpCv);
-    const hpSpr=new THREE.Sprite(new THREE.SpriteMaterial({map:hpTex,depthTest:false,transparent:true}));
+    const hpSpr=new THREE.Sprite(new THREE.SpriteMaterial({map:hpTex,depthTest:true,transparent:true}));
     hpSpr.position.set(0,2.1*S,0); hpSpr.scale.set(1.4,0.28,1); g.add(hpSpr);
 
     g.position.set(x,0,z); scene.add(g);
@@ -1470,7 +1470,7 @@ function spawnMob(x, z){
     lCtx.fillText('🪙 '+reward,64,20);
     const labelTex=new THREE.CanvasTexture(labelCv);
     labelTex.anisotropy=renderer.capabilities.getMaxAnisotropy();
-    const labelSpr=new THREE.Sprite(new THREE.SpriteMaterial({map:labelTex,depthTest:false,transparent:true}));
+    const labelSpr=new THREE.Sprite(new THREE.SpriteMaterial({map:labelTex,depthTest:true,transparent:true}));
     labelSpr.position.set(0,2.7*S,0); labelSpr.scale.set(1.8,0.55,1);
     g.add(labelSpr); mob.labelSpr=labelSpr;
 
@@ -1596,7 +1596,7 @@ function spawnLootPlatform(x, z, combatScale, forceLoot){
 
     // Spinning card above platform
     const cardTex = makeSpinCardTex(loot);
-    const cardMat = new THREE.MeshBasicMaterial({map:cardTex, transparent:true, side:THREE.DoubleSide, depthTest:false});
+    const cardMat = new THREE.MeshBasicMaterial({map:cardTex, transparent:true, side:THREE.DoubleSide, depthTest:true});
     const cardMesh = new THREE.Mesh(new THREE.PlaneGeometry(0.9*sc, 1.2*sc), cardMat);
     cardMesh.position.y = h + 1.0*sc;
     g.add(cardMesh);
@@ -1605,7 +1605,7 @@ function spawnLootPlatform(x, z, combatScale, forceLoot){
     const hpCv=document.createElement('canvas'); hpCv.width=96; hpCv.height=14;
     const hpCtx=hpCv.getContext('2d');
     const hpTex=new THREE.CanvasTexture(hpCv);
-    const hpSpr=new THREE.Sprite(new THREE.SpriteMaterial({map:hpTex,depthTest:false,transparent:true}));
+    const hpSpr=new THREE.Sprite(new THREE.SpriteMaterial({map:hpTex,depthTest:true,transparent:true}));
     hpSpr.position.set(0, h+1.5*sc, 0); hpSpr.scale.set(1.4*sc, 0.28*sc, 1); g.add(hpSpr);
 
     g.position.set(x,0,z); scene.add(g);
@@ -1659,7 +1659,7 @@ function spawnCoinPile(x, z, reward){
     lx.fillStyle='#FFD700'; lx.shadowColor='rgba(0,0,0,0.9)'; lx.shadowBlur=6;
     lx.fillText(`+${reward} МОНЕТ`, 80, 24);
     const lTex=new THREE.CanvasTexture(lCv); lTex.anisotropy=renderer.capabilities.getMaxAnisotropy();
-    const lSpr=new THREE.Sprite(new THREE.SpriteMaterial({map:lTex,depthTest:false,transparent:true}));
+    const lSpr=new THREE.Sprite(new THREE.SpriteMaterial({map:lTex,depthTest:true,transparent:true}));
     lSpr.position.set(0,1.2,0); lSpr.scale.set(2.2,0.66,1); pickup.add(lSpr);
     // Use coins loot so applyPickup gives money
     const loot={id:'coins',label:'🪙 МОНЕТЫ',color:'#FFD700',_reward:reward};
@@ -1746,7 +1746,7 @@ function killLootPlatform(lp){
         const tex=new THREE.CanvasTexture(cv); tex.anisotropy=renderer.capabilities.getMaxAnisotropy();
 
         // Card as Sprite — always faces camera, large size
-        const card=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,transparent:true,depthTest:false}));
+        const card=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,transparent:true,depthTest:true}));
         card.position.y=1.1; card.scale.set(1.4,1.85,1); pickup.add(card);
 
         // Glow ring at base
@@ -1828,7 +1828,7 @@ function spawnWeaponPlatform(z){
     lx.font='bold 26px Arial'; lx.fillStyle='#FFF';
     lx.fillText(WEP_ICONS[nextLv]+' '+wep.name, 128, 48);
     const lTex=new THREE.CanvasTexture(lCv); lTex.anisotropy=renderer.capabilities.getMaxAnisotropy();
-    const lSpr=new THREE.Sprite(new THREE.SpriteMaterial({map:lTex,depthTest:false,transparent:true}));
+    const lSpr=new THREE.Sprite(new THREE.SpriteMaterial({map:lTex,depthTest:true,transparent:true}));
     lSpr.position.set(0,h+1.1,0); lSpr.scale.set(4.0,1.0,1); g.add(lSpr);
 
     g.position.set(0,0,z); scene.add(g);
@@ -1870,7 +1870,7 @@ function spawnTrophyCup(z){
     lx.fillStyle='#FFD700'; lx.shadowColor='rgba(0,0,0,.9)'; lx.shadowBlur=8;
     lx.fillText('🏆 КУБОК', 128, 32);
     const lTex=new THREE.CanvasTexture(lCv);
-    const lSpr=new THREE.Sprite(new THREE.SpriteMaterial({map:lTex,depthTest:false,transparent:true}));
+    const lSpr=new THREE.Sprite(new THREE.SpriteMaterial({map:lTex,depthTest:true,transparent:true}));
     lSpr.position.set(0,3.8,0); lSpr.scale.set(3.2,0.8,1); g.add(lSpr);
 
     g.position.set(0,0,z); scene.add(g);
@@ -2094,7 +2094,7 @@ function spawnTarget(x, z, hp, sc){
     const hpCv=document.createElement('canvas'); hpCv.width=128; hpCv.height=18;
     const hpCtx=hpCv.getContext('2d');
     const hpTex=new THREE.CanvasTexture(hpCv);
-    const hpSpr=new THREE.Sprite(new THREE.SpriteMaterial({map:hpTex,depthTest:false,transparent:true}));
+    const hpSpr=new THREE.Sprite(new THREE.SpriteMaterial({map:hpTex,depthTest:true,transparent:true}));
     hpSpr.position.set(0, platY + 1.0, 0);
     hpSpr.scale.set(1.2, 0.26, 1);
     g.add(hpSpr);
@@ -2198,7 +2198,7 @@ function spawnCombatPlatform(x, z, hp, sc=1, coinMult=1){
     const hpCv=document.createElement('canvas'); hpCv.width=64; hpCv.height=8;
     const hpCtx=hpCv.getContext('2d');
     const hpTex2=new THREE.CanvasTexture(hpCv);
-    const hpSpr=new THREE.Sprite(new THREE.SpriteMaterial({map:hpTex2,depthTest:false,transparent:true}));
+    const hpSpr=new THREE.Sprite(new THREE.SpriteMaterial({map:hpTex2,depthTest:true,transparent:true}));
     hpSpr.position.set(0,h+0.40*sc,0); hpSpr.scale.set(0.9*sc,0.22*sc,1); g.add(hpSpr);
 
     g.position.set(x,0,z); scene.add(g);
@@ -2233,7 +2233,7 @@ function spawnMultiplierPlatform(x, z, mult){
     lctx.textAlign='center'; lctx.textBaseline='middle';
     lctx.fillText(`×${mult}`,32,12);
     const lTex=new THREE.CanvasTexture(labelCv);
-    const lSpr=new THREE.Sprite(new THREE.SpriteMaterial({map:lTex,depthTest:false,transparent:true}));
+    const lSpr=new THREE.Sprite(new THREE.SpriteMaterial({map:lTex,depthTest:true,transparent:true}));
     lSpr.position.set(0,h+0.65,0); lSpr.scale.set(0.9,0.35,1); g.add(lSpr);
 
     g.position.set(x,0,z); scene.add(g);
@@ -2243,7 +2243,7 @@ function spawnMultiplierPlatform(x, z, mult){
     const hpCv=document.createElement('canvas'); hpCv.width=64; hpCv.height=8;
     const hpCtx=hpCv.getContext('2d');
     const hpTex2=new THREE.CanvasTexture(hpCv);
-    const hpSpr=new THREE.Sprite(new THREE.SpriteMaterial({map:hpTex2,depthTest:false,transparent:true}));
+    const hpSpr=new THREE.Sprite(new THREE.SpriteMaterial({map:hpTex2,depthTest:true,transparent:true}));
     hpSpr.position.set(0,h+0.36,0); hpSpr.scale.set(0.9,0.22,1); g.add(hpSpr);
 
     const maxHp=hp;
