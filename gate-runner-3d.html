@@ -1966,6 +1966,27 @@ function makeStoneSideTex(){
     return t;
 }
 
+function makeGrayStoneTex(){
+    const W=256, H=256;
+    const cv=document.createElement('canvas'); cv.width=W; cv.height=H;
+    const ctx=cv.getContext('2d');
+    const g=ctx.createLinearGradient(0,0,0,H);
+    g.addColorStop(0,'#E8E8E8'); g.addColorStop(0.5,'#C8C8C8'); g.addColorStop(1,'#A0A0A0');
+    ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+    const hi=ctx.createLinearGradient(0,0,W,0);
+    hi.addColorStop(0,'rgba(255,255,255,0.30)'); hi.addColorStop(0.4,'rgba(255,255,255,0.12)'); hi.addColorStop(1,'rgba(255,255,255,0)');
+    ctx.fillStyle=hi; ctx.fillRect(0,0,W,H);
+    ctx.strokeStyle='rgba(80,80,80,0.45)'; ctx.lineWidth=5;
+    for(let y=40;y<H;y+=40){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
+    for(let row=0;row<H/40;row++){
+        const offset=row%2===0?0:52;
+        for(let x=offset;x<W+52;x+=104){
+            ctx.beginPath(); ctx.moveTo(x,row*40); ctx.lineTo(x,(row+1)*40); ctx.stroke();
+        }
+    }
+    const t=new THREE.CanvasTexture(cv); t.anisotropy=renderer.capabilities.getMaxAnisotropy(); return t;
+}
+
 function spawnTarget(x, z, hp, sc){
     const g=new THREE.Group();
 
@@ -1974,9 +1995,9 @@ function spawnTarget(x, z, hp, sc){
     const h2 = 0.20 + sc*0.40;   // top tier height
     const platY = h1 + h2;        // surface y
 
-    const sideTex  = makeStoneSideTex();
+    const sideTex  = makeGrayStoneTex();
     const stoneMat = new THREE.MeshLambertMaterial({map:sideTex});
-    const darkMat  = new THREE.MeshLambertMaterial({map:sideTex, color:0xBBAA88});
+    const darkMat  = new THREE.MeshLambertMaterial({map:sideTex, color:0xCCCCCC});
     const topMat   = new THREE.MeshLambertMaterial({map:makeTargetTopTex(hp)});
     const rimMat   = new THREE.MeshLambertMaterial({color:0xAA9966});
 
