@@ -2014,10 +2014,18 @@ function spawnCombatPlatform(x, z, hp, sc=1, coinMult=1){
         [yMat, new THREE.MeshLambertMaterial({map:topTex}), yMat]);
     topMesh.position.y=h+0.05*sc; g.add(topMesh);
 
-    // Bill on top
-    const billMat=new THREE.MeshLambertMaterial({color:0x2DBF4E});
-    const bill=new THREE.Mesh(new THREE.BoxGeometry(R*1.1,0.08*sc,R*0.85),billMat);
-    bill.position.y=h+0.14*sc; bill.rotation.y=Math.random()*0.5; g.add(bill);
+    // Coins on top
+    const cMat  = new THREE.MeshLambertMaterial({color:0xFFEE55});
+    const cEdge = new THREE.MeshLambertMaterial({color:0xDDAA22});
+    const cR2=0.10*sc, cH2=0.055*sc;
+    const cGeo=new THREE.CylinderGeometry(cR2,cR2,cH2,14);
+    [[0,0],[0.18*R,-0.12*R],[-0.15*R,0.14*R],[0.12*R,0.20*R],[-0.20*R,-0.08*R]].forEach(([cx,cz],i)=>{
+        for(let s=0;s<(i===0?3:1);s++){
+            const cm=new THREE.Mesh(cGeo,[cEdge,cMat,cEdge]);
+            cm.position.set(cx+(Math.random()-.5)*0.03,h+0.11*sc+cH2*s,cz+(Math.random()-.5)*0.03);
+            cm.rotation.y=Math.random()*Math.PI; g.add(cm);
+        }
+    });
 
     // HP bar sprite
     const hpCv=document.createElement('canvas'); hpCv.width=64; hpCv.height=8;
