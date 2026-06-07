@@ -1907,8 +1907,8 @@ function getCoinFaceTex(){
 
 // Returns [edgeMat, faceMat, edgeMat] for a coin
 function coinMats(){
-    const face=new THREE.MeshPhongMaterial({map:getCoinFaceTex(),shininess:220,specular:0xFFFFAA,emissive:0x994400,emissiveIntensity:0.6});
-    const edge=new THREE.MeshPhongMaterial({color:0xDD5500,shininess:160,specular:0xFF9900,emissive:0x882200,emissiveIntensity:0.65});
+    const face=new THREE.MeshPhongMaterial({map:getCoinFaceTex(),shininess:220,specular:0xFFFFAA,emissive:0x331100,emissiveIntensity:0.2});
+    const edge=new THREE.MeshPhongMaterial({color:0xDD5500,shininess:160,specular:0xFF9900,emissive:0x220800,emissiveIntensity:0.2});
     return [edge,face,edge];
 }
 function coinGeo(r,h){ return new THREE.CylinderGeometry(r,r,h,32); }
@@ -2047,7 +2047,7 @@ function spawnTarget(x, z, hp, sc){
     rim.rotation.x = Math.PI/2; rim.position.y = platY; g.add(rim);
 
     // ── 3D coin pile ──
-    const cR = (0.15 + sc*0.055)*1.3, cH = (0.065 + sc*0.015)*1.2;
+    const cR = 0.13 + sc*0.02, cH = 0.06 + sc*0.008;
     const cGeoT = coinGeo(cR,cH);
     const addCoin=(px,py,pz,rz=0)=>{
         const m=new THREE.Mesh(cGeoT,coinMats());
