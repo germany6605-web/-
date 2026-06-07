@@ -1827,37 +1827,39 @@ function getCoinFaceTex(){
     const S=128;
     const cv=document.createElement('canvas'); cv.width=S; cv.height=S;
     const c=cv.getContext('2d');
-    // Gold radial gradient
-    const g=c.createRadialGradient(S*0.38,S*0.35,2,S/2,S/2,S/2);
-    g.addColorStop(0,'#FFFAAA'); g.addColorStop(0.35,'#FFE033');
-    g.addColorStop(0.7,'#FFAA00'); g.addColorStop(1,'#CC7700');
+    // Bright orange-gold radial gradient
+    const g=c.createRadialGradient(S*0.36,S*0.32,1,S/2,S/2,S/2);
+    g.addColorStop(0,'#FFE566'); g.addColorStop(0.4,'#FFB800');
+    g.addColorStop(0.75,'#E07800'); g.addColorStop(1,'#A05000');
     c.fillStyle=g; c.beginPath(); c.arc(S/2,S/2,S/2-1,0,Math.PI*2); c.fill();
-    // Outer rim
-    c.strokeStyle='#BB6600'; c.lineWidth=5;
-    c.beginPath(); c.arc(S/2,S/2,S/2-3,0,Math.PI*2); c.stroke();
-    // Inner rim
-    c.strokeStyle='rgba(255,240,100,0.6)'; c.lineWidth=3;
-    c.beginPath(); c.arc(S/2,S/2,S/2-10,0,Math.PI*2); c.stroke();
-    // Symbol — stylized ₿ or star
-    c.fillStyle='rgba(150,70,0,0.55)';
-    c.font=`bold ${Math.round(S*0.52)}px Arial`;
-    c.textAlign='center'; c.textBaseline='middle';
-    c.shadowColor='rgba(80,30,0,0.4)'; c.shadowBlur=4;
-    c.fillText('$',S/2+1,S/2+2);
-    c.shadowBlur=0;
-    // Shine highlight
-    const sh=c.createRadialGradient(S*0.3,S*0.28,0,S*0.38,S*0.35,S*0.32);
-    sh.addColorStop(0,'rgba(255,255,255,0.55)'); sh.addColorStop(1,'rgba(255,255,255,0)');
+    // Dark outer rim
+    c.strokeStyle='#7A3800'; c.lineWidth=7;
+    c.beginPath(); c.arc(S/2,S/2,S/2-4,0,Math.PI*2); c.stroke();
+    // Inner circle border
+    c.strokeStyle='rgba(255,220,80,0.6)'; c.lineWidth=4;
+    c.beginPath(); c.arc(S/2,S/2,S/2-15,0,Math.PI*2); c.stroke();
+    // Coin emblem — circle with center dot
+    c.fillStyle='rgba(100,40,0,0.4)';
+    c.beginPath(); c.arc(S/2,S/2,20,0,Math.PI*2); c.fill();
+    c.strokeStyle='rgba(255,210,80,0.65)'; c.lineWidth=3;
+    c.beginPath(); c.arc(S/2,S/2,20,0,Math.PI*2); c.stroke();
+    c.fillStyle='rgba(100,40,0,0.5)';
+    c.beginPath(); c.arc(S/2,S/2,7,0,Math.PI*2); c.fill();
+    // Bright shine top-left
+    const sh=c.createRadialGradient(S*0.27,S*0.24,1,S*0.34,S*0.31,S*0.36);
+    sh.addColorStop(0,'rgba(255,255,255,0.80)');
+    sh.addColorStop(0.45,'rgba(255,255,220,0.30)');
+    sh.addColorStop(1,'rgba(255,255,255,0)');
     c.fillStyle=sh; c.beginPath(); c.arc(S/2,S/2,S/2-1,0,Math.PI*2); c.fill();
     _coinFaceTex=new THREE.CanvasTexture(cv);
     _coinFaceTex.anisotropy=renderer.capabilities.getMaxAnisotropy();
     return _coinFaceTex;
 }
 
-// Returns [edgeMat, faceMat] for a coin
+// Returns [edgeMat, faceMat, edgeMat] for a coin
 function coinMats(){
-    const face=new THREE.MeshPhongMaterial({map:getCoinFaceTex(),shininess:150,specular:0xFFFFDD});
-    const edge=new THREE.MeshPhongMaterial({color:0xFFAA00,shininess:100,specular:0xFFDD88,emissive:0x331800,emissiveIntensity:0.2});
+    const face=new THREE.MeshPhongMaterial({map:getCoinFaceTex(),shininess:160,specular:0xFFEEBB});
+    const edge=new THREE.MeshPhongMaterial({color:0xDD8800,shininess:120,specular:0xFFCC66,emissive:0x3A1800,emissiveIntensity:0.25});
     return [edge,face,edge];
 }
 function coinGeo(r,h){ return new THREE.CylinderGeometry(r,r,h,28); }
