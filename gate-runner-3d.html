@@ -1803,8 +1803,10 @@ function makeWepPlatTex(wep){
 }
 
 function spawnWeaponPlatform(z){
-    const nextLv = Math.min(WEPS.length-1, level+1);
-    if(nextLv<2 || ownedWeapons.has(nextLv)){ return; }
+    // Find the next weapon not yet owned, strictly in order
+    let nextLv = 2;
+    while(nextLv < WEPS.length && ownedWeapons.has(nextLv)) nextLv++;
+    if(nextLv >= WEPS.length) return; // all weapons owned
     const wep = WEPS[nextLv];
     const g = new THREE.Group();
     const R=1.3, h=2.5;
