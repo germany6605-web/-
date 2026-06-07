@@ -1563,7 +1563,7 @@ function spawnLootPlatform(x, z, combatScale, forceLoot){
     const R=1.1*sc, h=1.6*sc;   // bigger platform
 
     // Hex base
-    const stoneTex=makeStoneSideTex();
+    const stoneTex=makeGrayStoneTex();
     const base=new THREE.Mesh(new THREE.CylinderGeometry(R,R*1.1,h,6),
         new THREE.MeshLambertMaterial({map:stoneTex}));
     base.position.y=h/2; base.castShadow=true; g.add(base);
@@ -1784,7 +1784,7 @@ function spawnWeaponPlatform(z){
     const g = new THREE.Group();
     const R=1.3, h=2.5;
 
-    const stoneTex = makeStoneSideTex();
+    const stoneTex = makeGrayStoneTex();
     const base=new THREE.Mesh(new THREE.CylinderGeometry(R,R*1.1,h,6),
         new THREE.MeshLambertMaterial({map:stoneTex}));
     base.position.y=h/2; base.castShadow=true; g.add(base);
