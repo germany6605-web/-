@@ -1924,13 +1924,30 @@ function makeTargetTopTex(hp){
         ctx.beginPath(); ctx.arc(cx,cy,rg.r,0,Math.PI*2);
         ctx.strokeStyle=rg.c; ctx.lineWidth=rg.w; ctx.stroke();
     }
-    // Coin symbols
-    ctx.font='bold 72px Arial'; ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillStyle='rgba(150,90,0,.55)'; ctx.fillText('🪙',cx,cy);
+    // Draw cartoon coins on surface
+    function drawCoin(x,y,cr){
+        const g2=ctx.createRadialGradient(x-cr*0.3,y-cr*0.3,cr*0.05,x,y,cr);
+        g2.addColorStop(0,'#FFFFFF'); g2.addColorStop(0.18,'#FFEE66');
+        g2.addColorStop(0.5,'#FFB800'); g2.addColorStop(0.82,'#FF8800'); g2.addColorStop(1,'#BB4400');
+        ctx.fillStyle=g2; ctx.beginPath(); ctx.arc(x,y,cr,0,Math.PI*2); ctx.fill();
+        ctx.strokeStyle='#7A3800'; ctx.lineWidth=cr*0.12;
+        ctx.beginPath(); ctx.arc(x,y,cr-ctx.lineWidth/2,0,Math.PI*2); ctx.stroke();
+        ctx.strokeStyle='rgba(255,220,80,0.55)'; ctx.lineWidth=cr*0.07;
+        ctx.beginPath(); ctx.arc(x,y,cr*0.72,0,Math.PI*2); ctx.stroke();
+        ctx.fillStyle='rgba(100,40,0,0.4)';
+        ctx.beginPath(); ctx.arc(x,y,cr*0.28,0,Math.PI*2); ctx.fill();
+        const sh2=ctx.createRadialGradient(x-cr*0.3,y-cr*0.32,cr*0.02,x-cr*0.18,y-cr*0.2,cr*0.45);
+        sh2.addColorStop(0,'rgba(255,255,255,0.80)'); sh2.addColorStop(1,'rgba(255,255,255,0)');
+        ctx.fillStyle=sh2; ctx.beginPath(); ctx.arc(x,y,cr,0,Math.PI*2); ctx.fill();
+    }
+    drawCoin(cx-r*0.32, cy-r*0.28, r*0.28);
+    drawCoin(cx+r*0.30, cy-r*0.22, r*0.24);
+    drawCoin(cx,        cy+r*0.30, r*0.26);
     // HP label
     const label = hp>=1e6 ? (hp/1e6).toFixed(1)+'M' : hp>=1000 ? (hp/1000).toFixed(1)+'K' : String(hp);
     ctx.font=`bold ${label.length>5?56:72}px Arial`;
     ctx.fillStyle='#fff'; ctx.shadowColor='rgba(0,0,0,.7)'; ctx.shadowBlur=8;
+    ctx.textAlign='center'; ctx.textBaseline='middle';
     ctx.fillText(label, cx, cy+12);
     ctx.shadowBlur=0;
     const t=new THREE.CanvasTexture(cv);
