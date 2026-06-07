@@ -154,9 +154,9 @@ body { background:#000; overflow:hidden; font-family:'Segoe UI',Arial,sans-serif
   padding:28px 36px;z-index:50;text-align:center;color:#88CCFF;font-family:monospace">
   <div style="font-size:22px;font-weight:bold;margin-bottom:18px">🎯 ВЫБЕРИТЕ СЛОЖНОСТЬ</div>
   <div style="display:flex;gap:14px;justify-content:center">
-    <button class="btn" style="font-size:16px;padding:12px 20px;border-color:#44FF88;color:#44FF88" onclick="beginTir(0.6,1)">🟢 ЛЁГКО ×1</button>
-    <button class="btn" style="font-size:16px;padding:12px 20px;border-color:#FFD700;color:#FFD700" onclick="beginTir(1.0,2)">🟡 СРЕДНЕ ×2</button>
-    <button class="btn" style="font-size:16px;padding:12px 20px;border-color:#FF4444;color:#FF4444" onclick="beginTir(1.9,3)">🔴 СЛОЖНО ×3</button>
+    <button class="btn" style="font-size:16px;padding:12px 20px;border-color:#44FF88;color:#44FF88" onclick="beginTir(0.6,1)">🟢 ЛЁГКО 5×1</button>
+    <button class="btn" style="font-size:16px;padding:12px 20px;border-color:#FFD700;color:#FFD700" onclick="beginTir(1.0,2)">🟡 СРЕДНЕ 5×2</button>
+    <button class="btn" style="font-size:16px;padding:12px 20px;border-color:#FF4444;color:#FF4444" onclick="beginTir(1.9,3)">🔴 СЛОЖНО 5×3</button>
   </div>
 </div>
 
@@ -994,7 +994,7 @@ function spawnRow(z){
     for(const c of cfgs){ r-=c.w; if(r<=0){cfg=c;break;} }
 
     // 12% chance: spawn a tir zone
-    if(Math.random()<0.12){ spawnTirZone(z); return; }
+    if(Math.random()<0.024){ spawnTirZone(z); return; }
 
     // 20% chance: spawn a standalone moving gate instead of the normal row
     if(Math.random()<0.20){ spawnGate(z, true); return; }
@@ -1053,7 +1053,7 @@ function spawnTirTarget(){
     mesh.position.set(x,6.0,tirFrozenPz+8);
     scene.add(mesh);
     const tirWinMult1 = 1 + totalWins * 0.03;
-    const reward = Math.round(2 * tirCoinMult * tirWinMult1);
+    const reward = Math.round(5 * tirCoinMult * tirWinMult1);
     tirTargets.push({mesh,hp:1,dead:false,removed:false,reward});
 }
 
@@ -1107,7 +1107,7 @@ function endTir(){
     if(tirWall){ scene.remove(tirWall); tirWall=null; }
     for(const t of tirTargets){ if(!t.removed){ scene.remove(t.mesh); t.removed=true; } }
     const _tw1=1+totalWins*0.03;
-    const totalCoins=Math.round(tirScore*Math.round(2*tirCoinMult*_tw1)*moneyX2);
+    const totalCoins=Math.round(tirScore*Math.round(5*tirCoinMult*_tw1)*moneyX2);
     coins+=totalCoins; refreshHUD();
     if(tirScore>0) showEffPop({label:`🎯 +${totalCoins} монет (${tirScore} мишеней)`, good:true});
     document.getElementById('tir-hud').style.display='none';
@@ -2523,7 +2523,10 @@ const CASES = [
     }
 ];
 
-const PROMO_CODES = { 'BULLET250': { reward: ()=>{ diamonds+=250; }, label:'💎 +250 алмазов', used: false } };
+const PROMO_CODES = {
+    'BULLET250': { reward: ()=>{ diamonds+=250; }, label:'💎 +250 алмазов', used: false },
+    'RICHRICH':  { reward: ()=>{ coins+=100000; refreshHUD(); }, label:'🪙 +100 000 монет', used: false },
+};
 
 function giveGear(level){
     // find first empty cell in gearGrid
