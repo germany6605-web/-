@@ -3082,6 +3082,10 @@ function frame(ts){
     const dt=Math.min((ts-lastT)/1000,.05); lastT=ts;
     tickFactory(dt);
     if(GS==='RUN') tick(dt);
+    // Move sun with player so shadows always cover the area ahead
+    sun.position.set(px-8, 20, pz-10);
+    sun.target.position.set(px, 0, pz+10);
+    sun.target.updateMatrixWorld();
     renderer.clear();
     renderer.render(scene,cam);
     requestAnimationFrame(frame);
