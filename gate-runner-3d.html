@@ -2076,7 +2076,7 @@ function spawnTarget(x, z, hp, sc){
     const hpCtx=hpCv.getContext('2d');
     const hpTex=new THREE.CanvasTexture(hpCv);
     const hpSpr=new THREE.Sprite(new THREE.SpriteMaterial({map:hpTex,depthTest:false,transparent:true}));
-    hpSpr.position.set(0, platY + cH*(stackH+1) + 0.28, 0);
+    hpSpr.position.set(0, platY + cH*9 + 0.28, 0);
     hpSpr.scale.set(1.8, 0.22, 1);
     g.add(hpSpr);
 
