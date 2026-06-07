@@ -909,6 +909,8 @@ function makeBarricadeTex(type){
 }
 
 function drawCoverHP(cov){
+    if(cov.hp>=cov.maxHp){ cov.hpSpr.visible=false; return; }
+    cov.hpSpr.visible=true;
     const pct=Math.max(0,cov.hp/cov.maxHp);
     const cv=cov.hpCv, x=cov.hpCtx; cv.width=256; cv.height=20;
     x.clearRect(0,0,256,20);
@@ -1476,6 +1478,8 @@ function spawnMob(x, z){
 }
 
 function drawMobHP(m){
+    if(m.hp>=m.maxHp){ m.hpSpr.visible=false; return; }
+    m.hpSpr.visible=true;
     const c=m.hpCv, x=m.hpCtx; c.width=128; c.height=28;
     const r=Math.max(0,m.hp/m.maxHp);
     x.clearRect(0,0,128,28);
@@ -1614,6 +1618,8 @@ function spawnLootPlatform(x, z, combatScale, forceLoot){
 }
 
 function drawLootHP(lp){
+    if(lp.hp>=lp.maxHp){ lp.hpSpr.visible=false; return; }
+    lp.hpSpr.visible=true;
     const c=lp.hpCv, x=lp.hpCtx; c.width=192; c.height=32;
     const r=Math.max(0,lp.hp/lp.maxHp);
     x.clearRect(0,0,192,32);
@@ -2101,6 +2107,8 @@ function spawnTarget(x, z, hp, sc){
 }
 
 function drawEHP(e){
+    if(e.hp>=e.maxHp){ e.hpSpr.visible=false; return; }
+    e.hpSpr.visible=true;
     const c=e.hpCv,x=e.hpCtx; c.width=256; c.height=36;
     const r=Math.max(0,e.hp/e.maxHp);
     x.clearRect(0,0,256,36);
