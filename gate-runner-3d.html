@@ -1481,7 +1481,7 @@ const LOOT_TYPES=[
     {id:'triple',  label:'ТРОЙНОЙ ВЫСТРЕЛ', icon:'💥', color:'#FF8800', good:true},
     {id:'dmgx2',   label:'×2 УРОН',    icon:'⚔️',  color:'#FF2222', good:true},
     {id:'moneyx2', label:'×2 ДЕНЬГИ',  icon:'💰',  color:'#FFD700', good:true},
-    {id:'coins',   label:'🪙 МОНЕТЫ',   icon:'🪙',  color:'#FFD700', good:true},
+    {id:'coins',   label:'МОНЕТЫ',   icon:'🪙',  color:'#FFD700', good:true},
 ];
 
 function makeSpinCardTex(loot){
@@ -1638,7 +1638,7 @@ function spawnCoinPile(x, z, reward){
     const lx=lCv.getContext('2d');
     lx.font='bold 24px Arial'; lx.textAlign='center'; lx.textBaseline='middle';
     lx.fillStyle='#FFD700'; lx.shadowColor='rgba(0,0,0,0.9)'; lx.shadowBlur=6;
-    lx.fillText(`🪙 +${reward}`, 80, 24);
+    lx.fillText(`+${reward} МОНЕТ`, 80, 24);
     const lTex=new THREE.CanvasTexture(lCv); lTex.anisotropy=renderer.capabilities.getMaxAnisotropy();
     const lSpr=new THREE.Sprite(new THREE.SpriteMaterial({map:lTex,depthTest:false,transparent:true}));
     lSpr.position.set(0,1.2,0); lSpr.scale.set(2.2,0.66,1); pickup.add(lSpr);
