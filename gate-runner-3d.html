@@ -1928,21 +1928,31 @@ function makeTargetTopTex(hp){
         ctx.beginPath(); ctx.arc(cx,cy,rg.r,0,Math.PI*2);
         ctx.strokeStyle=rg.c; ctx.lineWidth=rg.w; ctx.stroke();
     }
-    // Draw cartoon coins on surface
+    // Draw cartoon coins on surface — same style as 3D coins
     function drawCoin(x,y,cr){
-        const g2=ctx.createRadialGradient(x-cr*0.3,y-cr*0.3,cr*0.05,x,y,cr);
-        g2.addColorStop(0,'#FFFFFF'); g2.addColorStop(0.18,'#FFEE66');
-        g2.addColorStop(0.5,'#FFB800'); g2.addColorStop(0.82,'#FF8800'); g2.addColorStop(1,'#BB4400');
-        ctx.fillStyle=g2; ctx.beginPath(); ctx.arc(x,y,cr,0,Math.PI*2); ctx.fill();
-        ctx.strokeStyle='#7A3800'; ctx.lineWidth=cr*0.12;
+        ctx.save(); ctx.beginPath(); ctx.arc(x,y,cr,0,Math.PI*2); ctx.clip();
+        const g2=ctx.createRadialGradient(x,y,0,x,y,cr);
+        g2.addColorStop(0,'#FFF3A0'); g2.addColorStop(0.3,'#FFD000');
+        g2.addColorStop(0.6,'#FF8C00'); g2.addColorStop(0.85,'#E05000'); g2.addColorStop(1,'#993300');
+        ctx.fillStyle=g2; ctx.fillRect(x-cr,y-cr,cr*2,cr*2);
+        ctx.restore();
+        // Dark rim
+        ctx.strokeStyle='#5A1A00'; ctx.lineWidth=cr*0.13;
         ctx.beginPath(); ctx.arc(x,y,cr-ctx.lineWidth/2,0,Math.PI*2); ctx.stroke();
-        ctx.strokeStyle='rgba(255,220,80,0.55)'; ctx.lineWidth=cr*0.07;
-        ctx.beginPath(); ctx.arc(x,y,cr*0.72,0,Math.PI*2); ctx.stroke();
-        ctx.fillStyle='rgba(100,40,0,0.4)';
-        ctx.beginPath(); ctx.arc(x,y,cr*0.28,0,Math.PI*2); ctx.fill();
-        const sh2=ctx.createRadialGradient(x-cr*0.3,y-cr*0.32,cr*0.02,x-cr*0.18,y-cr*0.2,cr*0.45);
-        sh2.addColorStop(0,'rgba(255,255,255,0.80)'); sh2.addColorStop(1,'rgba(255,255,255,0)');
-        ctx.fillStyle=sh2; ctx.beginPath(); ctx.arc(x,y,cr,0,Math.PI*2); ctx.fill();
+        // Inner ring
+        ctx.strokeStyle='rgba(255,230,80,0.65)'; ctx.lineWidth=cr*0.06;
+        ctx.beginPath(); ctx.arc(x,y,cr*0.75,0,Math.PI*2); ctx.stroke();
+        // Center emblem
+        ctx.strokeStyle='rgba(160,60,0,0.5)'; ctx.lineWidth=cr*0.055;
+        ctx.beginPath(); ctx.arc(x,y,cr*0.3,0,Math.PI*2); ctx.stroke();
+        ctx.fillStyle='rgba(130,45,0,0.45)';
+        ctx.beginPath(); ctx.arc(x,y,cr*0.1,0,Math.PI*2); ctx.fill();
+        // Shine
+        ctx.save(); ctx.beginPath(); ctx.arc(x,y,cr,0,Math.PI*2); ctx.clip();
+        const sh2=ctx.createRadialGradient(x-cr*0.42,y-cr*0.42,1,x-cr*0.2,y-cr*0.2,cr*0.7);
+        sh2.addColorStop(0,'rgba(255,255,255,0.92)'); sh2.addColorStop(0.3,'rgba(255,255,200,0.45)'); sh2.addColorStop(1,'rgba(255,255,255,0)');
+        ctx.fillStyle=sh2; ctx.fillRect(x-cr,y-cr,cr*2,cr*2);
+        ctx.restore();
     }
     drawCoin(cx-r*0.32, cy-r*0.28, r*0.28);
     drawCoin(cx+r*0.30, cy-r*0.22, r*0.24);
