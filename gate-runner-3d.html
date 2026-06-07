@@ -1482,7 +1482,7 @@ const LOOT_TYPES=[
     {id:'triple',  label:'ТРОЙНОЙ ВЫСТРЕЛ', icon:'💥', color:'#FF8800', good:true},
     {id:'dmgx2',   label:'×2 УРОН',    icon:'⚔️',  color:'#FF2222', good:true},
     {id:'moneyx2', label:'×2 ДЕНЬГИ',  icon:'💰',  color:'#FFD700', good:true},
-    {id:'coins',   label:'💵 ДЕНЬГИ',  icon:'💵',  color:'#44FF88', good:true},
+    {id:'coins',   label:'🪙 МОНЕТЫ',   icon:'🪙',  color:'#FFD700', good:true},
 ];
 
 function makeSpinCardTex(loot){
@@ -1511,9 +1511,9 @@ function makeSpinCardTex(loot){
     c.textAlign='center'; c.textBaseline='middle';
     c.shadowColor='rgba(0,0,0,0.25)'; c.shadowBlur=8;
     if(loot.id==='coins'){
-        c.font='68px Arial'; c.fillText('💵',W/2-30,H/2-18);
-        c.font='68px Arial'; c.fillText('💵',W/2+30,H/2+14);
-        c.font='50px Arial'; c.fillText('💵',W/2,H/2-52);
+        c.font='72px Arial'; c.fillText('🪙',W/2-28,H/2-16);
+        c.font='72px Arial'; c.fillText('🪙',W/2+28,H/2+18);
+        c.font='54px Arial'; c.fillText('🪙',W/2,H/2-56);
     } else {
         c.font='100px Arial'; c.fillText(loot.icon,W/2,H/2-8);
     }
@@ -1621,8 +1621,8 @@ function killLootPlatform(lp){
     if(lp.loot.id==='coins'){
         // Stack of coins
         const cR=0.32, cH=0.11;
-        const coinMat  = new THREE.MeshLambertMaterial({color:0xFFD700});
-        const coinEdge = new THREE.MeshLambertMaterial({color:0xAA7700});
+        const coinMat  = new THREE.MeshLambertMaterial({color:0xFFEE55});
+        const coinEdge = new THREE.MeshLambertMaterial({color:0xDDAA22});
         const coinGeo  = new THREE.CylinderGeometry(cR,cR,cH,20);
         const positions=[[0,0,0],[0.07,cH,0.04],[-0.05,cH*2,-0.03],[0.03,cH*3,0.02],
                          [0.05,cH*4,-0.04],[-0.04,cH*5,0.05],[0.01,cH*6,0]];
@@ -1659,12 +1659,23 @@ function killLootPlatform(lp){
         c.fillText(lp.loot.icon, W/2, H/2-30);
         c.shadowBlur=0;
 
-        // Stat label — large and bold
-        const fs = lp.loot.label.length>12 ? 26 : lp.loot.label.length>8 ? 30 : 34;
-        c.font=`bold ${fs}px Arial`;
+        // Stat label — split into 2 lines if long
+        const words = lp.loot.label.split(' ');
         c.fillStyle=col;
         c.shadowColor='rgba(0,0,0,0.9)'; c.shadowBlur=10;
-        c.fillText(lp.loot.label, W/2, H-58);
+        if(words.length>=2 && lp.loot.label.length>9){
+            const half=Math.ceil(words.length/2);
+            const line1=words.slice(0,half).join(' ');
+            const line2=words.slice(half).join(' ');
+            const fs=line1.length>8||line2.length>8 ? 26 : 30;
+            c.font=`bold ${fs}px Arial`;
+            c.fillText(line1, W/2, H-76);
+            c.fillText(line2, W/2, H-44);
+        } else {
+            const fs=lp.loot.label.length>9 ? 28 : 34;
+            c.font=`bold ${fs}px Arial`;
+            c.fillText(lp.loot.label, W/2, H-58);
+        }
         c.shadowBlur=0;
 
         // Top shine
@@ -1898,8 +1909,8 @@ function spawnTarget(x, z, hp, sc){
     rim.rotation.x = Math.PI/2; rim.position.y = platY; g.add(rim);
 
     // ── 3D coin pile ──
-    const coinMat  = new THREE.MeshLambertMaterial({color:0xFFD700});
-    const coinEdge = new THREE.MeshLambertMaterial({color:0xBB8800});
+    const coinMat  = new THREE.MeshLambertMaterial({color:0xFFEE55});
+    const coinEdge = new THREE.MeshLambertMaterial({color:0xDDAA22});
     const cR = 0.11 + sc*0.04, cH = 0.052 + sc*0.012;
     const coinGeo = new THREE.CylinderGeometry(cR, cR, cH, 12);
 
