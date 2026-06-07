@@ -2016,11 +2016,10 @@ function spawnTarget(x, z, hp, sc){
     const h2 = 0.20 + sc*0.40;   // top tier height
     const platY = h1 + h2;        // surface y
 
-    const sideTex  = makeGrayStoneTex();
     const stoneMat = new THREE.MeshLambertMaterial({color:0xC8C8C8});
-    const darkMat  = new THREE.MeshLambertMaterial({color:0xAAAAAA});
-    const topMat   = new THREE.MeshLambertMaterial({map:makeTargetTopTex(hp)});
-    const rimMat   = new THREE.MeshLambertMaterial({color:0xAA9966});
+    const darkMat  = new THREE.MeshLambertMaterial({color:0xB8B8B8});
+    const topMat   = new THREE.MeshLambertMaterial({map:makeTargetTopTex(hp),color:0xCCCCCC});
+    const rimMat   = new THREE.MeshLambertMaterial({color:0xAAAAAA});
 
     // Base hex slab — top face uses gold/HP texture, sides use stone
     const base = new THREE.Mesh(new THREE.CylinderGeometry(HEX_R, HEX_R*1.06, h1, 6),
