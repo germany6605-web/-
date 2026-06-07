@@ -2047,7 +2047,7 @@ function spawnTarget(x, z, hp, sc){
     rim.rotation.x = Math.PI/2; rim.position.y = platY; g.add(rim);
 
     // ── 3D coin pile (fixed size matching road coins) ──
-    const cR = 0.18, cH = 0.10;
+    const cR = 0.32, cH = 0.10;
     const cGeoT = coinGeo(cR,cH);
     const addCoin=(px,py,pz,rz=0)=>{
         const m=new THREE.Mesh(cGeoT,coinMats());
@@ -2144,7 +2144,7 @@ function spawnCombatPlatform(x, z, hp, sc=1, coinMult=1){
     topMesh.position.y=h+0.05*sc; g.add(topMesh);
 
     // Coins on top + blob shadow (fixed size matching road coins)
-    const cR2=0.15, cH2=0.09;
+    const cR2=0.25, cH2=0.08;
     const cGeoC=coinGeo(cR2,cH2);
     const bsCv2=document.createElement('canvas'); bsCv2.width=32; bsCv2.height=32;
     const bsCtx2=bsCv2.getContext('2d');
