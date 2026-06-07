@@ -2046,8 +2046,8 @@ function spawnTarget(x, z, hp, sc){
     const rim = new THREE.Mesh(new THREE.TorusGeometry(HEX_R*0.83, 0.045, 4, 6), rimMat);
     rim.rotation.x = Math.PI/2; rim.position.y = platY; g.add(rim);
 
-    // ── 3D coin pile ──
-    const cR = 0.13 + sc*0.02, cH = 0.06 + sc*0.008;
+    // ── 3D coin pile (fixed size matching road coins) ──
+    const cR = 0.18, cH = 0.10;
     const cGeoT = coinGeo(cR,cH);
     const addCoin=(px,py,pz,rz=0)=>{
         const m=new THREE.Mesh(cGeoT,coinMats());
@@ -2057,21 +2057,19 @@ function spawnTarget(x, z, hp, sc){
     // Blob shadow under pile
     const bsCv=document.createElement('canvas'); bsCv.width=64; bsCv.height=64;
     const bsCtx=bsCv.getContext('2d');
-    const bsG=bsCtx.createRadialGradient(32,32,2,32,32,30);
+    const bsG=bsCtx.createRadialGradient(32,32,2,32,32,28);
     bsG.addColorStop(0,'rgba(0,0,0,0.55)'); bsG.addColorStop(1,'rgba(0,0,0,0)');
     bsCtx.fillStyle=bsG; bsCtx.fillRect(0,0,64,64);
     const bsTex=new THREE.CanvasTexture(bsCv);
-    const bsMesh=new THREE.Mesh(new THREE.PlaneGeometry(HEX_R*1.4,HEX_R*1.4),
+    const bsMesh=new THREE.Mesh(new THREE.PlaneGeometry(1.4,1.4),
         new THREE.MeshBasicMaterial({map:bsTex,transparent:true,depthWrite:false,opacity:0.8}));
     bsMesh.rotation.x=-Math.PI/2; bsMesh.position.y=platY+0.005; g.add(bsMesh);
-    // Scattered base layer
-    [[ 0.28,0.10],[-0.30,0.15],[ 0.10,-0.28],[-0.18,-0.22],[ 0.32,-0.12],[-0.08,0.32],[ 0.22,0.28],[-0.26,-0.08]]
-        .forEach(([cx,cz])=>addCoin(cx*HEX_R*1.0, platY+cH/2, cz*HEX_R*1.0, (Math.random()-.5)*0.6));
-    // Central upright stack
-    const stackH = 5 + Math.floor(sc*3);
-    for(let i=0;i<stackH;i++) addCoin((Math.random()-.5)*0.05, platY+cH*(i+0.5), (Math.random()-.5)*0.05);
-    // Second smaller stack
-    for(let i=0;i<Math.max(3,stackH-1);i++) addCoin(0.20*HEX_R, platY+cH*(i+0.5), 0.16*HEX_R);
+    // Central upright stack (7 coins like road pile)
+    for(let i=0;i<7;i++) addCoin((Math.random()-.5)*0.04, platY+cH*(i+0.5), (Math.random()-.5)*0.04);
+    // Second smaller stack offset
+    for(let i=0;i<4;i++) addCoin(0.30+(Math.random()-.5)*0.04, platY+cH*(i+0.5), 0.15+(Math.random()-.5)*0.04);
+    // A few tilted coins scattered around
+    [[-0.28,0.18],[0.22,-0.24],[-0.20,-0.20]].forEach(([cx,cz])=>addCoin(cx, platY+cH/2, cz, (Math.random()-.5)*0.7));
 
     // ── HP bar ──
     const hpCv=document.createElement('canvas'); hpCv.width=128; hpCv.height=18;
@@ -2145,8 +2143,8 @@ function spawnCombatPlatform(x, z, hp, sc=1, coinMult=1){
         [gMat, new THREE.MeshLambertMaterial({map:topTex}), gMat]);
     topMesh.position.y=h+0.05*sc; g.add(topMesh);
 
-    // Coins on top + blob shadow
-    const cR2=0.13*sc, cH2=0.07*sc;
+    // Coins on top + blob shadow (fixed size matching road coins)
+    const cR2=0.15, cH2=0.09;
     const cGeoC=coinGeo(cR2,cH2);
     const bsCv2=document.createElement('canvas'); bsCv2.width=32; bsCv2.height=32;
     const bsCtx2=bsCv2.getContext('2d');
@@ -2155,13 +2153,19 @@ function spawnCombatPlatform(x, z, hp, sc=1, coinMult=1){
     bsCtx2.fillStyle=bsG2; bsCtx2.fillRect(0,0,32,32);
     const bsMesh2=new THREE.Mesh(new THREE.PlaneGeometry(R*2.2,R*2.2),
         new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(bsCv2),transparent:true,depthWrite:false}));
-    bsMesh2.rotation.x=-Math.PI/2; bsMesh2.position.y=h+0.16*sc+0.005; g.add(bsMesh2);
-    [[0,0],[0.18*R,-0.12*R],[-0.15*R,0.14*R],[0.12*R,0.20*R],[-0.20*R,-0.08*R]].forEach(([cx,cz],i)=>{
-        for(let s=0;s<(i===0?3:1);s++){
-            const cm=new THREE.Mesh(cGeoC,coinMats());
-            cm.position.set(cx+(Math.random()-.5)*0.03,h+0.16*sc+cH2*s,cz+(Math.random()-.5)*0.03);
-            cm.rotation.y=Math.random()*Math.PI; cm.castShadow=true; cm.receiveShadow=true; g.add(cm);
-        }
+    bsMesh2.rotation.x=-Math.PI/2; bsMesh2.position.y=h+cH2*0.5+0.005; g.add(bsMesh2);
+    // Central stack of 5 coins
+    for(let s=0;s<5;s++){
+        const cm=new THREE.Mesh(cGeoC,coinMats());
+        cm.position.set((Math.random()-.5)*0.03,h+cH2*(s+0.5),(Math.random()-.5)*0.03);
+        cm.rotation.y=Math.random()*Math.PI; cm.castShadow=true; cm.receiveShadow=true; g.add(cm);
+    }
+    // A few scattered coins
+    [[0.22,-0.18],[-0.20,0.16],[0.18,0.22]].forEach(([cx,cz])=>{
+        const cm=new THREE.Mesh(cGeoC,coinMats());
+        cm.position.set(cx,h+cH2*0.5,cz);
+        cm.rotation.y=Math.random()*Math.PI; cm.rotation.z=(Math.random()-.5)*0.5;
+        cm.castShadow=true; cm.receiveShadow=true; g.add(cm);
     });
 
     // HP bar sprite
