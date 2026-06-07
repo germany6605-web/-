@@ -1914,9 +1914,9 @@ function makeTargetTopTex(hp){
     const cv=document.createElement('canvas'); cv.width=S; cv.height=S;
     const ctx=cv.getContext('2d');
     const cx=S/2, cy=S/2, r=S/2;
-    // Gold radial gradient background
+    // Gray radial gradient background
     const grad=ctx.createRadialGradient(cx,cy,0,cx,cy,r);
-    grad.addColorStop(0,'#FFE066'); grad.addColorStop(0.6,'#FFB800'); grad.addColorStop(1,'#996600');
+    grad.addColorStop(0,'#EEEEEE'); grad.addColorStop(0.6,'#C0C0C0'); grad.addColorStop(1,'#888888');
     ctx.fillStyle=grad; ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.fill();
     // Concentric rings
     const rings=[{r:r*.88,w:6,c:'rgba(0,0,0,.18)'},{r:r*.65,w:5,c:'rgba(0,0,0,.15)'},{r:r*.40,w:4,c:'rgba(0,0,0,.12)'}];
@@ -2078,13 +2078,13 @@ let COMBAT_START_Z = GATE_SPACING * GATES_PER_LEVEL + 30; // recalculated each l
 // 15 columns spanning road width
 const COMBAT_COL_X = [-3.1, 0, 3.1];  // 3 columns, 30% wider spread
 
-function makeCombatTopTex(label, bgColor='#FFD700', textColor='#ffffff'){
+function makeCombatTopTex(label, bgColor='#C8C8C8', textColor='#ffffff'){
     const S=256;
     const cv=document.createElement('canvas'); cv.width=S; cv.height=S;
     const ctx=cv.getContext('2d');
     const g=ctx.createRadialGradient(S/2,S*0.38,0,S/2,S/2,S*0.52);
-    const bright=bgColor==='#FFD700'?'#FFFF66':bgColor;
-    g.addColorStop(0,bright); g.addColorStop(0.55,bgColor); g.addColorStop(1,'#AA6600');
+    const bright=bgColor==='#C8C8C8'?'#EEEEEE':bgColor;
+    g.addColorStop(0,bright); g.addColorStop(0.55,bgColor); g.addColorStop(1,'#888888');
     ctx.fillStyle=g; ctx.fillRect(0,0,S,S);
     ctx.strokeStyle='rgba(0,0,0,.3)'; ctx.lineWidth=12;
     ctx.beginPath(); ctx.arc(S/2,S/2,S/2-6,0,Math.PI*2); ctx.stroke();
