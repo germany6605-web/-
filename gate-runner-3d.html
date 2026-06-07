@@ -598,6 +598,10 @@ function randomEff(){
     if(type==='money' && totalWins<10) baseVal=Math.min(baseVal, 2);
     let incVal = 1 + Math.floor(Math.random()*3); // 1..3 per shot
     if(type==='money' && Math.random()<0.35) incVal = -(1 + Math.floor(Math.random()*3)); // 35% chance: -1..-3
+    // For money gates with negative incVal, ensure baseVal is positive so it starts good but worsens with shots
+    if(type==='money' && incVal<0) baseVal = Math.max(3, Math.abs(baseVal)+2);
+    // For all money gates ensure baseVal is at least 1
+    if(type==='money') baseVal = Math.max(1, baseVal);
     return {id:type, baseVal, incVal, currentVal:baseVal};
 }
 function moneyCoins(v){
