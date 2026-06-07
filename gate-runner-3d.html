@@ -493,7 +493,7 @@ function updateBullets(dt){
                         cov.hitT=0.12;
                         cov.mat.emissive.setHex(0xFF6600);
                         drawCoverHP(cov);
-                        if(cov.hp<=0&&!cov.dead){cov.dead=true;cov.deadT=0;coins+=Math.round(cov.reward*moneyX2);refreshHUD();}
+                        if(cov.hp<=0&&!cov.dead){cov.dead=true;cov.deadT=0;coins+=Math.round(cov.reward*moneyX2*0.7);refreshHUD();}
                         if(!b.pierce) hit=true;
                         break;
                     }
@@ -548,7 +548,7 @@ function updateBullets(dt){
                 if(m.dead||m.removed) continue;
                 if(Math.abs(bz-m.g.position.z)<0.55 && Math.abs(bx-m.g.position.x)<0.42){
                     m.hp -= effDmg()*(b.dmgMult||1); m.hitT=.12; drawMobHP(m);
-                    if(m.hp<=0&&!m.dead){ m.dead=true; coins+=Math.round(m.reward*moneyX2*COIN_MULT); refreshHUD(); }
+                    if(m.hp<=0&&!m.dead){ m.dead=true; coins+=Math.round(m.reward*moneyX2*COIN_MULT*0.7); refreshHUD(); }
                     if(!b.pierce) hit=true;
                     break;
                 }
@@ -567,7 +567,7 @@ function updateBullets(dt){
                     if(lp.hp<=0&&!lp.dead){
                         if(lp.isCombat){
                             lp.dead=true;
-                            const reward=Math.floor((lp.coinReward||30)*moneyX2*COIN_MULT);
+                            const reward=Math.floor((lp.coinReward||30)*moneyX2*COIN_MULT*0.5);
                             spawnCoinPile(lp.g.position.x, lp.g.position.z, reward);
                         }
                         else killLootPlatform(lp);
@@ -596,7 +596,7 @@ function randomEff(){
     const type=EFF_TYPES[Math.floor(Math.random()*EFF_TYPES.length)];
     let baseVal=Math.floor(Math.random()*8)-2 + (upgGate[type]||0);
     if(type==='money' && totalWins<10) baseVal=Math.min(baseVal, 2);
-    let incVal; do{ incVal=Math.floor(Math.random()*11)-3; }while(incVal===0);
+    let incVal = 1 + Math.floor(Math.random()*4); // 1..4 per shot, always positive
     return {id:type, baseVal, incVal, currentVal:baseVal};
 }
 function moneyCoins(v){
@@ -1038,7 +1038,7 @@ function spawnTirTarget(){
     mesh.position.set(x,6.0,tirFrozenPz+8);
     scene.add(mesh);
     const tirWinMult1 = 1 + totalWins * 0.03;
-    const reward = Math.round(5 * tirCoinMult * tirWinMult1);
+    const reward = Math.round(2 * tirCoinMult * tirWinMult1);
     tirTargets.push({mesh,hp:1,dead:false,removed:false,reward});
 }
 
@@ -1092,7 +1092,7 @@ function endTir(){
     if(tirWall){ scene.remove(tirWall); tirWall=null; }
     for(const t of tirTargets){ if(!t.removed){ scene.remove(t.mesh); t.removed=true; } }
     const _tw1=1+totalWins*0.03;
-    const totalCoins=Math.round(tirScore*Math.round(5*tirCoinMult*_tw1)*moneyX2);
+    const totalCoins=Math.round(tirScore*Math.round(2*tirCoinMult*_tw1)*moneyX2);
     coins+=totalCoins; refreshHUD();
     if(tirScore>0) showEffPop({label:`🎯 +${totalCoins} монет (${tirScore} мишеней)`, good:true});
     document.getElementById('tir-hud').style.display='none';
@@ -2096,7 +2096,7 @@ function drawEHP(e){
 }
 
 function killEnemy(e){
-    e.dead=true; coins+=Math.round(e.reward*moneyX2*COIN_MULT); refreshHUD();
+    e.dead=true; coins+=Math.round(e.reward*moneyX2*COIN_MULT*0.5); refreshHUD();
 }
 
 // ─── COMBAT ZONE ───
