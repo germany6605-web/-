@@ -2102,16 +2102,17 @@ function spawnCombatPlatform(x, z, hp, sc=1, coinMult=1){
     const g=new THREE.Group();
     const R=COMBAT_HEX_R*sc, h=0.35*sc;
 
-    const yMat=new THREE.MeshLambertMaterial({color:0xFFE000});
-    const yDarkMat=new THREE.MeshLambertMaterial({color:0xFFAA00});
+    const grayTex=makeGrayStoneTex();
+    const gMat=new THREE.MeshLambertMaterial({map:grayTex});
+    const gDarkMat=new THREE.MeshLambertMaterial({map:grayTex,color:0xBBBBBB});
     const base=new THREE.Mesh(new THREE.CylinderGeometry(R,R*1.05,h,6),
-        [yDarkMat,yDarkMat,yDarkMat]);
+        [gDarkMat,gDarkMat,gDarkMat]);
     base.position.y=h/2; base.castShadow=true; g.add(base);
 
     const hpLabel=hp>=1000?(hp/1000).toFixed(1)+'K':String(hp);
     const topTex=makeCombatTopTex(hpLabel);
     const topMesh=new THREE.Mesh(new THREE.CylinderGeometry(R,R,0.1*sc,6),
-        [yMat, new THREE.MeshLambertMaterial({map:topTex}), yMat]);
+        [gMat, new THREE.MeshLambertMaterial({map:topTex}), gMat]);
     topMesh.position.y=h+0.05*sc; g.add(topMesh);
 
     // Coins on top + blob shadow
