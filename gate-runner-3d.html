@@ -2016,10 +2016,11 @@ function spawnTarget(x, z, hp, sc){
     const h2 = 0.20 + sc*0.40;   // top tier height
     const platY = h1 + h2;        // surface y
 
-    const stoneMat = new THREE.MeshLambertMaterial({color:0xC8C8C8});
-    const darkMat  = new THREE.MeshLambertMaterial({color:0xB8B8B8});
-    const topMat   = new THREE.MeshLambertMaterial({map:makeTargetTopTex(hp),color:0xCCCCCC});
-    const rimMat   = new THREE.MeshLambertMaterial({color:0xAAAAAA});
+    const sideTex  = makeGrayStoneTex();
+    const stoneMat = new THREE.MeshLambertMaterial({map:sideTex});
+    const darkMat  = new THREE.MeshLambertMaterial({map:sideTex});
+    const topMat   = new THREE.MeshLambertMaterial({map:makeTargetTopTex(hp)});
+    const rimMat   = new THREE.MeshLambertMaterial({map:sideTex});
 
     // Base hex slab — top face uses gold/HP texture, sides use stone
     const base = new THREE.Mesh(new THREE.CylinderGeometry(HEX_R, HEX_R*1.06, h1, 6),
@@ -2124,9 +2125,8 @@ function spawnCombatPlatform(x, z, hp, sc=1, coinMult=1){
 
     const grayTex=makeGrayStoneTex();
     const gMat=new THREE.MeshLambertMaterial({map:grayTex});
-    const gDarkMat=new THREE.MeshLambertMaterial({map:grayTex,color:0xBBBBBB});
     const base=new THREE.Mesh(new THREE.CylinderGeometry(R,R*1.05,h,6),
-        [gDarkMat,gDarkMat,gDarkMat]);
+        [gMat,gMat,gMat]);
     base.position.y=h/2; base.castShadow=true; g.add(base);
 
     const hpLabel=hp>=1000?(hp/1000).toFixed(1)+'K':String(hp);
