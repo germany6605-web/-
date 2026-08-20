@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <title>Паркур Башня: 275 уровней</title>
+    <link rel="stylesheet" href="./src/style.css" />
+    <script src="https://yandex.ru/games/sdk/v2"></script>
+  </head>
+  <body>
+    <canvas id="scene"></canvas>
+
+    <div id="loading" class="overlay">
+      <div class="panel">
+        <h1>Паркур Башня</h1>
+        <div class="loading-bar"><div id="loadingFill" class="loading-fill"></div></div>
+        <p>Загрузка...</p>
+      </div>
+    </div>
+
+    <div id="menu" class="overlay hidden">
+      <div class="panel">
+        <h1>Паркур Башня</h1>
+        <p class="subtitle">275 уровней несложного паркура</p>
+        <p id="menuProgress" class="progress-text"></p>
+        <button id="btnContinue" class="btn btn-primary">Продолжить</button>
+        <button id="btnNewGame" class="btn">Начать заново</button>
+      </div>
+    </div>
+
+    <div id="winScreen" class="overlay hidden">
+      <div class="panel">
+        <h1>🏆 Поздравляем!</h1>
+        <p class="subtitle">Вы прошли все 275 уровней паркура!</p>
+        <button id="btnReplay" class="btn btn-primary">Играть заново</button>
+      </div>
+    </div>
+
+    <div id="hud" class="hidden">
+      <div id="levelBadge">
+        <div id="levelNum">Уровень 1 / 275</div>
+        <div id="worldName"></div>
+        <div class="progress-bar"><div id="progressFill" class="progress-fill"></div></div>
+      </div>
+      <button id="btnMenu" class="icon-btn">☰</button>
+      <div id="checkpointToast" class="toast hidden">Контрольная точка!</div>
+    </div>
+
+    <div id="controls" class="hidden">
+      <div id="joystickBase" class="joystick-base" touch-action="none">
+        <div id="joystickKnob" class="joystick-knob"></div>
+      </div>
+      <button id="jumpButton" class="jump-btn" touch-action="none">ПРЫЖОК</button>
+      <div id="dragLayer"></div>
+    </div>
+
+    <script type="module" src="./src/main.js"></script>
+  </body>
+</html>

@@ -1,0 +1,261 @@
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #0a0a12;
+  font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  touch-action: none;
+}
+
+#scene {
+  position: fixed;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at 50% 30%, rgba(40, 50, 90, 0.9), rgba(6, 8, 18, 0.96));
+  z-index: 50;
+  color: #fff;
+  text-align: center;
+}
+
+.overlay.hidden {
+  display: none;
+}
+
+.panel {
+  max-width: 420px;
+  width: 88%;
+  padding: 32px 28px;
+  border-radius: 20px;
+  background: rgba(20, 22, 40, 0.55);
+  backdrop-filter: blur(6px);
+  box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+}
+
+.panel h1 {
+  margin: 0 0 8px;
+  font-size: 28px;
+  letter-spacing: 0.5px;
+}
+
+.subtitle {
+  opacity: 0.8;
+  margin: 0 0 18px;
+  font-size: 14px;
+}
+
+.progress-text {
+  font-size: 14px;
+  opacity: 0.85;
+  margin-bottom: 18px;
+}
+
+.btn {
+  display: block;
+  width: 100%;
+  padding: 14px;
+  margin-top: 12px;
+  border: none;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  background: rgba(255,255,255,0.12);
+  color: #fff;
+  transition: transform 0.1s ease, background 0.15s ease;
+}
+
+.btn:active {
+  transform: scale(0.97);
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #4f8ef7, #6c5ce7);
+}
+
+.loading-bar {
+  width: 100%;
+  height: 10px;
+  border-radius: 6px;
+  background: rgba(255,255,255,0.12);
+  overflow: hidden;
+  margin: 14px 0;
+}
+
+.loading-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #4f8ef7, #6c5ce7);
+  transition: width 0.2s ease;
+}
+
+#hud {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  padding: 14px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  z-index: 20;
+  pointer-events: none;
+}
+
+#hud.hidden {
+  display: none;
+}
+
+#levelBadge {
+  background: rgba(10, 12, 24, 0.55);
+  backdrop-filter: blur(4px);
+  padding: 10px 16px;
+  border-radius: 14px;
+  color: #fff;
+  min-width: 200px;
+}
+
+#levelNum {
+  font-weight: 700;
+  font-size: 16px;
+}
+
+#worldName {
+  font-size: 12px;
+  opacity: 0.75;
+  margin-top: 2px;
+}
+
+.progress-bar {
+  margin-top: 8px;
+  height: 6px;
+  border-radius: 4px;
+  background: rgba(255,255,255,0.15);
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #4f8ef7, #6c5ce7);
+}
+
+.icon-btn {
+  pointer-events: auto;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(10, 12, 24, 0.55);
+  color: #fff;
+  font-size: 18px;
+  cursor: pointer;
+}
+
+.toast {
+  position: fixed;
+  top: 90px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(20, 30, 20, 0.8);
+  color: #baffc9;
+  padding: 8px 18px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 600;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  pointer-events: none;
+}
+
+.toast.hidden {
+  opacity: 0;
+  transform: translateX(-50%) translateY(-10px);
+}
+
+#controls {
+  position: fixed;
+  inset: 0;
+  z-index: 15;
+}
+
+#controls.hidden {
+  display: none;
+}
+
+#dragLayer {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  touch-action: none;
+}
+
+.joystick-base {
+  position: absolute;
+  left: 24px;
+  bottom: 28px;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.12);
+  border: 2px solid rgba(255,255,255,0.25);
+  z-index: 5;
+  touch-action: none;
+}
+
+.joystick-knob {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 52px;
+  height: 52px;
+  margin-left: -26px;
+  margin-top: -26px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.5);
+  pointer-events: none;
+}
+
+.jump-btn {
+  position: absolute;
+  right: 28px;
+  bottom: 40px;
+  width: 92px;
+  height: 92px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.35);
+  background: rgba(79, 142, 247, 0.55);
+  color: #fff;
+  font-weight: 700;
+  font-size: 13px;
+  z-index: 5;
+  touch-action: none;
+}
+
+@media (min-width: 900px) and (pointer: fine) {
+  .joystick-base,
+  .jump-btn {
+    opacity: 0.35;
+    transition: opacity 0.2s ease;
+  }
+  .joystick-base:hover,
+  .jump-btn:hover {
+    opacity: 0.7;
+  }
+}
