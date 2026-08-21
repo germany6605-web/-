@@ -22,6 +22,13 @@ function hazardDangerZone(h) {
   return h;
 }
 
+// Full-width "must jump" hazards (hurdle/spikeWall/rollingLog) span nearly
+// the whole corridor, so there's no side lane to dodge into - the only way
+// past is a jump timed to clear it.
+function isFullWidth(h) {
+  return h.type === 'box' && h.maxZ - h.minZ > 5.0;
+}
+
 function simulateLevel(index) {
   const scene = new THREE.Scene();
   const cur = buildLevel(index);
@@ -34,6 +41,7 @@ function simulateLevel(index) {
   let died = false;
   player.onDeath = () => { died = true; };
   player.teleport(new THREE.Vector3(cur.startWorld.x, cur.startWorld.y, cur.startWorld.z));
+  player.deathY = cur.startWorld.y - 20;
 
   const targetX = cur.endX;
   let t = 0;
@@ -60,6 +68,7 @@ function simulateLevel(index) {
     // position to the target would cross, mirroring how a sighted player
     // routes around danger rather than walking straight through it
     for (const h of hazards) {
+      if (isFullWidth(h)) continue; // no lane to dodge into - handled by the jump trigger below
       const hb = hazardDangerZone(h);
       if (hb.maxX < p.x - 0.5 || hb.minX > p.x + 4) continue;
       const hCenterZ = (hb.minZ + hb.maxZ) / 2;
@@ -77,12 +86,13 @@ function simulateLevel(index) {
     if (player.grounded) {
       const aheadX0 = p.x + 0.5;
       const aheadX1 = p.x + 1.6;
-      const covered = colliders.some((c) => c.maxX > aheadX0 && c.minX < aheadX1 && c.maxZ > p.z - 0.3 && c.minZ < p.z + 0.3 && c.maxY > p.y - 0.35 && c.maxY < p.y + 0.35)
+      const covered = colliders.some((c) => c.maxX > aheadX0 && c.minX < aheadX1 && c.maxZ > p.z - 0.3 && c.minZ < p.z + 0.3 && c.maxY > p.y - 1.0 && c.maxY < p.y + 0.35)
         || movers.some((m) => {
           const mp = m.mesh.position;
           return mp.x + m.half.x > aheadX0 && mp.x - m.half.x < aheadX1 && mp.z + m.half.z > p.z - 0.3 && mp.z - m.half.z < p.z + 0.3 && mp.y + m.half.y > p.y - 0.35 && mp.y + m.half.y < p.y + 0.35;
         });
-      if (!covered) player.jump();
+      const hazardAhead = hazards.some((h) => isFullWidth(h) && h.maxX > p.x + 0.3 && h.minX < p.x + 1.3);
+      if (!covered || hazardAhead) player.jump();
     }
 
     player.update(dt, move, colliders, movers, hazards);

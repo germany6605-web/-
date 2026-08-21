@@ -107,6 +107,9 @@ export class Game {
     const lvl = this.levels.get(this.currentLevel) || this.buildAndRegister(this.currentLevel);
     const spawn = new THREE.Vector3(lvl.startWorld.x, lvl.startWorld.y, lvl.startWorld.z);
     this.player.teleport(spawn);
+    // death-by-fall threshold is relative to this level's own floor height,
+    // since climbing levels can start dozens of units above y=0
+    this.player.deathY = lvl.startWorld.y - 20;
   }
 
   buildAndRegister(index) {
@@ -169,6 +172,8 @@ export class Game {
         } else if (h.type === 'orb') {
           h.mesh.position.z = h.center + Math.sin(t * h.speed + h.phase) * h.amplitude;
         }
+        // purely cosmetic spin (e.g. a rolling log) - the hitbox never changes
+        if (h.spinMesh) h.spinMesh.rotation.x = t * 2.4;
       }
     }
     const pulse = 0.55 + Math.sin(t * 6) * 0.25;

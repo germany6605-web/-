@@ -26,3 +26,8 @@ export function themeForLevel(levelIndex) {
 export function worldForLevel(levelIndex) {
   return Math.floor(levelIndex / LEVELS_PER_WORLD);
 }
+
+// Worlds that climb steadily upward across all 25 of their levels instead of
+// staying roughly flat: Пещера (climbing out of a cave), Небеса (up into the
+// sky) and Космос (up into orbit) - a fitting theme for each.
+export const CLIMBING_WORLDS = new Set([4, 6, 9]);

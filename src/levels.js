@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { makeLevelRng, range } from './rng.js';
-import { themeForLevel, worldForLevel, TOTAL_LEVELS } from './themes.js';
+import { themeForLevel, worldForLevel, TOTAL_LEVELS, TOTAL_WORLDS, LEVELS_PER_WORLD, CLIMBING_WORLDS } from './themes.js';
 
 export const LEVEL_LENGTH = 26;
 const STEP = 0.55;
@@ -10,6 +10,28 @@ const MAX_GAP = 2.1;
 const END_MARGIN = 11;
 const PAD_SIZE = 3;
 const MAX_HEIGHT = STEP * 4;
+
+// Climbing worlds gain a fixed amount of height every level, on top of
+// whatever any earlier climbing world already added - so the baseline never
+// has to drop back down at a world boundary, it just keeps building.
+const CLIMB_STEPS_TOTAL = 6;
+const CLIMB_GAIN_PER_LEVEL = CLIMB_STEPS_TOTAL * STEP;
+
+const WORLD_BASE_Y = (() => {
+  const arr = [0];
+  for (let w = 0; w < TOTAL_WORLDS - 1; w++) {
+    const add = CLIMBING_WORLDS.has(w) ? CLIMB_GAIN_PER_LEVEL * LEVELS_PER_WORLD : 0;
+    arr.push(arr[w] + add);
+  }
+  return arr;
+})();
+
+function baseYForLevel(levelIndex) {
+  const world = worldForLevel(levelIndex);
+  const indexInWorld = levelIndex - world * LEVELS_PER_WORLD;
+  const climbSoFar = CLIMBING_WORLDS.has(world) ? indexInWorld * CLIMB_GAIN_PER_LEVEL : 0;
+  return WORLD_BASE_Y[world] + climbSoFar;
+}
 
 const materialCache = new Map();
 function getMaterial(color) {
@@ -110,20 +132,33 @@ function gap(ctx, length) {
   ctx.cursor.x += length;
 }
 
-function stairs(ctx, steps, dir) {
+function stairs(ctx, steps, dir, stepHeight = STEP, stepLen = 1.5) {
   const { theme, cursor } = ctx;
-  const stepLen = 1.5;
   for (let i = 0; i < steps; i++) {
-    cursor.y += dir * STEP;
+    cursor.y += dir * stepHeight;
     const cx = cursor.x + stepLen / 2;
     // riser: a taller box whose TOP stays exactly at cursor.y (the walkable
     // surface) while its bottom extends down so there's no floating gap.
-    const riserHeight = PLATFORM_THICK + STEP * 4;
+    const riserHeight = PLATFORM_THICK + stepHeight * 4;
     const cy = cursor.y - riserHeight / 2;
     addBoxMesh(ctx, cx, cy, cursor.z, stepLen, riserHeight, CORRIDOR_HALF * 2, theme.platform);
     addBoxCollider(ctx, cx, cy, cursor.z, stepLen, riserHeight, CORRIDOR_HALF * 2, {});
     cursor.x += stepLen;
   }
+}
+
+// A smooth-looking incline: many small steps instead of a few tall ones.
+// Same walkable mechanics as stairs(), just finer-grained for visual variety.
+function rampPiece(ctx, rng, dir) {
+  const { cursor, baseY } = ctx;
+  const rampStep = 0.18;
+  const rampLen = 0.7;
+  const room = dir === 1
+    ? Math.max(0, Math.floor((baseY + MAX_HEIGHT - cursor.y) / rampStep))
+    : Math.max(0, Math.floor((cursor.y - baseY) / rampStep));
+  const steps = Math.min(room, 6 + Math.floor(rng() * 6));
+  if (steps > 0) stairs(ctx, steps, dir, rampStep, rampLen);
+  else platform(ctx, 2);
 }
 
 function zigzag(ctx, count, rng) {
@@ -250,6 +285,120 @@ function orbPiece(ctx, rng) {
   });
 }
 
+// Full-width "must jump" hazards: unlike spikes/blade/orb (which always
+// leave a safe lane to walk around), these block the entire corridor so
+// clearing them requires an actual jump.
+function hurdlePiece(ctx, rng) {
+  const { cursor, group, hazards } = ctx;
+  const leadIn = range(rng, 2.6, 3.2);
+  const trail = range(rng, 1.6, 2.0);
+  const barX = cursor.x + leadIn;
+  platform(ctx, leadIn + trail, { width: CORRIDOR_HALF * 2 });
+  const height = 0.5;
+  const thickness = 0.22;
+  const width = CORRIDOR_HALF * 2;
+  const mesh = new THREE.Mesh(getBoxGeo(thickness, height, width), getHazardMaterial());
+  mesh.position.set(barX, cursor.y + height / 2, cursor.z);
+  group.add(mesh);
+  hazards.push({
+    type: 'box',
+    minX: barX - thickness / 2, maxX: barX + thickness / 2,
+    minY: cursor.y, maxY: cursor.y + height,
+    minZ: cursor.z - width / 2, maxZ: cursor.z + width / 2,
+  });
+}
+
+function spikeWallPiece(ctx, rng) {
+  const { cursor, group, hazards } = ctx;
+  const leadIn = range(rng, 2.6, 3.2);
+  const trail = range(rng, 1.8, 2.2);
+  const spikeX = cursor.x + leadIn;
+  platform(ctx, leadIn + trail, { width: CORRIDOR_HALF * 2 });
+  const height = 0.55;
+  const count = 7;
+  const spanWidth = CORRIDOR_HALF * 2 - 0.4;
+  const spacing = spanWidth / (count - 1);
+  for (let i = 0; i < count; i++) {
+    const sz = cursor.z - spanWidth / 2 + i * spacing;
+    const mesh = new THREE.Mesh(getConeGeo(0.26, height), getHazardMaterial());
+    mesh.position.set(spikeX, cursor.y + height / 2, sz);
+    group.add(mesh);
+  }
+  // one continuous hitbox spanning the whole row - no sliver between cones to sneak through
+  hazards.push({
+    type: 'box',
+    minX: spikeX - 0.3, maxX: spikeX + 0.3,
+    minY: cursor.y, maxY: cursor.y + height,
+    minZ: cursor.z - spanWidth / 2 - 0.2, maxZ: cursor.z + spanWidth / 2 + 0.2,
+  });
+}
+
+function rollingLogPiece(ctx, rng) {
+  const { cursor, group, hazards } = ctx;
+  const leadIn = range(rng, 2.6, 3.2);
+  const trail = range(rng, 1.6, 2.0);
+  const logX = cursor.x + leadIn;
+  platform(ctx, leadIn + trail, { width: CORRIDOR_HALF * 2 });
+  const radius = 0.32;
+  const width = CORRIDOR_HALF * 2;
+  const mesh = new THREE.Mesh(getCylinderGeo(radius, width), getHazardMaterial());
+  mesh.rotation.z = Math.PI / 2; // lay the cylinder on its side, spanning the corridor
+  mesh.position.set(logX, cursor.y + radius, cursor.z);
+  group.add(mesh);
+  hazards.push({
+    type: 'box',
+    spinMesh: mesh, // rolls visually around its own axis; the hitbox never changes shape
+    minX: logX - radius, maxX: logX + radius,
+    minY: cursor.y, maxY: cursor.y + radius * 2,
+    minZ: cursor.z - width / 2, maxZ: cursor.z + width / 2,
+  });
+}
+
+// Splits `total` into `parts` non-negative integers (some may be 0) that
+// always sum to exactly `total`, so a climbing level's net height gain is
+// deterministic regardless of how the RNG distributes it across flights.
+function partitionSteps(rng, total, parts) {
+  if (parts <= 1) return [total];
+  const cuts = [];
+  for (let i = 0; i < parts - 1; i++) cuts.push(Math.floor(rng() * (total + 1)));
+  cuts.sort((a, b) => a - b);
+  const result = [];
+  let prev = 0;
+  for (const c of cuts) {
+    result.push(c - prev);
+    prev = c;
+  }
+  result.push(total - prev);
+  return result;
+}
+
+// A climbing level replaces the normal piece loop entirely: a few flights
+// of stairs (always summing to CLIMB_GAIN_PER_LEVEL) separated by flat rests
+// and the occasional bit of variety, ending flush with the next level's pad.
+function buildClimbSkeleton(ctx, rng, worldOffsetX) {
+  const flights = 2 + Math.floor(rng() * 2);
+  const stepsPerFlight = partitionSteps(rng, CLIMB_STEPS_TOTAL, flights);
+  for (let f = 0; f < flights; f++) {
+    if (stepsPerFlight[f] > 0) stairs(ctx, stepsPerFlight[f], 1);
+    if (f < flights - 1) {
+      const roll = rng();
+      if (roll < 0.25) {
+        platform(ctx, range(rng, 1.6, 2.0));
+        gap(ctx, range(rng, 1.2, 1.7));
+        platform(ctx, range(rng, 2.2, 2.8));
+      } else if (roll < 0.4) {
+        spikesPiece(ctx, rng);
+      } else if (roll < 0.5) {
+        hurdlePiece(ctx, rng);
+      } else {
+        platform(ctx, range(rng, 2.2, 3.0));
+      }
+    }
+  }
+  const finalLen = Math.max(0.5, worldOffsetX + LEVEL_LENGTH - ctx.cursor.x);
+  platform(ctx, finalLen, { width: CORRIDOR_HALF * 2 });
+}
+
 function steppingStones(ctx, rng) {
   const { theme, cursor, group, colliders } = ctx;
   const count = 3 + Math.floor(rng() * 2);
@@ -266,6 +415,31 @@ function steppingStones(ctx, rng) {
       bouncy: false,
     });
     cursor.x = cx + stoneRadius + range(rng, 0.9, 1.4);
+  }
+}
+
+// Like steppingStones, but each pillar sits a little higher or lower than
+// the last - a gentle rolling rhythm instead of a flat row, in the theme's
+// accent colour so it reads as a distinct shape from the ground-level ones.
+function floatingPillars(ctx, rng) {
+  const { theme, cursor, group, colliders, baseY } = ctx;
+  const count = 3 + Math.floor(rng() * 2);
+  for (let i = 0; i < count; i++) {
+    const stoneRadius = range(rng, 0.75, 0.95);
+    const cx = cursor.x + stoneRadius;
+    let dy = range(rng, -0.35, 0.35);
+    if (cursor.y + dy > baseY + MAX_HEIGHT || cursor.y + dy < baseY - MAX_HEIGHT) dy = 0;
+    cursor.y += dy;
+    const mesh = new THREE.Mesh(getCylinderGeo(stoneRadius, PLATFORM_THICK), getMaterial(theme.accent));
+    mesh.position.set(cx, cursor.y - PLATFORM_THICK / 2, cursor.z);
+    group.add(mesh);
+    colliders.push({
+      minX: cx - stoneRadius, maxX: cx + stoneRadius,
+      minY: cursor.y - PLATFORM_THICK, maxY: cursor.y,
+      minZ: cursor.z - stoneRadius, maxZ: cursor.z + stoneRadius,
+      bouncy: false,
+    });
+    cursor.x = cx + stoneRadius + range(rng, 0.8, 1.2);
   }
 }
 
@@ -334,12 +508,17 @@ function pieceWeightsForWorld(world) {
     { type: 'zigzag', w: 2 },
     { type: 'narrow', w: 2 },
     { type: 'stones', w: 2 },
+    { type: 'pillars', w: 1.8 },
+    { type: 'ramp', w: 1.8 },
     { type: 'spikes', w: 1.5 },
+    { type: 'hurdle', w: 1.5 },
   ];
-  if (world >= 1) pool.push({ type: 'jumpPad', w: 1.5 }, { type: 'blade', w: 1.5 });
-  if (world >= 2) pool.push({ type: 'moving', w: 2 }, { type: 'orb', w: 1.5 });
+  if (world >= 1) pool.push({ type: 'jumpPad', w: 1.5 }, { type: 'blade', w: 1.5 }, { type: 'spikeWall', w: 1.3 });
+  if (world >= 2) pool.push({ type: 'moving', w: 2 }, { type: 'orb', w: 1.5 }, { type: 'rollingLog', w: 1.3 });
   return pool;
 }
+
+const HAZARD_TYPES = new Set(['spikes', 'blade', 'orb', 'hurdle', 'spikeWall', 'rollingLog']);
 
 function weightedPick(rng, pool) {
   const total = pool.reduce((s, p) => s + p.w, 0);
@@ -360,12 +539,30 @@ export function buildLevel(levelIndex) {
   const colliders = [];
   const movers = [];
   const hazards = [];
-  const cursor = { x: worldOffsetX, y: 0, z: 0 };
-  const ctx = { group, colliders, movers, hazards, theme, cursor, rng };
+  const baseY = baseYForLevel(levelIndex);
+  const cursor = { x: worldOffsetX, y: baseY, z: 0 };
+  const ctx = { group, colliders, movers, hazards, theme, cursor, rng, baseY };
 
   // entry / checkpoint pad
-  buildPad(ctx, worldOffsetX + PAD_SIZE / 2, 0, 0, {});
+  buildPad(ctx, worldOffsetX + PAD_SIZE / 2, baseY, 0, {});
   cursor.x = worldOffsetX + PAD_SIZE + 0.4;
+
+  if (CLIMBING_WORLDS.has(world)) {
+    buildClimbSkeleton(ctx, rng, worldOffsetX);
+    scatterDecorations(ctx, worldOffsetX, rng);
+    const isLast = levelIndex === TOTAL_LEVELS - 1;
+    if (isLast) buildPad(ctx, worldOffsetX + LEVEL_LENGTH, cursor.y, 0, { finish: true });
+    return {
+      index: levelIndex,
+      group,
+      colliders,
+      hazards,
+      movers,
+      theme,
+      startWorld: { x: worldOffsetX + PAD_SIZE / 2, y: baseY + 1.2, z: 0 },
+      endX: worldOffsetX + LEVEL_LENGTH,
+    };
+  }
 
   const pool = pieceWeightsForWorld(world);
   const budgetEnd = worldOffsetX + LEVEL_LENGTH - END_MARGIN;
@@ -375,8 +572,7 @@ export function buildLevel(levelIndex) {
     // never chain two gaps, and never chain two hazards back to back - each
     // hazard's safe lane should be reasoned about on its own, not combined
     // with another hazard's while it's still fresh underfoot
-    const isHazardType = (t) => t === 'spikes' || t === 'blade' || t === 'orb';
-    const avoidTypes = lastType === 'gap' ? ['gap'] : isHazardType(lastType) ? ['spikes', 'blade', 'orb'] : [];
+    const avoidTypes = lastType === 'gap' ? ['gap'] : HAZARD_TYPES.has(lastType) ? [...HAZARD_TYPES] : [];
     const candidatePool = avoidTypes.length ? pool.filter((p) => !avoidTypes.includes(p.type)) : pool;
     const type = weightedPick(rng, candidatePool.length ? candidatePool : pool);
     lastType = type;
@@ -389,15 +585,21 @@ export function buildLevel(levelIndex) {
         platform(ctx, range(rng, 3.0, 4.2));
         break;
       case 'stairsUp': {
-        const room = Math.max(0, Math.round((MAX_HEIGHT - cursor.y) / STEP));
+        const room = Math.max(0, Math.round((baseY + MAX_HEIGHT - cursor.y) / STEP));
         const steps = Math.min(2, room, 1 + Math.floor(rng() * 2));
         if (steps > 0) stairs(ctx, steps, 1);
         else platform(ctx, 2);
         break;
       }
       case 'stairsDown':
-        if (cursor.y > 0) stairs(ctx, Math.min(2, Math.round(cursor.y / STEP), 1 + Math.floor(rng() * 2)), -1);
+        if (cursor.y > baseY) stairs(ctx, Math.min(2, Math.round((cursor.y - baseY) / STEP), 1 + Math.floor(rng() * 2)), -1);
         else platform(ctx, 2);
+        break;
+      case 'ramp':
+        rampPiece(ctx, rng, rng() > 0.5 ? 1 : -1);
+        break;
+      case 'pillars':
+        floatingPillars(ctx, rng);
         break;
       case 'zigzag':
         zigzag(ctx, 2, rng);
@@ -428,6 +630,15 @@ export function buildLevel(levelIndex) {
       case 'orb':
         orbPiece(ctx, rng);
         break;
+      case 'hurdle':
+        hurdlePiece(ctx, rng);
+        break;
+      case 'spikeWall':
+        spikeWallPiece(ctx, rng);
+        break;
+      case 'rollingLog':
+        rollingLogPiece(ctx, rng);
+        break;
       default:
         platform(ctx, 2);
     }
@@ -435,14 +646,14 @@ export function buildLevel(levelIndex) {
   }
 
   // leveling connector: bring z back toward 0 with a generous safe platform,
-  // and y back to baseline with short stairs, so the next level always
-  // starts predictably at (worldOffsetX + LEVEL_LENGTH, 0, 0).
-  if (cursor.y !== 0) {
-    const steps = Math.round(Math.abs(cursor.y) / STEP);
-    const dir = cursor.y > 0 ? -1 : 1;
+  // and y back to this level's own baseline with short stairs, so the next
+  // level always starts predictably at (worldOffsetX + LEVEL_LENGTH, baseY, 0).
+  if (cursor.y !== baseY) {
+    const steps = Math.round(Math.abs(cursor.y - baseY) / STEP);
+    const dir = cursor.y > baseY ? -1 : 1;
     if (steps > 0) stairs(ctx, steps, dir);
   }
-  cursor.y = 0;
+  cursor.y = baseY;
   const finalLen = Math.max(0.5, worldOffsetX + LEVEL_LENGTH - cursor.x);
   const wideWidth = Math.min(CORRIDOR_HALF * 2 + Math.abs(cursor.z) * 2 + 1, 12);
   platform(ctx, finalLen, { width: wideWidth });
@@ -450,7 +661,7 @@ export function buildLevel(levelIndex) {
 
   const isLast = levelIndex === TOTAL_LEVELS - 1;
   if (isLast) {
-    buildPad(ctx, worldOffsetX + LEVEL_LENGTH, 0, 0, { finish: true });
+    buildPad(ctx, worldOffsetX + LEVEL_LENGTH, baseY, 0, { finish: true });
   }
 
   scatterDecorations(ctx, worldOffsetX, rng);
@@ -462,7 +673,7 @@ export function buildLevel(levelIndex) {
     hazards,
     movers,
     theme,
-    startWorld: { x: worldOffsetX + PAD_SIZE / 2, y: 1.2, z: 0 },
+    startWorld: { x: worldOffsetX + PAD_SIZE / 2, y: baseY + 1.2, z: 0 },
     endX: worldOffsetX + LEVEL_LENGTH,
   };
 }
