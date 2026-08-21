@@ -32,15 +32,29 @@ function writeLocal(data) {
   }
 }
 
+// Outside the real Yandex Games host, YaGames.init() (and other SDK calls)
+// can hang forever waiting for a handshake that will never arrive, which
+// would otherwise stall the whole loading screen. Never await an SDK call
+// without a timeout that falls back to "no SDK" / localStorage.
+function withTimeout(promise, ms) {
+  return new Promise((resolve) => {
+    let done = false;
+    const finish = (value) => {
+      if (done) return;
+      done = true;
+      resolve(value);
+    };
+    promise.then(finish).catch(() => finish(null));
+    setTimeout(() => finish(null), ms);
+  });
+}
+
 export async function initYandex() {
   try {
     if (typeof window.YaGames === 'undefined') return null;
-    ysdk = await window.YaGames.init();
-    try {
-      player = await ysdk.getPlayer({ scopes: false });
-    } catch (e) {
-      player = null;
-    }
+    ysdk = await withTimeout(window.YaGames.init(), 4000);
+    if (!ysdk) return null;
+    player = await withTimeout(ysdk.getPlayer({ scopes: false }), 3000);
     return ysdk;
   } catch (e) {
     ysdk = null;
@@ -55,7 +69,7 @@ export function getYsdk() {
 export async function loadSave() {
   if (player) {
     try {
-      const remote = await player.getData(['obby3d']);
+      const remote = await withTimeout(player.getData(['obby3d']), 3000);
       if (remote && remote.obby3d && typeof remote.obby3d.currentLevel === 'number') {
         cachedSave = remote.obby3d;
         return cachedSave;
