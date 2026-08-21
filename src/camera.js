@@ -1,11 +1,6 @@
 import * as THREE from 'three';
 
-// Offset slightly to the side (z) rather than sitting dead-on the corridor's
-// centre axis - a camera perfectly behind the player looks straight down the
-// same line as upcoming obstacles, so anything a few units ahead visually
-// stacks on top of the player model instead of reading as "ahead of them".
-// The side offset gives real parallax separation between player and hazard.
-const BASE_OFFSET = new THREE.Vector3(-7.6, 4.8, -2.8);
+const BASE_OFFSET = new THREE.Vector3(-6.5, 3.6, 0);
 
 export class ChaseCamera {
   constructor(camera) {
