@@ -6,8 +6,17 @@ export const LEVEL_LENGTH = 26;
 const STEP = 0.55;
 const PLATFORM_THICK = 0.6;
 const CORRIDOR_HALF = 3.2;
-const MAX_GAP = 2.1;
-const END_MARGIN = 11;
+// A player who just walks off an edge (no jump) drifts forward on momentum
+// alone and empirically still lands safely on gaps up to exactly 2.0m (only
+// 2.05m+ reliably requires a jump) - so the "gap" piece stays above that, or
+// it wouldn't actually require a jump.
+const MIN_GAP = 2.1;
+const MAX_GAP = 2.4;
+// Room reserved after the piece loop for the leveling connector back to
+// (baseY, z=0) plus, when none of the random pieces rolled a must-jump one,
+// the guaranteed fallback hurdle - both must fit before endX or a player
+// could cross the level's finish line before ever reaching the hazard.
+const END_MARGIN = 14;
 const PAD_SIZE = 3;
 const MAX_HEIGHT = STEP * 4;
 
@@ -169,7 +178,7 @@ function zigzag(ctx, count, rng) {
     const targetZ = THREE.MathUtils.clamp(cursor.z + dir * range(rng, 1.2, 1.8), -CORRIDOR_HALF, CORRIDOR_HALF);
     cursor.z = targetZ;
     platform(ctx, padLen, { width: 2.2 });
-    ctx.cursor.x -= 0.2; // slight overlap: zigzag is a lateral-steering challenge, never a fall risk
+    ctx.cursor.x += 0.3; // a real (if small) gap - missing the lateral aim has a consequence
     dir *= -1;
   }
   // recentre gently so following pieces have room
@@ -450,23 +459,30 @@ function partitionSteps(rng, total, parts) {
 function buildClimbSkeleton(ctx, rng, worldOffsetX, dir) {
   const flights = 2 + Math.floor(rng() * 2);
   const stepsPerFlight = partitionSteps(rng, CLIMB_STEPS_TOTAL, flights);
+  let mustJumpCount = 0;
   for (let f = 0; f < flights; f++) {
     if (stepsPerFlight[f] > 0) stairs(ctx, stepsPerFlight[f], dir);
     if (f < flights - 1) {
       const roll = rng();
       if (roll < 0.25) {
         platform(ctx, range(rng, 1.6, 2.0));
-        gap(ctx, range(rng, 1.2, 1.7));
+        gap(ctx, range(rng, MIN_GAP, MAX_GAP));
         platform(ctx, range(rng, 2.2, 2.8));
+        mustJumpCount++;
       } else if (roll < 0.4) {
         spikesPiece(ctx, rng);
       } else if (roll < 0.5) {
         hurdlePiece(ctx, rng);
+        mustJumpCount++;
       } else {
         platform(ctx, range(rng, 2.2, 3.0));
       }
     }
   }
+  // same guarantee as the flat-level generator: stairs alone are always
+  // auto-climbable, so without this a climbing level could reach its end
+  // without ever needing an actual jump
+  if (mustJumpCount === 0) hurdlePiece(ctx, rng);
   const finalLen = Math.max(0.5, worldOffsetX + LEVEL_LENGTH - ctx.cursor.x);
   platform(ctx, finalLen, { width: CORRIDOR_HALF * 2 });
 }
@@ -486,7 +502,7 @@ function steppingStones(ctx, rng) {
       minZ: cursor.z - stoneRadius, maxZ: cursor.z + stoneRadius,
       bouncy: false,
     });
-    cursor.x = cx + stoneRadius + range(rng, 0.9, 1.4);
+    cursor.x = cx + stoneRadius + range(rng, 1.1, 1.6);
   }
 }
 
@@ -511,14 +527,17 @@ function floatingPillars(ctx, rng) {
       minZ: cursor.z - stoneRadius, maxZ: cursor.z + stoneRadius,
       bouncy: false,
     });
-    cursor.x = cx + stoneRadius + range(rng, 0.8, 1.2);
+    cursor.x = cx + stoneRadius + range(rng, 1.0, 1.5);
   }
 }
 
 function addDecoration(ctx, x, z, rng) {
-  const { theme, group } = ctx;
+  const { theme, group, baseY } = ctx;
   const kind = Math.floor(rng() * 3);
-  const y = -0.3;
+  // sit flush on this level's own ground height, not a hardcoded world-space
+  // y - otherwise decorations clip into (or float miles from) the platforms
+  // in climbing levels, whose floor can be dozens of units above y=0
+  const y = baseY;
   if (kind === 0) {
     const trunk = new THREE.Mesh(getCylinderGeo(0.12, 0.8), getMaterial(0x8a6a4a));
     trunk.position.set(x, y + 0.4, z);
@@ -572,40 +591,49 @@ function buildPad(ctx, worldX, y, z, opts = {}) {
   ctx.group.add(flag);
 }
 
+// Most piece types are available from world 0 - variety shouldn't have to
+// wait. Only the pieces that combine multiple moving/timed elements (orb,
+// twin orbs, rolling log, pendulum) hold back one tier, as a gentle ramp
+// rather than a real gate. Must-jump pieces (gap/hurdle/spikeWall/jumpPad/
+// blade/gate) are weighted so roughly half of any level's pieces force an
+// actual jump, instead of being something you can stroll past on momentum.
 function pieceWeightsForWorld(world) {
   const pool = [
-    { type: 'gap', w: 3 },
-    { type: 'stairsUp', w: 2.5 },
-    { type: 'stairsDown', w: 2.5 },
-    { type: 'ramp', w: 2.3 },
-    { type: 'zigzag', w: 2 },
-    { type: 'narrow', w: 2 },
-    { type: 'stones', w: 2 },
-    { type: 'pillars', w: 1.8 },
-    { type: 'spikes', w: 1.5 },
-    { type: 'hurdle', w: 1.5 },
+    { type: 'gap', w: 3.4 },
+    { type: 'hurdle', w: 2.2 },
+    { type: 'spikeWall', w: 2.0 },
+    { type: 'jumpPad', w: 1.8 },
+    { type: 'blade', w: 1.8 },
+    { type: 'gate', w: 1.6 },
+    { type: 'stairsUp', w: 2.2 },
+    { type: 'stairsDown', w: 2.2 },
+    { type: 'ramp', w: 1.8 },
+    { type: 'zigzag', w: 1.8 },
+    { type: 'narrow', w: 1.6 },
+    { type: 'stones', w: 1.6 },
+    { type: 'pillars', w: 1.4 },
+    { type: 'spikes', w: 1.6 },
+    { type: 'moving', w: 1.8 },
   ];
   if (world >= 1) {
     pool.push(
-      { type: 'jumpPad', w: 1.5 },
-      { type: 'blade', w: 1.5 },
-      { type: 'spikeWall', w: 1.3 },
-      { type: 'gate', w: 1.4 },
-      { type: 'moving', w: 2 },
-    );
-  }
-  if (world >= 2) {
-    pool.push(
-      { type: 'orb', w: 1.5 },
-      { type: 'rollingLog', w: 1.3 },
-      { type: 'pendulum', w: 1.3 },
-      { type: 'twinOrbs', w: 1.2 },
+      { type: 'orb', w: 1.6 },
+      { type: 'rollingLog', w: 1.5 },
+      { type: 'pendulum', w: 1.4 },
+      { type: 'twinOrbs', w: 1.3 },
     );
   }
   return pool;
 }
 
 const HAZARD_TYPES = new Set(['spikes', 'blade', 'orb', 'hurdle', 'spikeWall', 'rollingLog', 'gate', 'pendulum', 'twinOrbs']);
+// Pieces that can't be crossed by just holding forward - either a real gap
+// wider than momentum can carry, or a hazard blocking the full width. Note
+// jumpPad is deliberately excluded even though it "must" be crossed via a
+// jump arc - the bounce is automatic on contact (the physics engine's bouncy
+// collider flag fires regardless of player input), so it doesn't actually
+// require the player to press jump and can't satisfy the per-level guarantee.
+const MUST_JUMP_TYPES = new Set(['gap', 'hurdle', 'spikeWall']);
 
 function weightedPick(rng, pool) {
   const total = pool.reduce((s, p) => s + p.w, 0);
@@ -655,18 +683,27 @@ export function buildLevel(levelIndex) {
   const budgetEnd = worldOffsetX + LEVEL_LENGTH - END_MARGIN;
   let pieces = 0;
   let lastType = null;
+  let mustJumpCount = 0;
   while (cursor.x < budgetEnd && pieces < 6) {
     // never chain two gaps, and never chain two hazards back to back - each
     // hazard's safe lane should be reasoned about on its own, not combined
     // with another hazard's while it's still fresh underfoot
     const avoidTypes = lastType === 'gap' ? ['gap'] : HAZARD_TYPES.has(lastType) ? [...HAZARD_TYPES] : [];
     const candidatePool = avoidTypes.length ? pool.filter((p) => !avoidTypes.includes(p.type)) : pool;
-    const type = weightedPick(rng, candidatePool.length ? candidatePool : pool);
+    // force the must-jump guarantee onto a piece still inside the normal
+    // budget/count-capped loop (this is likely the last iteration - either
+    // the piece count cap or the room left says so) instead of bolting one
+    // on after the loop exits, which could land past this level's endX and
+    // let a player cross the finish line before ever reaching it
+    const mustForceJump = mustJumpCount === 0 && (pieces === 5 || budgetEnd - cursor.x < 6);
+    const jumpPool = candidatePool.filter((p) => MUST_JUMP_TYPES.has(p.type));
+    const type = mustForceJump && jumpPool.length ? weightedPick(rng, jumpPool) : weightedPick(rng, candidatePool.length ? candidatePool : pool);
     lastType = type;
+    if (MUST_JUMP_TYPES.has(type)) mustJumpCount++;
     switch (type) {
       case 'gap':
         platform(ctx, range(rng, 1.8, 2.4));
-        gap(ctx, range(rng, 1.3, MAX_GAP));
+        gap(ctx, range(rng, MIN_GAP, MAX_GAP));
         // generous landing zone so a full jump arc can't sail over it into
         // whatever short piece comes next
         platform(ctx, range(rng, 3.0, 4.2));
@@ -739,6 +776,12 @@ export function buildLevel(levelIndex) {
         platform(ctx, 2);
     }
     pieces++;
+  }
+
+  // guarantee every level has at least one genuine "must jump" moment,
+  // rather than leaving it to chance whether the random pieces included one
+  if (mustJumpCount === 0) {
+    hurdlePiece(ctx, rng);
   }
 
   // leveling connector: bring z back toward 0 with a generous safe platform,
