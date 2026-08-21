@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { Player } from './player.js';
 import { InputController } from './input.js';
 import { ChaseCamera } from './camera.js';
-import { buildLevel, disposeLevel, LEVEL_LENGTH } from './levels.js';
+import { buildLevel, disposeLevel, LEVEL_LENGTH, getHazardMaterial } from './levels.js';
 import { TOTAL_LEVELS, themeForLevel, worldForLevel } from './themes.js';
 import * as save from './save.js';
 import * as ui from './ui.js';
@@ -28,7 +28,7 @@ export class Game {
     this.scene.add(this.hemi, this.dir);
 
     this.player = new Player(this.scene);
-    this.player.onFall = () => this.respawn();
+    this.player.onDeath = () => this.respawn();
 
     this.levels = new Map();
     this.currentLevel = 0;
@@ -143,30 +143,41 @@ export class Game {
   collectActiveColliders() {
     let colliders = [];
     let movers = [];
+    let hazards = [];
     for (const lvl of this.levels.values()) {
       colliders = colliders.concat(lvl.colliders);
       movers = movers.concat(lvl.movers);
+      hazards = hazards.concat(lvl.hazards);
     }
-    return { colliders, movers };
+    return { colliders, movers, hazards };
   }
 
   tick() {
     if (!this.running) return;
     const dt = Math.min(this._clock.getDelta(), MAX_DT);
+    const t = performance.now() / 1000;
 
     for (const lvl of this.levels.values()) {
       for (const m of lvl.movers) {
-        const t = performance.now() / 1000;
         const val = m.center + Math.sin(t * m.speed + m.phase) * m.amplitude;
         if (m.axis === 'z') m.mesh.position.z = val;
         else m.mesh.position.y = val;
       }
+      for (const h of lvl.hazards) {
+        if (h.type === 'blade') {
+          h.mesh.rotation.y = h.phase + t * h.speed;
+        } else if (h.type === 'orb') {
+          h.mesh.position.z = h.center + Math.sin(t * h.speed + h.phase) * h.amplitude;
+        }
+      }
     }
+    const pulse = 0.55 + Math.sin(t * 6) * 0.25;
+    getHazardMaterial().color.setRGB(1, pulse * 0.18, pulse * 0.28);
 
     const move = this.input.getMove();
     if (this.input.consumeJump()) this.player.jump();
-    const { colliders, movers } = this.collectActiveColliders();
-    this.player.update(dt, move, colliders, movers);
+    const { colliders, movers, hazards } = this.collectActiveColliders();
+    this.player.update(dt, move, colliders, movers, hazards);
 
     const boundaryIndex = Math.floor((this.player.position.x) / LEVEL_LENGTH);
     if (boundaryIndex > this.currentLevel) {

@@ -29,7 +29,7 @@ export class Player {
     this.grounded = false;
     this.groundMover = null;
     this.deathY = MAX_FALL;
-    this.onFall = null;
+    this.onDeath = null;
     this.facing = 0;
     this.coyoteTimer = 0;
     this.jumpBufferTimer = 0;
@@ -49,7 +49,7 @@ export class Player {
     this.jumpBufferTimer = JUMP_BUFFER;
   }
 
-  update(dt, input, colliders, movers) {
+  update(dt, input, colliders, movers, hazards) {
     const speed = this.grounded ? MOVE_SPEED : AIR_SPEED;
     const moveX = input.x * speed;
     const moveZ = input.z * speed;
@@ -112,7 +112,12 @@ export class Player {
     this.group.rotation.y = this.facing;
 
     if (this.position.y < this.deathY) {
-      this.onFall && this.onFall();
+      this.onDeath && this.onDeath();
+      return;
+    }
+
+    if (hazards && hazards.length && touchesHazard(this.position, hazards)) {
+      this.onDeath && this.onDeath();
     }
   }
 }
@@ -153,6 +158,47 @@ function resolveHorizontal(pos, colliders, movers) {
       pos.z += overlapZ1 < overlapZ2 ? overlapZ1 : -overlapZ2;
     }
   }
+}
+
+// Hazards use a slightly smaller hit region than solid collision so a near
+// miss visually reads as a miss, matching the "easy parkour" brief.
+function touchesHazard(pos, hazards) {
+  const px0 = pos.x - RADIUS * 0.85, px1 = pos.x + RADIUS * 0.85;
+  const pz0 = pos.z - RADIUS * 0.85, pz1 = pos.z + RADIUS * 0.85;
+  const py0 = pos.y + 0.12, py1 = pos.y + HEIGHT - 0.12;
+  for (const h of hazards) {
+    const b = hazardBox(h);
+    if (px1 <= b.minX || px0 >= b.maxX) continue;
+    if (pz1 <= b.minZ || pz0 >= b.maxZ) continue;
+    if (py1 <= b.minY || py0 >= b.maxY) continue;
+    return true;
+  }
+  return false;
+}
+
+function hazardBox(h) {
+  if (h.type === 'orb') {
+    const p = h.mesh.position;
+    return {
+      minX: p.x - h.radius, maxX: p.x + h.radius,
+      minY: p.y - h.radius, maxY: p.y + h.radius,
+      minZ: p.z - h.radius, maxZ: p.z + h.radius,
+    };
+  }
+  if (h.type === 'blade') {
+    const p = h.mesh.position;
+    const angle = h.mesh.rotation.y;
+    const cos = Math.abs(Math.cos(angle));
+    const sin = Math.abs(Math.sin(angle));
+    const halfX = (h.length / 2) * cos + (h.thickness / 2) * sin;
+    const halfZ = (h.length / 2) * sin + (h.thickness / 2) * cos;
+    return {
+      minX: p.x - halfX, maxX: p.x + halfX,
+      minY: p.y - h.halfHeight, maxY: p.y + h.halfHeight,
+      minZ: p.z - halfZ, maxZ: p.z + halfZ,
+    };
+  }
+  return h; // static box: {minX,maxX,minY,maxY,minZ,maxZ}
 }
 
 function getAllBoxes(colliders, movers) {

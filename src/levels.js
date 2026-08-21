@@ -20,6 +20,18 @@ function getMaterial(color) {
   return materialCache.get(key);
 }
 
+// Hazards are unlit and fog-exempt so they read as a vivid neon-red warning
+// in every theme, from the sunny grass world to the dark cave/space worlds.
+// A single shared material also means game.js can pulse it once per frame
+// and every hazard mesh in the game pulses with it for free.
+let hazardMaterial = null;
+export function getHazardMaterial() {
+  if (!hazardMaterial) {
+    hazardMaterial = new THREE.MeshBasicMaterial({ color: 0xff1040, fog: false, toneMapped: false });
+  }
+  return hazardMaterial;
+}
+
 const boxGeoCache = new Map();
 function getBoxGeo(sx, sy, sz) {
   const key = `${sx.toFixed(2)}_${sy.toFixed(2)}_${sz.toFixed(2)}`;
@@ -27,6 +39,42 @@ function getBoxGeo(sx, sy, sz) {
     boxGeoCache.set(key, new THREE.BoxGeometry(sx, sy, sz));
   }
   return boxGeoCache.get(key);
+}
+
+const cylGeoCache = new Map();
+function getCylinderGeo(radius, height) {
+  const key = `${radius.toFixed(2)}_${height.toFixed(2)}`;
+  if (!cylGeoCache.has(key)) {
+    cylGeoCache.set(key, new THREE.CylinderGeometry(radius, radius, height, 16));
+  }
+  return cylGeoCache.get(key);
+}
+
+const coneGeoCache = new Map();
+function getConeGeo(radius, height) {
+  const key = `${radius.toFixed(2)}_${height.toFixed(2)}`;
+  if (!coneGeoCache.has(key)) {
+    coneGeoCache.set(key, new THREE.ConeGeometry(radius, height, 8));
+  }
+  return coneGeoCache.get(key);
+}
+
+const icosGeoCache = new Map();
+function getIcosGeo(radius) {
+  const key = radius.toFixed(2);
+  if (!icosGeoCache.has(key)) {
+    icosGeoCache.set(key, new THREE.IcosahedronGeometry(radius, 0));
+  }
+  return icosGeoCache.get(key);
+}
+
+const octaGeoCache = new Map();
+function getOctaGeo(radius) {
+  const key = radius.toFixed(2);
+  if (!octaGeoCache.has(key)) {
+    octaGeoCache.set(key, new THREE.OctahedronGeometry(radius, 0));
+  }
+  return octaGeoCache.get(key);
 }
 
 function addBoxCollider(ctx, cx, cy, cz, sx, sy, sz, opts = {}) {
@@ -121,6 +169,140 @@ function movingPlatform(ctx, rng) {
   cursor.x += gapLen;
 }
 
+function spikesPiece(ctx, rng) {
+  const { cursor, group, hazards } = ctx;
+  const len = range(rng, 3.4, 4.4);
+  platform(ctx, len);
+  const spikeCount = 2 + Math.floor(rng() * 2);
+  const startX = cursor.x - len + 0.9;
+  const spacing = (len - 1.8) / Math.max(1, spikeCount - 1);
+  const laneSide = rng() > 0.5 ? 1 : -1;
+  const spikeZ = laneSide * range(rng, 1.3, 1.9); // leaves a clear walk-around lane on the other side
+  const radius = 0.26;
+  const height = 0.55;
+  for (let i = 0; i < spikeCount; i++) {
+    const sx = startX + i * spacing;
+    const mesh = new THREE.Mesh(getConeGeo(radius, height), getHazardMaterial());
+    mesh.position.set(sx, cursor.y + height / 2, spikeZ);
+    group.add(mesh);
+    hazards.push({
+      type: 'box',
+      minX: sx - radius * 0.6, maxX: sx + radius * 0.6,
+      minY: cursor.y, maxY: cursor.y + height,
+      minZ: spikeZ - radius * 0.6, maxZ: spikeZ + radius * 0.6,
+    });
+  }
+}
+
+function bladePiece(ctx, rng) {
+  const { theme, cursor, group, hazards } = ctx;
+  const width = CORRIDOR_HALF * 2;
+  // generous straight lead-in before the pivot so there's time to line up
+  // with the safe lane, plus a short trailing stretch to land the dodge
+  const leadIn = range(rng, 3.0, 3.6);
+  const trail = range(rng, 1.4, 1.8);
+  const platLen = leadIn + trail;
+  const pivotX = cursor.x + leadIn;
+  const pivotZ = cursor.z;
+  platform(ctx, platLen, { width });
+  const length = 2.6;
+  const thickness = 0.28;
+  const halfHeight = 0.32;
+  const mesh = new THREE.Mesh(getBoxGeo(length, halfHeight * 2, thickness), getHazardMaterial());
+  mesh.position.set(pivotX, cursor.y + halfHeight, pivotZ);
+  group.add(mesh);
+  const post = new THREE.Mesh(getCylinderGeo(0.1, 0.5), getMaterial(theme.accent));
+  post.position.set(pivotX, cursor.y + 0.25, pivotZ);
+  group.add(post);
+  hazards.push({
+    type: 'blade',
+    mesh,
+    length,
+    thickness,
+    halfHeight,
+    speed: range(rng, 1.1, 1.7) * (rng() > 0.5 ? 1 : -1),
+    phase: rng() * Math.PI * 2,
+  });
+}
+
+function orbPiece(ctx, rng) {
+  const { cursor, group, hazards } = ctx;
+  const leadIn = range(rng, 3.0, 3.6);
+  const trail = range(rng, 1.6, 2.0);
+  const platLen = leadIn + trail;
+  const baseX = cursor.x + leadIn;
+  const baseY = cursor.y + 0.55;
+  const baseZ = cursor.z;
+  platform(ctx, platLen, { width: CORRIDOR_HALF * 2 });
+  const radius = 0.32;
+  const mesh = new THREE.Mesh(new THREE.SphereGeometry(radius, 12, 8), getHazardMaterial());
+  mesh.position.set(baseX, baseY, baseZ);
+  group.add(mesh);
+  hazards.push({
+    type: 'orb',
+    mesh,
+    radius,
+    axis: 'z',
+    center: baseZ,
+    amplitude: range(rng, 1.4, 2.0),
+    speed: range(rng, 0.9, 1.3),
+    phase: rng() * Math.PI * 2,
+  });
+}
+
+function steppingStones(ctx, rng) {
+  const { theme, cursor, group, colliders } = ctx;
+  const count = 3 + Math.floor(rng() * 2);
+  for (let i = 0; i < count; i++) {
+    const stoneRadius = range(rng, 0.85, 1.05);
+    const cx = cursor.x + stoneRadius;
+    const mesh = new THREE.Mesh(getCylinderGeo(stoneRadius, PLATFORM_THICK), getMaterial(theme.platform));
+    mesh.position.set(cx, cursor.y - PLATFORM_THICK / 2, cursor.z);
+    group.add(mesh);
+    colliders.push({
+      minX: cx - stoneRadius, maxX: cx + stoneRadius,
+      minY: cursor.y - PLATFORM_THICK, maxY: cursor.y,
+      minZ: cursor.z - stoneRadius, maxZ: cursor.z + stoneRadius,
+      bouncy: false,
+    });
+    cursor.x = cx + stoneRadius + range(rng, 0.9, 1.4);
+  }
+}
+
+function addDecoration(ctx, x, z, rng) {
+  const { theme, group } = ctx;
+  const kind = Math.floor(rng() * 3);
+  const y = -0.3;
+  if (kind === 0) {
+    const trunk = new THREE.Mesh(getCylinderGeo(0.12, 0.8), getMaterial(0x8a6a4a));
+    trunk.position.set(x, y + 0.4, z);
+    group.add(trunk);
+    const top = new THREE.Mesh(getConeGeo(0.55, 1.1), getMaterial(theme.platform));
+    top.position.set(x, y + 1.1, z);
+    group.add(top);
+  } else if (kind === 1) {
+    const rock = new THREE.Mesh(getIcosGeo(range(rng, 0.35, 0.6)), getMaterial(theme.accent));
+    rock.position.set(x, y + 0.3, z);
+    rock.rotation.set(rng() * Math.PI, rng() * Math.PI, 0);
+    group.add(rock);
+  } else {
+    const crystal = new THREE.Mesh(getOctaGeo(range(rng, 0.3, 0.5)), getMaterial(theme.accent));
+    crystal.position.set(x, y + 0.5, z);
+    crystal.rotation.y = rng() * Math.PI;
+    group.add(crystal);
+  }
+}
+
+function scatterDecorations(ctx, worldOffsetX, rng) {
+  const count = 4 + Math.floor(rng() * 4);
+  for (let i = 0; i < count; i++) {
+    const side = rng() > 0.5 ? 1 : -1;
+    const x = worldOffsetX + range(rng, 1, LEVEL_LENGTH - 1);
+    const z = side * range(rng, CORRIDOR_HALF + 1.2, CORRIDOR_HALF + 3.2);
+    addDecoration(ctx, x, z, rng);
+  }
+}
+
 function jumpPad(ctx) {
   const { theme, cursor } = ctx;
   const len = 2;
@@ -151,9 +333,11 @@ function pieceWeightsForWorld(world) {
     { type: 'stairsDown', w: 2 },
     { type: 'zigzag', w: 2 },
     { type: 'narrow', w: 2 },
+    { type: 'stones', w: 2 },
+    { type: 'spikes', w: 1.5 },
   ];
-  if (world >= 1) pool.push({ type: 'jumpPad', w: 1.5 });
-  if (world >= 2) pool.push({ type: 'moving', w: 2 });
+  if (world >= 1) pool.push({ type: 'jumpPad', w: 1.5 }, { type: 'blade', w: 1.5 });
+  if (world >= 2) pool.push({ type: 'moving', w: 2 }, { type: 'orb', w: 1.5 });
   return pool;
 }
 
@@ -175,8 +359,9 @@ export function buildLevel(levelIndex) {
   const group = new THREE.Group();
   const colliders = [];
   const movers = [];
+  const hazards = [];
   const cursor = { x: worldOffsetX, y: 0, z: 0 };
-  const ctx = { group, colliders, movers, theme, cursor, rng };
+  const ctx = { group, colliders, movers, hazards, theme, cursor, rng };
 
   // entry / checkpoint pad
   buildPad(ctx, worldOffsetX + PAD_SIZE / 2, 0, 0, {});
@@ -187,8 +372,13 @@ export function buildLevel(levelIndex) {
   let pieces = 0;
   let lastType = null;
   while (cursor.x < budgetEnd && pieces < 6) {
-    const avoid = lastType === 'gap' ? 'gap' : null;
-    const type = weightedPick(rng, avoid ? pool.filter((p) => p.type !== avoid) : pool);
+    // never chain two gaps, and never chain two hazards back to back - each
+    // hazard's safe lane should be reasoned about on its own, not combined
+    // with another hazard's while it's still fresh underfoot
+    const isHazardType = (t) => t === 'spikes' || t === 'blade' || t === 'orb';
+    const avoidTypes = lastType === 'gap' ? ['gap'] : isHazardType(lastType) ? ['spikes', 'blade', 'orb'] : [];
+    const candidatePool = avoidTypes.length ? pool.filter((p) => !avoidTypes.includes(p.type)) : pool;
+    const type = weightedPick(rng, candidatePool.length ? candidatePool : pool);
     lastType = type;
     switch (type) {
       case 'gap':
@@ -226,6 +416,18 @@ export function buildLevel(levelIndex) {
         movingPlatform(ctx, rng);
         platform(ctx, range(rng, 3.0, 4.2));
         break;
+      case 'stones':
+        steppingStones(ctx, rng);
+        break;
+      case 'spikes':
+        spikesPiece(ctx, rng);
+        break;
+      case 'blade':
+        bladePiece(ctx, rng);
+        break;
+      case 'orb':
+        orbPiece(ctx, rng);
+        break;
       default:
         platform(ctx, 2);
     }
@@ -251,10 +453,13 @@ export function buildLevel(levelIndex) {
     buildPad(ctx, worldOffsetX + LEVEL_LENGTH, 0, 0, { finish: true });
   }
 
+  scatterDecorations(ctx, worldOffsetX, rng);
+
   return {
     index: levelIndex,
     group,
     colliders,
+    hazards,
     movers,
     theme,
     startWorld: { x: worldOffsetX + PAD_SIZE / 2, y: 1.2, z: 0 },
