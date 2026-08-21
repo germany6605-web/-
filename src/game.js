@@ -162,15 +162,24 @@ export class Game {
 
     for (const lvl of this.levels.values()) {
       for (const m of lvl.movers) {
-        const val = m.center + Math.sin(t * m.speed + m.phase) * m.amplitude;
-        if (m.axis === 'z') m.mesh.position.z = val;
-        else m.mesh.position.y = val;
+        if (m.axis === 'circle') {
+          m.mesh.position.x = m.centerX + Math.cos(t * m.speed + m.phase) * m.radius;
+          m.mesh.position.z = m.centerZ + Math.sin(t * m.speed + m.phase) * m.radius;
+        } else {
+          const val = m.center + Math.sin(t * m.speed + m.phase) * m.amplitude;
+          if (m.axis === 'z') m.mesh.position.z = val;
+          else m.mesh.position.y = val;
+        }
       }
       for (const h of lvl.hazards) {
         if (h.type === 'blade') {
-          h.mesh.rotation.y = h.phase + t * h.speed;
+          h.mesh.rotation.y = h.pendulum
+            ? h.phase + Math.sin(t * h.speed) * h.swingRange
+            : h.phase + t * h.speed;
         } else if (h.type === 'orb') {
           h.mesh.position.z = h.center + Math.sin(t * h.speed + h.phase) * h.amplitude;
+        } else if (h.type === 'gate') {
+          h.mesh.position.y = h.center + Math.sin(t * h.speed + h.phase) * h.amplitude;
         }
         // purely cosmetic spin (e.g. a rolling log) - the hitbox never changes
         if (h.spinMesh) h.spinMesh.rotation.x = t * 2.4;

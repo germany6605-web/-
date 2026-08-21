@@ -20,8 +20,8 @@ const CLIMB_GAIN_PER_LEVEL = CLIMB_STEPS_TOTAL * STEP;
 const WORLD_BASE_Y = (() => {
   const arr = [0];
   for (let w = 0; w < TOTAL_WORLDS - 1; w++) {
-    const add = CLIMBING_WORLDS.has(w) ? CLIMB_GAIN_PER_LEVEL * LEVELS_PER_WORLD : 0;
-    arr.push(arr[w] + add);
+    const dir = CLIMBING_WORLDS.get(w) ?? 0;
+    arr.push(arr[w] + dir * CLIMB_GAIN_PER_LEVEL * LEVELS_PER_WORLD);
   }
   return arr;
 })();
@@ -29,8 +29,8 @@ const WORLD_BASE_Y = (() => {
 function baseYForLevel(levelIndex) {
   const world = worldForLevel(levelIndex);
   const indexInWorld = levelIndex - world * LEVELS_PER_WORLD;
-  const climbSoFar = CLIMBING_WORLDS.has(world) ? indexInWorld * CLIMB_GAIN_PER_LEVEL : 0;
-  return WORLD_BASE_Y[world] + climbSoFar;
+  const dir = CLIMBING_WORLDS.get(world) ?? 0;
+  return WORLD_BASE_Y[world] + dir * indexInWorld * CLIMB_GAIN_PER_LEVEL;
 }
 
 const materialCache = new Map();
@@ -180,10 +180,10 @@ function narrowBridge(ctx, length) {
   platform(ctx, length, { width: 1.4 });
 }
 
-function movingPlatform(ctx, rng) {
+function movingPlatform(ctx, rng, axisOverride) {
   const { theme, cursor } = ctx;
   const size = { x: 2.2, y: PLATFORM_THICK, z: 2.2 };
-  const axis = rng() > 0.5 ? 'z' : 'y';
+  const axis = axisOverride ?? (rng() > 0.5 ? 'z' : 'y');
   const gapLen = MAX_GAP + range(rng, 0.6, 1.4);
   const startX = cursor.x + gapLen / 2;
   const baseY = cursor.y - PLATFORM_THICK / 2;
@@ -195,8 +195,11 @@ function movingPlatform(ctx, rng) {
     mesh,
     axis,
     center: axis === 'z' ? baseZ : baseY,
+    centerX: startX,
+    centerZ: baseZ,
+    radius: range(rng, 1.4, 2.0),
     amplitude: axis === 'z' ? range(rng, 1.6, 2.4) : range(rng, 0.8, 1.2),
-    speed: range(rng, 0.7, 1.1),
+    speed: axis === 'circle' ? range(rng, 0.4, 0.7) : range(rng, 0.7, 1.1),
     phase: rng() * Math.PI * 2,
     half: { x: size.x / 2, y: size.y / 2, z: size.z / 2 },
   };
@@ -229,7 +232,7 @@ function spikesPiece(ctx, rng) {
   }
 }
 
-function bladePiece(ctx, rng) {
+function bladePiece(ctx, rng, opts = {}) {
   const { theme, cursor, group, hazards } = ctx;
   const width = CORRIDOR_HALF * 2;
   // generous straight lead-in before the pivot so there's time to line up
@@ -257,6 +260,10 @@ function bladePiece(ctx, rng) {
     halfHeight,
     speed: range(rng, 1.1, 1.7) * (rng() > 0.5 ? 1 : -1),
     phase: rng() * Math.PI * 2,
+    // a pendulum swings back and forth through a limited arc instead of
+    // spinning all the way around - same collision math, different rhythm
+    pendulum: !!opts.pendulum,
+    swingRange: opts.pendulum ? range(rng, 1.1, 1.7) : 0,
   });
 }
 
@@ -283,6 +290,38 @@ function orbPiece(ctx, rng) {
     speed: range(rng, 0.9, 1.3),
     phase: rng() * Math.PI * 2,
   });
+}
+
+// Two orbs sweeping the corridor out of phase with each other, so the safe
+// gap between them drifts back and forth - weave through rather than just
+// picking one fixed side like a single orb.
+function twinOrbsPiece(ctx, rng) {
+  const { cursor, group, hazards } = ctx;
+  const leadIn = range(rng, 3.0, 3.6);
+  const trail = range(rng, 1.6, 2.0);
+  const platLen = leadIn + trail;
+  const baseX = cursor.x + leadIn;
+  const baseY = cursor.y + 0.55;
+  const baseZ = cursor.z;
+  platform(ctx, platLen, { width: CORRIDOR_HALF * 2 });
+  const radius = 0.3;
+  const speed = range(rng, 0.8, 1.1);
+  const amplitude = range(rng, 1.3, 1.7);
+  for (const phaseOffset of [0, Math.PI]) {
+    const mesh = new THREE.Mesh(new THREE.SphereGeometry(radius, 12, 8), getHazardMaterial());
+    mesh.position.set(baseX, baseY, baseZ);
+    group.add(mesh);
+    hazards.push({
+      type: 'orb',
+      mesh,
+      radius,
+      axis: 'z',
+      center: baseZ,
+      amplitude,
+      speed,
+      phase: phaseOffset,
+    });
+  }
 }
 
 // Full-width "must jump" hazards: unlike spikes/blade/orb (which always
@@ -354,6 +393,39 @@ function rollingLogPiece(ctx, rng) {
   });
 }
 
+// A full-width bar that rises and falls between "blocking, must jump" and
+// "well above head height, safe to just walk under". Waiting for it to lift
+// clear is always a safe strategy, no precision required - jumping through
+// while it's low is an optional shortcut for players who time it.
+function gatePiece(ctx, rng) {
+  const { cursor, group, hazards } = ctx;
+  const leadIn = range(rng, 2.8, 3.4);
+  const trail = range(rng, 2.2, 2.8);
+  const gateX = cursor.x + leadIn;
+  platform(ctx, leadIn + trail, { width: CORRIDOR_HALF * 2 });
+  const thickness = 0.24;
+  const barHeight = 0.4;
+  const width = CORRIDOR_HALF * 2;
+  const lowY = cursor.y + barHeight / 2 + 0.05;
+  const highY = cursor.y + 2.8;
+  const center = (lowY + highY) / 2;
+  const amplitude = (highY - lowY) / 2;
+  const mesh = new THREE.Mesh(getBoxGeo(thickness, barHeight, width), getHazardMaterial());
+  mesh.position.set(gateX, center, cursor.z);
+  group.add(mesh);
+  hazards.push({
+    type: 'gate',
+    mesh,
+    thickness,
+    halfHeight: barHeight / 2,
+    width,
+    center,
+    amplitude,
+    speed: range(rng, 1.2, 1.6),
+    phase: rng() * Math.PI * 2,
+  });
+}
+
 // Splits `total` into `parts` non-negative integers (some may be 0) that
 // always sum to exactly `total`, so a climbing level's net height gain is
 // deterministic regardless of how the RNG distributes it across flights.
@@ -375,11 +447,11 @@ function partitionSteps(rng, total, parts) {
 // A climbing level replaces the normal piece loop entirely: a few flights
 // of stairs (always summing to CLIMB_GAIN_PER_LEVEL) separated by flat rests
 // and the occasional bit of variety, ending flush with the next level's pad.
-function buildClimbSkeleton(ctx, rng, worldOffsetX) {
+function buildClimbSkeleton(ctx, rng, worldOffsetX, dir) {
   const flights = 2 + Math.floor(rng() * 2);
   const stepsPerFlight = partitionSteps(rng, CLIMB_STEPS_TOTAL, flights);
   for (let f = 0; f < flights; f++) {
-    if (stepsPerFlight[f] > 0) stairs(ctx, stepsPerFlight[f], 1);
+    if (stepsPerFlight[f] > 0) stairs(ctx, stepsPerFlight[f], dir);
     if (f < flights - 1) {
       const roll = rng();
       if (roll < 0.25) {
@@ -503,22 +575,37 @@ function buildPad(ctx, worldX, y, z, opts = {}) {
 function pieceWeightsForWorld(world) {
   const pool = [
     { type: 'gap', w: 3 },
-    { type: 'stairsUp', w: 2 },
-    { type: 'stairsDown', w: 2 },
+    { type: 'stairsUp', w: 2.5 },
+    { type: 'stairsDown', w: 2.5 },
+    { type: 'ramp', w: 2.3 },
     { type: 'zigzag', w: 2 },
     { type: 'narrow', w: 2 },
     { type: 'stones', w: 2 },
     { type: 'pillars', w: 1.8 },
-    { type: 'ramp', w: 1.8 },
     { type: 'spikes', w: 1.5 },
     { type: 'hurdle', w: 1.5 },
   ];
-  if (world >= 1) pool.push({ type: 'jumpPad', w: 1.5 }, { type: 'blade', w: 1.5 }, { type: 'spikeWall', w: 1.3 });
-  if (world >= 2) pool.push({ type: 'moving', w: 2 }, { type: 'orb', w: 1.5 }, { type: 'rollingLog', w: 1.3 });
+  if (world >= 1) {
+    pool.push(
+      { type: 'jumpPad', w: 1.5 },
+      { type: 'blade', w: 1.5 },
+      { type: 'spikeWall', w: 1.3 },
+      { type: 'gate', w: 1.4 },
+      { type: 'moving', w: 2 },
+    );
+  }
+  if (world >= 2) {
+    pool.push(
+      { type: 'orb', w: 1.5 },
+      { type: 'rollingLog', w: 1.3 },
+      { type: 'pendulum', w: 1.3 },
+      { type: 'twinOrbs', w: 1.2 },
+    );
+  }
   return pool;
 }
 
-const HAZARD_TYPES = new Set(['spikes', 'blade', 'orb', 'hurdle', 'spikeWall', 'rollingLog']);
+const HAZARD_TYPES = new Set(['spikes', 'blade', 'orb', 'hurdle', 'spikeWall', 'rollingLog', 'gate', 'pendulum', 'twinOrbs']);
 
 function weightedPick(rng, pool) {
   const total = pool.reduce((s, p) => s + p.w, 0);
@@ -548,7 +635,7 @@ export function buildLevel(levelIndex) {
   cursor.x = worldOffsetX + PAD_SIZE + 0.4;
 
   if (CLIMBING_WORLDS.has(world)) {
-    buildClimbSkeleton(ctx, rng, worldOffsetX);
+    buildClimbSkeleton(ctx, rng, worldOffsetX, CLIMBING_WORLDS.get(world));
     scatterDecorations(ctx, worldOffsetX, rng);
     const isLast = levelIndex === TOTAL_LEVELS - 1;
     if (isLast) buildPad(ctx, worldOffsetX + LEVEL_LENGTH, cursor.y, 0, { finish: true });
@@ -615,7 +702,7 @@ export function buildLevel(levelIndex) {
         break;
       case 'moving':
         platform(ctx, 1.2);
-        movingPlatform(ctx, rng);
+        movingPlatform(ctx, rng, rng() < 0.3 ? 'circle' : undefined);
         platform(ctx, range(rng, 3.0, 4.2));
         break;
       case 'stones':
@@ -627,8 +714,14 @@ export function buildLevel(levelIndex) {
       case 'blade':
         bladePiece(ctx, rng);
         break;
+      case 'pendulum':
+        bladePiece(ctx, rng, { pendulum: true });
+        break;
       case 'orb':
         orbPiece(ctx, rng);
+        break;
+      case 'twinOrbs':
+        twinOrbsPiece(ctx, rng);
         break;
       case 'hurdle':
         hurdlePiece(ctx, rng);
@@ -638,6 +731,9 @@ export function buildLevel(levelIndex) {
         break;
       case 'rollingLog':
         rollingLogPiece(ctx, rng);
+        break;
+      case 'gate':
+        gatePiece(ctx, rng);
         break;
       default:
         platform(ctx, 2);

@@ -27,7 +27,15 @@ export function worldForLevel(levelIndex) {
   return Math.floor(levelIndex / LEVELS_PER_WORLD);
 }
 
-// Worlds that climb steadily upward across all 25 of their levels instead of
-// staying roughly flat: Пещера (climbing out of a cave), Небеса (up into the
-// sky) and Космос (up into orbit) - a fitting theme for each.
-export const CLIMBING_WORLDS = new Set([4, 6, 9]);
+// Worlds that steadily gain or lose height across all 25 of their levels
+// instead of staying roughly flat, each mapped to a climb direction
+// (1 = upward, -1 = downward): Пещера climbs out of a cave, Лава then
+// descends into the volcano (landing back near ground level), Небеса climbs
+// into the sky, Технологии climbs a tower, and Космос climbs into orbit.
+export const CLIMBING_WORLDS = new Map([
+  [4, 1],
+  [5, -1],
+  [6, 1],
+  [8, 1],
+  [9, 1],
+]);

@@ -47,13 +47,23 @@ function simulateLevel(index) {
   let t = 0;
   while (t < MAX_SIM_TIME && !died) {
     for (const m of movers) {
-      const val = m.center + Math.sin(t * m.speed + m.phase) * m.amplitude;
-      if (m.axis === 'z') m.mesh.position.z = val;
-      else m.mesh.position.y = val;
+      if (m.axis === 'circle') {
+        m.mesh.position.x = m.centerX + Math.cos(t * m.speed + m.phase) * m.radius;
+        m.mesh.position.z = m.centerZ + Math.sin(t * m.speed + m.phase) * m.radius;
+      } else {
+        const val = m.center + Math.sin(t * m.speed + m.phase) * m.amplitude;
+        if (m.axis === 'z') m.mesh.position.z = val;
+        else m.mesh.position.y = val;
+      }
     }
     for (const h of hazards) {
-      if (h.type === 'blade') h.mesh.rotation.y = h.phase + t * h.speed;
-      else if (h.type === 'orb') h.mesh.position.z = h.center + Math.sin(t * h.speed + h.phase) * h.amplitude;
+      if (h.type === 'blade') {
+        h.mesh.rotation.y = h.pendulum ? h.phase + Math.sin(t * h.speed) * h.swingRange : h.phase + t * h.speed;
+      } else if (h.type === 'orb') {
+        h.mesh.position.z = h.center + Math.sin(t * h.speed + h.phase) * h.amplitude;
+      } else if (h.type === 'gate') {
+        h.mesh.position.y = h.center + Math.sin(t * h.speed + h.phase) * h.amplitude;
+      }
     }
 
     const p = player.position;
@@ -81,7 +91,20 @@ function simulateLevel(index) {
       }
     }
     const dz = THREE.MathUtils.clamp((targetZ - p.z) * 0.8, -1, 1);
-    const move = { x: 1, z: dz };
+    // a timing gate is always safe to just wait out - no jump precision
+    // needed. Start watching it well before reaching it (the gate moves
+    // slowly, so a wide lookahead window still catches "about to close"
+    // many frames before actually arriving) and hold in place the instant
+    // clearance looks marginal, rather than reacting only once adjacent.
+    let waitForGate = false;
+    for (const h of hazards) {
+      if (h.type !== 'gate') continue;
+      const gx = h.mesh.position.x;
+      if (p.x < gx - 1.5 || p.x > gx + 0.3) continue;
+      const clearance = h.mesh.position.y - h.halfHeight - (p.y + 1.7);
+      if (clearance < 0.3) { waitForGate = true; break; }
+    }
+    const move = { x: waitForGate ? 0 : 1, z: dz };
 
     if (player.grounded) {
       const aheadX0 = p.x + 0.5;

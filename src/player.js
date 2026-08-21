@@ -198,6 +198,14 @@ function hazardBox(h) {
       minZ: p.z - halfZ, maxZ: p.z + halfZ,
     };
   }
+  if (h.type === 'gate') {
+    const p = h.mesh.position;
+    return {
+      minX: p.x - h.thickness / 2, maxX: p.x + h.thickness / 2,
+      minY: p.y - h.halfHeight, maxY: p.y + h.halfHeight,
+      minZ: p.z - h.width / 2, maxZ: p.z + h.width / 2,
+    };
+  }
   return h; // static box: {minX,maxX,minY,maxY,minZ,maxZ}
 }
 
