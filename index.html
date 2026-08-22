@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Cookie Merge</title>
+<style>
+  :root{
+    --bg-0:#1b120c;
+    --bg-1:#2a1c12;
+    --panel:#3a2617;
+    --panel-2:#4a3120;
+    --cell:#5a3c26;
+    --cell-empty:#2f1f14;
+    --cream:#ffe9c9;
+    --cream-dim:#d8bd9a;
+    --accent:#ffb742;
+    --accent-2:#ff7a3d;
+    --good:#8bd17c;
+    --danger:#ff6b6b;
+    --radius:16px;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{
+    margin:0;padding:0;height:100%;
+    background:radial-gradient(circle at 50% -10%,var(--bg-1),var(--bg-0) 70%);
+    color:var(--cream);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    overscroll-behavior:none;
+    -webkit-user-select:none;user-select:none;
+  }
+  #app{
+    max-width:980px;
+    margin:0 auto;
+    padding:12px 12px calc(24px + env(safe-area-inset-bottom));
+    display:flex;
+    flex-direction:column;
+    gap:14px;
+    min-height:100%;
+  }
+  header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    background:linear-gradient(180deg,var(--panel),var(--panel-2));
+    border-radius:var(--radius);
+    padding:10px 14px;
+    box-shadow:0 4px 14px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.06);
+  }
+  h1{
+    font-size:15px;
+    margin:0;
+    letter-spacing:.5px;
+    font-weight:700;
+    color:var(--accent);
+    text-shadow:0 1px 0 rgba(0,0,0,.4);
+    display:flex;align-items:center;gap:6px;
+  }
+  .stats{display:flex;flex-direction:column;align-items:flex-end;gap:2px;}
+  .money{font-size:19px;font-weight:800;color:var(--cream);}
+  .money span{color:var(--accent);}
+  .income{font-size:12px;color:var(--good);font-weight:600;}
+  .reset-btn{
+    background:rgba(255,255,255,.06);
+    border:1px solid rgba(255,255,255,.12);
+    color:var(--cream-dim);
+    border-radius:10px;
+    padding:8px 9px;
+    font-size:14px;
+    cursor:pointer;
+    line-height:1;
+  }
+  .reset-btn:active{transform:scale(.94);}
+
+  main{
+    display:flex;
+    flex-direction:column;
+    gap:16px;
+  }
+  .board-wrap{
+    background:linear-gradient(180deg,var(--panel),var(--panel-2));
+    border-radius:20px;
+    padding:10px;
+    box-shadow:0 6px 20px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.06);
+  }
+  #board{
+    display:grid;
+    grid-template-columns:repeat(5,1fr);
+    gap:7px;
+    width:100%;
+    aspect-ratio:1/1;
+  }
+  .cell{
+    position:relative;
+    border-radius:13px;
+    background:var(--cell-empty);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+    touch-action:manipulation;
+    box-shadow:inset 0 2px 5px rgba(0,0,0,.45);
+    overflow:hidden;
+    transition:box-shadow .15s ease, transform .1s ease;
+  }
+  .cell.filled{
+    background:var(--cell);
+    box-shadow:0 2px 0 rgba(255,255,255,.05) inset, 0 3px 6px rgba(0,0,0,.35);
+  }
+  .cell.selected{
+    box-shadow:0 0 0 3px var(--accent), 0 0 14px 2px rgba(255,183,66,.6);
+  }
+  .cell canvas{
+    width:82%;
+    height:82%;
+    display:block;
+    pointer-events:none;
+  }
+  .cell .plus{
+    color:rgba(255,233,201,.15);
+    font-size:22px;
+    font-weight:300;
+    pointer-events:none;
+  }
+  @keyframes pop{
+    0%{transform:scale(.55);}
+    60%{transform:scale(1.12);}
+    100%{transform:scale(1);}
+  }
+  .cell.pop canvas{animation:pop .28s cubic-bezier(.34,1.56,.64,1);}
+
+  .shop-wrap{
+    background:linear-gradient(180deg,var(--panel),var(--panel-2));
+    border-radius:20px;
+    padding:12px;
+    box-shadow:0 6px 20px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.06);
+  }
+  .shop-title{
+    font-size:13px;
+    font-weight:700;
+    color:var(--cream-dim);
+    text-transform:uppercase;
+    letter-spacing:.8px;
+    margin:2px 4px 10px;
+  }
+  #shop{
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(112px,1fr));
+    gap:8px;
+  }
+  .shop-card{
+    background:rgba(0,0,0,.22);
+    border-radius:14px;
+    padding:8px 6px 9px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:4px;
+    position:relative;
+    border:1px solid rgba(255,255,255,.05);
+  }
+  .shop-card canvas{
+    width:52px;height:52px;
+  }
+  .shop-lvl{font-size:11px;color:var(--cream-dim);font-weight:600;}
+  .shop-price{font-size:12.5px;font-weight:700;color:var(--accent);}
+  .buy-btn{
+    margin-top:2px;
+    width:100%;
+    border:none;
+    border-radius:9px;
+    padding:6px 4px;
+    font-size:12px;
+    font-weight:700;
+    background:linear-gradient(180deg,var(--accent),var(--accent-2));
+    color:#2a1608;
+    cursor:pointer;
+  }
+  .buy-btn:disabled{
+    background:#4a3f34;
+    color:#8a7a68;
+    cursor:not-allowed;
+  }
+  .buy-btn:active:not(:disabled){transform:scale(.96);}
+  .shop-card.locked{opacity:.55;}
+  .lock-note{
+    font-size:10px;
+    color:var(--cream-dim);
+    text-align:center;
+    line-height:1.25;
+  }
+  .toast{
+    position:fixed;
+    left:50%;
+    bottom:calc(18px + env(safe-area-inset-bottom));
+    transform:translateX(-50%) translateY(20px);
+    background:rgba(20,12,7,.95);
+    border:1px solid rgba(255,183,66,.4);
+    color:var(--cream);
+    padding:10px 16px;
+    border-radius:12px;
+    font-size:13px;
+    font-weight:600;
+    box-shadow:0 6px 18px rgba(0,0,0,.5);
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .25s ease, transform .25s ease;
+    z-index:50;
+    max-width:88vw;
+    text-align:center;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+  .hint{
+    font-size:11.5px;
+    color:var(--cream-dim);
+    text-align:center;
+    padding:0 6px;
+    opacity:.8;
+  }
+
+  @media (min-width:820px){
+    main{flex-direction:row;align-items:flex-start;}
+    .board-wrap{flex:0 0 auto;width:520px;}
+    .shop-wrap{flex:1;}
+    #shop{grid-template-columns:repeat(auto-fill,minmax(120px,1fr));}
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1>🍪 Cookie Merge</h1>
+    <div class="stats">
+      <div class="money">💰 <span id="moneyVal">0</span></div>
+      <div class="income" id="incomeVal">+0.0/сек</div>
+    </div>
+    <button class="reset-btn" id="resetBtn" title="Сбросить игру">⟲</button>
+  </header>
+
+  <main>
+    <div class="board-wrap">
+      <div id="board"></div>
+    </div>
+    <div class="shop-wrap">
+      <div class="shop-title">Магазин печенья</div>
+      <div id="shop"></div>
+      <div class="hint">Нажмите на печенье, затем на такое же — чтобы объединить. Пустую клетку — чтобы переставить выбранное.</div>
+    </div>
+  </main>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  "use strict";
+
+  var GRID_SIZE = 5;
+  var CELLS = GRID_SIZE*GRID_SIZE;
+  var SAVE_KEY = "cookieMergeSave_v1";
+  var TICK_MS = 200;
+
+  var state = {
+    grid: new Array(CELLS).fill(null),
+    money: 20,
+    maxLevel: 1,
+    prices: {},
+    lastSeen: Date.now()
+  };
+
+  var selectedIdx = null;
+
+  // ---------- persistence ----------
+  function save(){
+    state.lastSeen = Date.now();
+    try{
+      localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+    }catch(e){}
+  }
+
+  function load(){
+    try{
+      var raw = localStorage.getItem(SAVE_KEY);
+      if(!raw) return;
+      var data = JSON.parse(raw);
+      if(!data || !Array.isArray(data.grid) || data.grid.length !== CELLS) return;
+      state.grid = data.grid;
+      state.money = typeof data.money === "number" ? data.money : 20;
+      state.maxLevel = data.maxLevel || 1;
+      state.prices = data.prices || {};
+      var elapsed = (Date.now() - (data.lastSeen || Date.now())) / 1000;
+      elapsed = Math.max(0, Math.min(elapsed, 4*3600));
+      if(elapsed > 5){
+        var rate = incomeRate();
+        var earned = rate * elapsed;
+        if(earned > 0.005){
+          state.money += earned;
+          showToast("Пока вас не было, начислено 💰 " + fmt(earned));
+        }
+      }
+    }catch(e){}
+  }
+
+  // ---------- economy ----------
+  function basePrice(level){
+    var p = 5 * Math.pow(3, level-1);
+    return Math.round(p*100)/100;
+  }
+
+  function priceFor(level){
+    if(state.prices[level] === undefined){
+      state.prices[level] = basePrice(level);
+    }
+    return state.prices[level];
+  }
+
+  function bumpPrice(level){
+    state.prices[level] = Math.round((priceFor(level) + 0.01)*100)/100;
+  }
+
+  function isUnlocked(level){
+    if(level === 1) return true;
+    return state.maxLevel >= level + 2;
+  }
+
+  function incomeRate(){
+    var sum = 0;
+    for(var i=0;i<state.grid.length;i++){
+      if(state.grid[i]) sum += state.grid[i];
+    }
+    return sum;
+  }
+
+  function fmt(n){
+    n = Math.max(0, n);
+    if(n >= 1e9) return (n/1e9).toFixed(2)+"B";
+    if(n >= 1e6) return (n/1e6).toFixed(2)+"M";
+    if(n >= 1e3) return (n/1e3).toFixed(2)+"K";
+    return n.toFixed(2);
+  }
+
+  // ---------- rng ----------
+  function mulberry32(seed){
+    return function(){
+      seed |= 0; seed = (seed + 0x6D2B79F5) | 0;
+      var t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  // ---------- cookie rendering ----------
+  var THEME_COUNT = 8;
+
+  function hsl(h,s,l,a){
+    a = a===undefined?1:a;
+    return "hsla("+h+","+s+"%,"+l+"%,"+a+")";
+  }
+
+  function drawBase(ctx, sub, rng){
+    var cx=50, cy=50, r=42;
+    ctx.save();
+    switch(sub){
+      case 0: { // classic choc chip
+        var g = ctx.createRadialGradient(38,34,6,cx,cy,r);
+        g.addColorStop(0, hsl(38,60,66));
+        g.addColorStop(1, hsl(32,50,46));
+        ctx.fillStyle = g;
+        circlePath(ctx,cx,cy,r); ctx.fill();
+        ctx.fillStyle = hsl(25,45,22);
+        for(var i=0;i<9;i++){
+          var a = rng()*Math.PI*2, rr = rng()*28;
+          var px = cx+Math.cos(a)*rr, py = cy+Math.sin(a)*rr;
+          circlePath(ctx,px,py,2.6+rng()*2.2); ctx.fill();
+        }
+        break;
+      }
+      case 1: { // double choco
+        var g1 = ctx.createRadialGradient(38,34,6,cx,cy,r);
+        g1.addColorStop(0, hsl(22,38,32));
+        g1.addColorStop(1, hsl(18,40,16));
+        ctx.fillStyle = g1;
+        circlePath(ctx,cx,cy,r); ctx.fill();
+        for(var i2=0;i2<7;i2++){
+          var a2=rng()*Math.PI*2, rr2=rng()*27;
+          var px2=cx+Math.cos(a2)*rr2, py2=cy+Math.sin(a2)*rr2;
+          ctx.fillStyle = rng()>0.5? hsl(32,55,68) : hsl(0,0,93);
+          circlePath(ctx,px2,py2,3+rng()*2.6); ctx.fill();
+        }
+        break;
+      }
+      case 2: { // strawberry glaze
+        ctx.fillStyle = hsl(30,35,68);
+        circlePath(ctx,cx,cy,r); ctx.fill();
+        ctx.fillStyle = hsl(340,72,82);
+        circlePath(ctx,cx,cy,r-6); ctx.fill();
+        ctx.fillStyle = hsl(350,80,58);
+        for(var i3=0;i3<6;i3++){
+          var a3=rng()*Math.PI*2, rr3=rng()*24;
+          var px3=cx+Math.cos(a3)*rr3, py3=cy+Math.sin(a3)*rr3;
+          dropPath(ctx,px3,py3,3.4+rng()*2);
+          ctx.fill();
+        }
+        break;
+      }
+      case 3: { // matcha red bean
+        var g3 = ctx.createRadialGradient(38,34,6,cx,cy,r);
+        g3.addColorStop(0, hsl(96,45,52));
+        g3.addColorStop(1, hsl(100,50,32));
+        ctx.fillStyle = g3;
+        circlePath(ctx,cx,cy,r); ctx.fill();
+        for(var i4=0;i4<8;i4++){
+          var a4=rng()*Math.PI*2, rr4=rng()*28;
+          var px4=cx+Math.cos(a4)*rr4, py4=cy+Math.sin(a4)*rr4;
+          ctx.fillStyle = rng()>0.4? hsl(15,45,32) : hsl(0,0,97);
+          circlePath(ctx,px4,py4,2+rng()*2); ctx.fill();
+        }
+        break;
+      }
+      case 4: { // honey gold
+        var g5 = ctx.createRadialGradient(38,32,4,cx,cy,r);
+        g5.addColorStop(0, hsl(46,92,62));
+        g5.addColorStop(1, hsl(34,80,38));
+        ctx.fillStyle = g5;
+        circlePath(ctx,cx,cy,r); ctx.fill();
+        ctx.strokeStyle = hsl(30,80,32,0.65);
+        ctx.lineWidth = 2.4;
+        for(var i5=0;i5<3;i5++){
+          ctx.beginPath();
+          var sy = 28 + i5*14;
+          ctx.moveTo(cx-26, sy);
+          ctx.quadraticCurveTo(cx, sy+12+rng()*6, cx+26, sy-4);
+          ctx.stroke();
+        }
+        break;
+      }
+      case 5: { // rainbow sprinkle
+        ctx.fillStyle = hsl(0,0,97);
+        circlePath(ctx,cx,cy,r); ctx.fill();
+        ctx.fillStyle = hsl(38,40,86);
+        circlePath(ctx,cx,cy,r); ctx.globalAlpha=0.18; ctx.fill(); ctx.globalAlpha=1;
+        for(var i6=0;i6<14;i6++){
+          var a6=rng()*Math.PI*2, rr6=rng()*30;
+          var px6=cx+Math.cos(a6)*rr6, py6=cy+Math.sin(a6)*rr6;
+          ctx.save();
+          ctx.translate(px6,py6);
+          ctx.rotate(rng()*Math.PI);
+          ctx.fillStyle = hsl(Math.floor(rng()*360),75,58);
+          ctx.fillRect(-3.4,-1.1,6.8,2.2);
+          ctx.restore();
+        }
+        break;
+      }
+      case 6: { // galaxy
+        var g7 = ctx.createRadialGradient(40,36,4,cx,cy,r);
+        g7.addColorStop(0, hsl(255,55,22));
+        g7.addColorStop(1, hsl(270,65,10));
+        ctx.fillStyle = g7;
+        circlePath(ctx,cx,cy,r); ctx.fill();
+        ctx.globalAlpha=0.35;
+        ctx.fillStyle = hsl(190,70,55);
+        blobPath(ctx,cx-8,cy+6,14,rng); ctx.fill();
+        ctx.fillStyle = hsl(300,70,55);
+        blobPath(ctx,cx+10,cy-8,12,rng); ctx.fill();
+        ctx.globalAlpha=1;
+        for(var i7=0;i7<10;i7++){
+          var a7=rng()*Math.PI*2, rr7=rng()*30;
+          var px7=cx+Math.cos(a7)*rr7, py7=cy+Math.sin(a7)*rr7;
+          ctx.fillStyle = rng()>0.5? hsl(50,90,80) : hsl(0,0,100);
+          circlePath(ctx,px7,py7,rng()*1.6+0.5); ctx.fill();
+        }
+        break;
+      }
+      case 7: { // crystal
+        var g8 = ctx.createRadialGradient(38,34,4,cx,cy,r);
+        g8.addColorStop(0, hsl(195,70,90));
+        g8.addColorStop(1, hsl(200,60,66));
+        ctx.fillStyle = g8;
+        circlePath(ctx,cx,cy,r); ctx.fill();
+        ctx.strokeStyle = "rgba(255,255,255,0.75)";
+        ctx.lineWidth = 1.3;
+        for(var i8=0;i8<5;i8++){
+          ctx.beginPath();
+          var a8 = rng()*Math.PI*2;
+          ctx.moveTo(cx, cy);
+          ctx.lineTo(cx+Math.cos(a8)*r*0.95, cy+Math.sin(a8)*r*0.95);
+          ctx.stroke();
+        }
+        for(var i9=0;i9<5;i9++){
+          var a9=rng()*Math.PI*2, rr9=8+rng()*22;
+          var px9=cx+Math.cos(a9)*rr9, py9=cy+Math.sin(a9)*rr9;
+          starPath(ctx,px9,py9,2.4);
+          ctx.fillStyle="#fff";
+          ctx.fill();
+        }
+        break;
+      }
+    }
+    ctx.restore();
+  }
+
+  function circlePath(ctx,x,y,r){
+    ctx.beginPath();
+    ctx.arc(x,y,r,0,Math.PI*2);
+    ctx.closePath();
+  }
+
+  function dropPath(ctx,x,y,r){
+    ctx.beginPath();
+    ctx.arc(x,y+r*0.3,r,0,Math.PI*2);
+    ctx.moveTo(x, y-r*1.4);
+    ctx.lineTo(x-r*0.8, y);
+    ctx.lineTo(x+r*0.8, y);
+    ctx.closePath();
+  }
+
+  function blobPath(ctx,x,y,r,rng){
+    ctx.beginPath();
+    var pts=8;
+    for(var i=0;i<=pts;i++){
+      var a=(i/pts)*Math.PI*2;
+      var rad=r*(0.7+rng()*0.5);
+      var px=x+Math.cos(a)*rad, py=y+Math.sin(a)*rad;
+      if(i===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
+    }
+    ctx.closePath();
+  }
+
+  function starPath(ctx,x,y,r){
+    ctx.beginPath();
+    for(var i=0;i<5;i++){
+      var a = -Math.PI/2 + i*(Math.PI*2/5);
+      var ax = x+Math.cos(a)*r, ay = y+Math.sin(a)*r;
+      if(i===0) ctx.moveTo(ax,ay); else ctx.lineTo(ax,ay);
+      var a2 = a + Math.PI/5;
+      var ax2 = x+Math.cos(a2)*(r*0.42), ay2 = y+Math.sin(a2)*(r*0.42);
+      ctx.lineTo(ax2,ay2);
+    }
+    ctx.closePath();
+  }
+
+  function drawCookie(canvas, level){
+    var dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+    var size = 100;
+    if(canvas.width !== size*dpr){
+      canvas.width = size*dpr;
+      canvas.height = size*dpr;
+    }
+    var ctx = canvas.getContext("2d");
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    ctx.clearRect(0,0,size,size);
+
+    var tier = Math.floor((level-1)/THEME_COUNT);
+    var sub = (level-1) % THEME_COUNT;
+    var rng = mulberry32(level*7919 + 13);
+    var tierClamped = Math.min(tier,5);
+
+    ctx.save();
+
+    if(tier > 0){
+      var ringColors = [hsl(200,80,60,.55), hsl(320,80,60,.5), hsl(50,90,60,.5), hsl(0,80,60,.5)];
+      var rings = Math.min(tier,3);
+      for(var i=0;i<rings;i++){
+        ctx.strokeStyle = ringColors[(tier+i) % ringColors.length];
+        ctx.lineWidth = 2.4;
+        ctx.beginPath();
+        ctx.arc(50,50, 46 - i*4, 0, Math.PI*2);
+        ctx.stroke();
+      }
+    }
+
+    ctx.save();
+    if("filter" in ctx && tier > 0){
+      ctx.filter = "hue-rotate(" + (tier*47 % 360) + "deg) saturate(" + (1+tierClamped*0.14) + ") brightness(" + (1+tierClamped*0.03) + ")";
+    }
+    drawBase(ctx, sub, rng);
+    ctx.restore();
+
+    if(tier >= 2){
+      ctx.fillStyle = hsl(46,90,60);
+      starPath(ctx, 50, 16, 6);
+      ctx.fill();
+    }
+    if(tier >= 1){
+      var sparkleN = Math.min(tier,6);
+      for(var s=0;s<sparkleN;s++){
+        var sa = (s/sparkleN)*Math.PI*2 + tier;
+        var sx = 50+Math.cos(sa)*44, sy = 50+Math.sin(sa)*44;
+        ctx.fillStyle = "rgba(255,255,255,0.85)";
+        starPath(ctx, sx, sy, 2.6);
+        ctx.fill();
+      }
+    }
+
+    // level badge
+    ctx.fillStyle = "rgba(20,12,7,0.82)";
+    circlePath(ctx, 78, 78, 15);
+    ctx.fill();
+    ctx.fillStyle = "#ffe9c9";
+    ctx.font = "bold 15px sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(String(level), 78, 79);
+
+    ctx.restore();
+  }
+
+  // ---------- board ----------
+  var boardEl = document.getElementById("board");
+  var cellEls = [];
+
+  function buildBoard(){
+    boardEl.innerHTML = "";
+    cellEls = [];
+    for(var i=0;i<CELLS;i++){
+      var cell = document.createElement("div");
+      cell.className = "cell";
+      cell.dataset.idx = i;
+      var canvas = document.createElement("canvas");
+      cell.appendChild(canvas);
+      var plus = document.createElement("div");
+      plus.className = "plus";
+      plus.textContent = "";
+      cell.appendChild(plus);
+      cell.addEventListener("click", onCellClick);
+      boardEl.appendChild(cell);
+      cellEls.push({cell:cell, canvas:canvas});
+    }
+  }
+
+  function renderCell(i, animate){
+    var level = state.grid[i];
+    var ref = cellEls[i];
+    ref.cell.classList.toggle("filled", !!level);
+    ref.cell.classList.toggle("selected", selectedIdx === i);
+    if(level){
+      ref.canvas.style.display = "block";
+      drawCookie(ref.canvas, level);
+    }else{
+      ref.canvas.style.display = "none";
+    }
+    if(animate){
+      ref.cell.classList.remove("pop");
+      void ref.cell.offsetWidth;
+      ref.cell.classList.add("pop");
+    }
+  }
+
+  function renderBoard(){
+    for(var i=0;i<CELLS;i++) renderCell(i,false);
+  }
+
+  function onCellClick(e){
+    var idx = parseInt(e.currentTarget.dataset.idx, 10);
+    var level = state.grid[idx];
+
+    if(selectedIdx === null){
+      if(level){
+        selectedIdx = idx;
+        renderBoard();
+      }
+      return;
+    }
+
+    if(selectedIdx === idx){
+      selectedIdx = null;
+      renderBoard();
+      return;
+    }
+
+    var selLevel = state.grid[selectedIdx];
+
+    if(!level){
+      // move selected cookie into empty cell
+      state.grid[idx] = selLevel;
+      state.grid[selectedIdx] = null;
+      selectedIdx = null;
+      renderBoard();
+      save();
+      return;
+    }
+
+    if(level === selLevel){
+      // merge
+      var newLevel = level + 1;
+      state.grid[idx] = newLevel;
+      state.grid[selectedIdx] = null;
+      if(newLevel > state.maxLevel) state.maxLevel = newLevel;
+      selectedIdx = null;
+      renderBoard();
+      renderCell(idx, true);
+      renderShop();
+      save();
+      return;
+    }
+
+    // different level cookie -> switch selection
+    selectedIdx = idx;
+    renderBoard();
+  }
+
+  // ---------- shop ----------
+  var shopEl = document.getElementById("shop");
+
+  function shopLevelsToShow(){
+    var levels = [];
+    var n = 1;
+    while(isUnlocked(n)){
+      levels.push(n);
+      n++;
+      if(levels.length > 40) break;
+    }
+    levels.push(n); // next locked preview
+    return levels;
+  }
+
+  function renderShop(){
+    var levels = shopLevelsToShow();
+    shopEl.innerHTML = "";
+    levels.forEach(function(level){
+      var unlocked = isUnlocked(level);
+      var card = document.createElement("div");
+      card.className = "shop-card" + (unlocked ? "" : " locked");
+
+      var canvas = document.createElement("canvas");
+      drawCookie(canvas, level);
+      card.appendChild(canvas);
+
+      var lvl = document.createElement("div");
+      lvl.className = "shop-lvl";
+      lvl.textContent = "Уровень " + level;
+      card.appendChild(lvl);
+
+      if(unlocked){
+        var price = priceFor(level);
+        var priceEl = document.createElement("div");
+        priceEl.className = "shop-price";
+        priceEl.textContent = "💰 " + fmt(price);
+        card.appendChild(priceEl);
+
+        var btn = document.createElement("button");
+        btn.className = "buy-btn";
+        btn.textContent = "Купить";
+        var canAfford = state.money >= price;
+        btn.disabled = !canAfford;
+        btn.addEventListener("click", function(lv){
+          return function(){ buyCookie(lv); };
+        }(level));
+        card.appendChild(btn);
+      }else{
+        var note = document.createElement("div");
+        note.className = "lock-note";
+        note.textContent = "🔒 Откроется на уровне " + (level+2);
+        card.appendChild(note);
+      }
+
+      shopEl.appendChild(card);
+    });
+  }
+
+  function buyCookie(level){
+    if(!isUnlocked(level)) return;
+    var price = priceFor(level);
+    if(state.money < price){
+      showToast("Недостаточно денег 💰");
+      return;
+    }
+    var emptyIdx = state.grid.indexOf(null);
+    if(emptyIdx === -1){
+      showToast("Поле заполнено! Объедините печенья, чтобы освободить место.");
+      return;
+    }
+    state.money -= price;
+    state.grid[emptyIdx] = level;
+    if(level > state.maxLevel) state.maxLevel = level;
+    bumpPrice(level);
+    renderCell(emptyIdx, true);
+    renderShop();
+    updateHeader();
+    save();
+  }
+
+  // ---------- header / toast ----------
+  var moneyValEl = document.getElementById("moneyVal");
+  var incomeValEl = document.getElementById("incomeVal");
+  var toastEl = document.getElementById("toast");
+  var toastTimer = null;
+
+  function updateHeader(){
+    moneyValEl.textContent = fmt(state.money);
+    incomeValEl.textContent = "+" + fmt(incomeRate()) + "/сек";
+  }
+
+  function showToast(msg){
+    toastEl.textContent = msg;
+    toastEl.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function(){
+      toastEl.classList.remove("show");
+    }, 2600);
+  }
+
+  // ---------- game loop ----------
+  var lastTick = Date.now();
+  function tick(){
+    var now = Date.now();
+    var dt = (now - lastTick) / 1000;
+    lastTick = now;
+    state.money += incomeRate() * dt;
+    updateHeader();
+    renderShopAffordability();
+  }
+
+  function renderShopAffordability(){
+    var btns = shopEl.querySelectorAll(".buy-btn");
+    var levels = shopLevelsToShow().filter(isUnlocked);
+    btns.forEach(function(btn, i){
+      var level = levels[i];
+      if(level === undefined) return;
+      btn.disabled = state.money < priceFor(level);
+    });
+  }
+
+  var saveTimer = setInterval(save, 4000);
+  var tickTimer = setInterval(tick, TICK_MS);
+
+  // ---------- reset ----------
+  document.getElementById("resetBtn").addEventListener("click", function(){
+    if(confirm("Сбросить игру и начать заново?")){
+      state = { grid: new Array(CELLS).fill(null), money: 20, maxLevel: 1, prices: {}, lastSeen: Date.now() };
+      selectedIdx = null;
+      save();
+      renderBoard();
+      renderShop();
+      updateHeader();
+    }
+  });
+
+  window.addEventListener("beforeunload", save);
+  document.addEventListener("visibilitychange", function(){
+    if(document.hidden) save();
+  });
+
+  // ---------- init ----------
+  load();
+  buildBoard();
+  renderBoard();
+  renderShop();
+  updateHeader();
+})();
+</script>
+</body>
+</html>
