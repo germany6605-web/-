@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Cookie Merge</title>
-<script src="https://yandex.ru/games/sdk/v2" defer></script>
 <style>
   :root{
     --bg-0:#1b120c;
@@ -24,6 +23,8 @@
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
   html,body{
     margin:0;padding:0;height:100%;
+    max-width:100%;
+    overflow-x:hidden;
     background:radial-gradient(circle at 50% -10%,var(--bg-1),var(--bg-0) 70%);
     color:var(--cream);
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
@@ -353,19 +354,24 @@
   }
   .tabs{
     display:flex;
+    flex-wrap:wrap;
     gap:6px;
     margin-bottom:10px;
   }
   .tab-btn{
-    flex:1;
+    flex:1 1 30%;
+    min-width:0;
     border:none;
     border-radius:11px;
-    padding:9px 6px;
-    font-size:12.5px;
+    padding:9px 4px;
+    font-size:11.5px;
     font-weight:700;
     background:rgba(0,0,0,.2);
     color:var(--cream-dim);
     cursor:pointer;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
   }
   .tab-btn.active{
     background:linear-gradient(180deg,var(--accent),var(--accent-2));
@@ -2262,6 +2268,17 @@
     }catch(e){}
   }
 
+  function loadYandexSDKScript(){
+    try{
+      var s = document.createElement("script");
+      s.src = "https://yandex.ru/games/sdk/v2";
+      s.async = true;
+      s.onload = function(){ initYandexSDK(); };
+      s.onerror = function(){ /* not available (blocked network, offline, not on Yandex Games) */ };
+      document.head.appendChild(s);
+    }catch(e){}
+  }
+
   function pushLeaderboardScores(force){
     if(!ysdkLeaderboards) return;
     var now = Date.now();
@@ -2318,8 +2335,6 @@
     loadLeaderboard(LB_NAMES.income, "lbListIncome", "lbStatusIncome");
     loadLeaderboard(LB_NAMES.merges, "lbListMerges", "lbStatusMerges");
   }
-
-  initYandexSDK();
 
   // ---------- tabs ----------
   var TABS = {
@@ -2384,6 +2399,7 @@
   updateHeader();
   updateEventCurrencyDisplays();
   updateWheelStatus();
+  loadYandexSDKScript();
 })();
 </script>
 </body>
