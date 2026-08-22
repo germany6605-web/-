@@ -763,7 +763,7 @@
       <div class="money">💰 <span id="moneyVal">0</span></div>
       <div class="income" id="incomeVal">+0.0/сек</div>
     </div>
-    <div class="currency-badge" id="currencyBadge" title="Печеньки — валюта для событий, откройте вкладку События">🍪 <span id="eventCurrencyHeader">0</span></div>
+    <div class="currency-badge" id="currencyBadge">🍪 <span id="eventCurrencyHeader">0</span></div>
   </header>
 
   <main id="main">
@@ -771,7 +771,7 @@
       <div id="board"></div>
       <div class="trash-zone" id="trashZone">
         <span class="trash-icon">🗑️</span>
-        <span>Корзина — перетащите печенье или выберите его и нажмите. Топ-3 уровня защищены.</span>
+        <span id="trashHintText">Корзина — перетащите печенье или выберите его и нажмите. Топ-3 уровня защищены.</span>
       </div>
     </div>
     <div class="shop-wrap">
@@ -783,16 +783,16 @@
         <button class="tab-btn" id="tabBtnLeaders" data-tab="leaders">🏆 Топы</button>
       </div>
       <div class="tab-panel active" id="shopPanel">
-        <div class="shop-title">Магазин печенья</div>
+        <div class="shop-title" id="shopTitleEl">Магазин печенья</div>
         <div id="shop"></div>
-        <div class="hint">Перетащите печенье на такое же — чтобы объединить, на пустую клетку — чтобы переставить. Короткое нажатие тоже работает.</div>
+        <div class="hint" id="shopHintEl">Перетащите печенье на такое же — чтобы объединить, на пустую клетку — чтобы переставить. Короткое нажатие тоже работает.</div>
       </div>
       <div class="tab-panel" id="eventsPanel">
-        <div class="events-currency">🍪 Печеньки: <span id="eventCurrencyVal">0</span> — даются за каждый разблокированный уровень печенья</div>
+        <div class="events-currency"><span id="eventsCurrencyPrefixEl">🍪 Печеньки: </span><span id="eventCurrencyVal">0</span><span id="eventsCurrencySuffixEl"> — даются за каждый разблокированный уровень печенья</span></div>
         <div id="events"></div>
       </div>
       <div class="tab-panel" id="wheelPanel">
-        <div class="shop-title">Колесо фортуны</div>
+        <div class="shop-title" id="wheelTitleEl">Колесо фортуны</div>
         <div class="wheel-outer">
           <div class="wheel-pointer">🔻</div>
           <div class="wheel-spin" id="wheelSpin">
@@ -803,7 +803,7 @@
         </div>
         <button class="spin-btn" id="wheelSpinBtn">Крутить!</button>
         <div class="wheel-status" id="wheelStatus"></div>
-        <div class="hint">Один бесплатный спин каждые 15 минут. Приз — деньги, печеньки или бесплатное событие.</div>
+        <div class="hint" id="wheelHintEl">Один бесплатный спин каждые 15 минут. Приз — деньги, печеньки или бесплатное событие.</div>
         <div class="promo-box">
           <input type="text" id="promoInput" placeholder="Промокод" maxlength="24">
           <button id="promoBtn">Применить</button>
@@ -811,40 +811,40 @@
         <div class="wheel-status" id="promoStatus"></div>
       </div>
       <div class="tab-panel" id="upgradesPanel">
-        <div class="shop-title">Улучшения</div>
+        <div class="shop-title" id="upgradesTitleEl">Улучшения</div>
         <div class="event-card" id="incomeUpgradeCard">
-          <div class="event-head"><span class="event-icon">⚡</span><span>Улучшение дохода</span></div>
-          <div class="event-desc">Каждое улучшение прибавляет +0.1 к доходу в секунду навсегда. Цена первого — 1 🍪, каждое следующее вдвое дороже.</div>
+          <div class="event-head"><span class="event-icon">⚡</span><span id="incomeUpgTitleEl">Улучшение дохода</span></div>
+          <div class="event-desc" id="incomeUpgDescEl">Каждое улучшение прибавляет +0.1 к доходу в секунду навсегда. Цена первого — 1 🍪, каждое следующее вдвое дороже.</div>
           <div class="event-meta" id="incomeUpgradeMeta">Уровень 0 · Бонус +0.0/сек</div>
           <button class="event-btn" id="incomeUpgradeBtn">Улучшить (1 🍪)</button>
         </div>
         <div class="event-card" id="offlineUpgradeCard">
-          <div class="event-head"><span class="event-icon">🌙</span><span>Оффлайн-доход</span></div>
-          <div class="event-desc">Увеличивает время, за которое начисляется доход, пока вас нет в игре. Без улучшений — 1 час, максимум — 8 часов. Каждое улучшение — +1 минута за 1 🍪.</div>
+          <div class="event-head"><span class="event-icon">🌙</span><span id="offlineUpgTitleEl">Оффлайн-доход</span></div>
+          <div class="event-desc" id="offlineUpgDescEl">Увеличивает время, за которое начисляется доход, пока вас нет в игре. Без улучшений — 1 час, максимум — 8 часов. Каждое улучшение — +1 минута за 1 🍪.</div>
           <div class="event-meta" id="offlineUpgradeMeta">Сейчас: 1 ч</div>
           <button class="event-btn" id="offlineUpgradeBtn">Улучшить (+1 мин · 1 🍪)</button>
         </div>
         <div class="event-card">
-          <div class="event-head"><span class="event-icon">🔧</span><span>Улучшения клеток</span></div>
-          <div class="event-desc">Нажмите на клетку ниже, чтобы открыть меню улучшения именно этой клетки поля. 1-е улучшение даёт ×1.5 к доходу этой клетки, каждое следующее — ещё +0.5. Цена первого улучшения — 1 🍪, каждое следующее вдвое дороже. Улучшение остаётся у клетки навсегда, даже если печенье в ней сменится.</div>
+          <div class="event-head"><span class="event-icon">🔧</span><span id="cellUpgTitleEl">Улучшения клеток</span></div>
+          <div class="event-desc" id="cellUpgDescEl">Нажмите на клетку ниже, чтобы открыть меню улучшения именно этой клетки поля. 1-е улучшение даёт ×1.5 к доходу этой клетки, каждое следующее — ещё +0.5. Цена первого улучшения — 1 🍪, каждое следующее вдвое дороже. Улучшение остаётся у клетки навсегда, даже если печенье в ней сменится.</div>
           <div class="cell-upg-grid" id="cellUpgGrid"></div>
         </div>
       </div>
       <div class="tab-panel" id="leadersPanel">
-        <div class="shop-title">Топы игроков</div>
-        <div class="hint">Топы работают только внутри Яндекс Игр — там, где игра запущена через официальный SDK и игрок авторизован.</div>
+        <div class="shop-title" id="leadersTitleEl">Топы игроков</div>
+        <div class="hint" id="leadersHintEl">Топы работают только внутри Яндекс Игр — там, где игра запущена через официальный SDK и игрок авторизован.</div>
         <div class="event-card">
-          <div class="event-head"><span class="event-icon">💰</span><span>Топ по балансу</span></div>
+          <div class="event-head"><span class="event-icon">💰</span><span id="leadersBalanceTitleEl">Топ по балансу</span></div>
           <div class="lb-status" id="lbStatusBalance">Загрузка...</div>
           <div class="lb-list" id="lbListBalance"></div>
         </div>
         <div class="event-card">
-          <div class="event-head"><span class="event-icon">📈</span><span>Топ по доходу в час</span></div>
+          <div class="event-head"><span class="event-icon">📈</span><span id="leadersIncomeTitleEl">Топ по доходу в час</span></div>
           <div class="lb-status" id="lbStatusIncome">Загрузка...</div>
           <div class="lb-list" id="lbListIncome"></div>
         </div>
         <div class="event-card">
-          <div class="event-head"><span class="event-icon">🔀</span><span>Топ по объединениям печенья</span></div>
+          <div class="event-head"><span class="event-icon">🔀</span><span id="leadersMergesTitleEl">Топ по объединениям печенья</span></div>
           <div class="lb-status" id="lbStatusMerges">Загрузка...</div>
           <div class="lb-list" id="lbListMerges"></div>
         </div>
@@ -856,11 +856,11 @@
 
 <div class="modal-backdrop" id="cellUpgModalBackdrop">
   <div class="modal-card" id="cellUpgModalCard">
-    <div class="modal-title">🔧 Улучшение клетки</div>
-    <div class="modal-row"><span>Текущий уровень</span><b id="cellUpgModalLevel">0</b></div>
-    <div class="modal-row"><span>Текущий множитель</span><b id="cellUpgModalCurrentMult">×1.0</b></div>
-    <div class="modal-row"><span>После улучшения</span><b id="cellUpgModalNextMult">×1.5</b></div>
-    <div class="modal-row"><span>Цена улучшения</span><b id="cellUpgModalCost">1 🍪</b></div>
+    <div class="modal-title" id="cellModalTitleEl">🔧 Улучшение клетки</div>
+    <div class="modal-row"><span id="cellModalLevelLabelEl">Текущий уровень</span><b id="cellUpgModalLevel">0</b></div>
+    <div class="modal-row"><span id="cellModalCurrentMultLabelEl">Текущий множитель</span><b id="cellUpgModalCurrentMult">×1.0</b></div>
+    <div class="modal-row"><span id="cellModalNextMultLabelEl">После улучшения</span><b id="cellUpgModalNextMult">×1.5</b></div>
+    <div class="modal-row"><span id="cellModalCostLabelEl">Цена улучшения</span><b id="cellUpgModalCost">1 🍪</b></div>
     <div class="modal-actions">
       <button class="event-btn" id="cellUpgModalBuyBtn">Улучшить</button>
       <button class="modal-close-btn" id="cellUpgModalCloseBtn">Закрыть</button>
@@ -905,6 +905,262 @@
 
   var selectedIdx = null;
 
+  // ---------- i18n ----------
+  var SUPPORTED_LANGS = { ru:1, en:1 };
+  var LANG_STRINGS = {
+    ru:{
+      trash_hint:"Корзина — перетащите печенье или выберите его и нажмите. Топ-3 уровня защищены.",
+      currency_badge_title:"Печеньки — валюта для событий, откройте вкладку События",
+      tab_shop:"🛒 Магазин", tab_events:"🎉 События", tab_wheel:"🎡 Колесо", tab_upgrades:"⚡ Улучш.", tab_leaders:"🏆 Топы",
+      shop_title:"Магазин печенья",
+      shop_hint:"Перетащите печенье на такое же — чтобы объединить, на пустую клетку — чтобы переставить. Короткое нажатие тоже работает.",
+      buy_btn:"Купить",
+      locked_note_prefix:"🔒 Откроется на уровне ",
+      events_currency_prefix:"🍪 Печеньки: ",
+      events_currency_suffix:" — даются за каждый разблокированный уровень печенья",
+      event_price_label:"⏱ {dur}   ·   Цена: 1 🍪",
+      event_active_btn:"Активно",
+      event_time_left_prefix:"Осталось: ",
+      event_activate_btn:"Активировать (1 🍪)",
+      event_not_enough:"Недостаточно печенек",
+      ev_rain_name:"Печенькопад", ev_rain_desc:"1 минуту на поле сами появляются печенья разблокированных уровней.", ev_rain_dur:"1 минута",
+      ev_x2_name:"x2 Деньги", ev_x2_desc:"Доход от всех печений на поле удваивается.", ev_x2_dur:"3 часа",
+      ev_fixedPrice_name:"Заморозка цен", ev_fixedPrice_desc:"Цены в магазине не растут при покупках.", ev_fixedPrice_dur:"5 минут",
+      toast_unlock_gained:"Получено 🍪 x{n} за разблокировку печенья!",
+      toast_event_already_active:"Событие уже активно",
+      toast_not_enough_cookies:"Недостаточно печенек 🍪",
+      toast_event_activated:"{icon} {name} активировано!",
+      wheel_title:"Колесо фортуны",
+      wheel_spin_btn_spinning:"Крутится...",
+      wheel_spin_btn_ready:"Крутить! 🎡",
+      wheel_bonus_spins_prefix:"Бонусные спины: ",
+      wheel_ready_status:"Спин готов!",
+      wheel_next_spin_prefix:"Следующий спин через ",
+      wheel_hint:"Один бесплатный спин каждые 15 минут. Приз — деньги, печеньки или бесплатное событие.",
+      wheel_not_ready_toast:"Спин ещё не готов 🎡",
+      wheel_prize_income:"🎉 Приз: доход за {dur}! +💰{amount}",
+      wheel_prize_currency:"🎉 Приз: {amount} 🍪!",
+      wheel_prize_event:"🎉 Приз: бесплатное событие — {icon} {name}!",
+      wp_inc5:"Доход\n5 мин", wp_inc10:"Доход\n10 мин", wp_c1:"1\nпеченька", wp_inc30:"Доход\n30 мин",
+      wp_rain:"Дождь\nпеченек", wp_inc60:"Доход\n1 час", wp_c3:"3\nпеченьки", wp_fixedPrice:"Заморозка\nцен",
+      wp_c5:"5\nпеченек", wp_inc360:"Доход\n6 часов", wp_x2:"x2\nдоход",
+      dur_5m:"5 минут", dur_10m:"10 минут", dur_30m:"30 минут", dur_1h:"1 час", dur_6h:"6 часов",
+      promo_placeholder:"Промокод", promo_apply_btn:"Применить",
+      promo_empty:"Введите промокод",
+      promo_used:"Этот промокод уже использован",
+      promo_not_found:"Промокод не найден",
+      promo_got_cookies:"🎁 Получено {n} 🍪!",
+      promo_activated_cookies_toast:"🎁 Промокод активирован: +{n} 🍪!",
+      promo_got_spins:"🎁 Получено {n} бонусных спинов!",
+      promo_activated_spins_toast:"🎁 Промокод активирован: +{n} спинов колеса!",
+      upgrades_title:"Улучшения",
+      income_upg_title:"Улучшение дохода",
+      income_upg_desc:"Каждое улучшение прибавляет +0.1 к доходу в секунду навсегда. Цена первого — 1 🍪, каждое следующее вдвое дороже.",
+      income_upg_meta:"Уровень {n} · Бонус +{x}/сек",
+      income_upg_btn:"Улучшить ({cost} 🍪)",
+      offline_upg_title:"Оффлайн-доход",
+      offline_upg_desc:"Увеличивает время, за которое начисляется доход, пока вас нет в игре. Без улучшений — 1 час, максимум — 8 часов. Каждое улучшение — +1 минута за 1 🍪.",
+      offline_upg_meta:"Сейчас: {label}",
+      offline_upg_meta_max_suffix:" (максимум)",
+      offline_upg_btn:"Улучшить (+1 мин · 1 🍪)",
+      offline_upg_btn_maxed:"Максимум достигнут",
+      cell_upg_title:"Улучшения клеток",
+      cell_upg_desc:"Нажмите на клетку ниже, чтобы открыть меню улучшения именно этой клетки поля. 1-е улучшение даёт ×1.5 к доходу этой клетки, каждое следующее — ещё +0.5. Цена первого улучшения — 1 🍪, каждое следующее вдвое дороже. Улучшение остаётся у клетки навсегда, даже если печенье в ней сменится.",
+      offline_h_min:"{h} ч {m} мин", offline_h_only:"{h} ч",
+      cell_modal_title:"🔧 Улучшение клетки",
+      cell_modal_level:"Текущий уровень",
+      cell_modal_current_mult:"Текущий множитель",
+      cell_modal_next_mult:"После улучшения",
+      cell_modal_cost:"Цена улучшения",
+      cell_modal_buy_btn:"Улучшить",
+      cell_modal_buy_btn_cost:"Улучшить за {cost} 🍪",
+      cell_modal_close_btn:"Закрыть",
+      toast_cell_upgraded:"🔧 Клетка улучшена! Множитель ×{x}",
+      leaders_title:"Топы игроков",
+      leaders_hint:"Топы работают только внутри Яндекс Игр — там, где игра запущена через официальный SDK и игрок авторизован.",
+      leaders_balance_title:"Топ по балансу",
+      leaders_income_title:"Топ по доходу в час",
+      leaders_merges_title:"Топ по объединениям печенья",
+      lb_loading:"Загрузка...",
+      lb_empty:"Пока никто не попал в топ",
+      lb_unavailable:"Недоступно вне Яндекс Игр",
+      lb_load_error:"Не удалось загрузить топ (проверьте, что лидерборд \"{name}\" создан в консоли Яндекс Игр)",
+      lb_default_player_name:"Игрок",
+      toast_cannot_delete_protected:"Нельзя удалить один из 3 старших уровней на поле 🔒",
+      toast_select_or_drag:"Сначала выберите или перетащите печенье в корзину 🗑️",
+      toast_not_enough_money:"Недостаточно денег 💰",
+      toast_board_full:"Поле заполнено! Объедините печенья, чтобы освободить место.",
+      income_x2_suffix:" (x2!)",
+      toast_offline_earnings:"Пока вас не было, начислено 💰 {amount}",
+      per_sec:"/сек",
+      toast_income_upgraded:"⚡ Доход улучшен! +0.1/сек навсегда",
+      toast_offline_maxed:"Оффлайн-доход уже максимален — 8 часов",
+      toast_offline_upgraded:"🌙 Оффлайн-доход теперь: {label}"
+    },
+    en:{
+      trash_hint:"Trash — drag a cookie here, or select it and tap. The top 3 levels are protected.",
+      currency_badge_title:"Cookie Points — currency for events, open the Events tab",
+      tab_shop:"🛒 Shop", tab_events:"🎉 Events", tab_wheel:"🎡 Wheel", tab_upgrades:"⚡ Upgr.", tab_leaders:"🏆 Ranks",
+      shop_title:"Cookie Shop",
+      shop_hint:"Drag a cookie onto a matching one to merge, or onto an empty cell to move it. A short tap works too.",
+      buy_btn:"Buy",
+      locked_note_prefix:"🔒 Unlocks at level ",
+      events_currency_prefix:"🍪 Cookie points: ",
+      events_currency_suffix:" — earned for every cookie level you unlock",
+      event_price_label:"⏱ {dur}   ·   Price: 1 🍪",
+      event_active_btn:"Active",
+      event_time_left_prefix:"Time left: ",
+      event_activate_btn:"Activate (1 🍪)",
+      event_not_enough:"Not enough cookie points",
+      ev_rain_name:"Cookie Rain", ev_rain_desc:"For 1 minute, cookies of your unlocked levels appear on the board by themselves.", ev_rain_dur:"1 minute",
+      ev_x2_name:"x2 Money", ev_x2_desc:"Income from every cookie on the board is doubled.", ev_x2_dur:"3 hours",
+      ev_fixedPrice_name:"Price Freeze", ev_fixedPrice_desc:"Shop prices stop rising when you buy.", ev_fixedPrice_dur:"5 minutes",
+      toast_unlock_gained:"Got 🍪 x{n} for unlocking a cookie level!",
+      toast_event_already_active:"That event is already active",
+      toast_not_enough_cookies:"Not enough cookie points 🍪",
+      toast_event_activated:"{icon} {name} activated!",
+      wheel_title:"Wheel of Fortune",
+      wheel_spin_btn_spinning:"Spinning...",
+      wheel_spin_btn_ready:"Spin! 🎡",
+      wheel_bonus_spins_prefix:"Bonus spins: ",
+      wheel_ready_status:"Spin ready!",
+      wheel_next_spin_prefix:"Next spin in ",
+      wheel_hint:"One free spin every 15 minutes. Prizes: money, cookie points, or a free event.",
+      wheel_not_ready_toast:"The spin isn't ready yet 🎡",
+      wheel_prize_income:"🎉 Prize: income worth {dur}! +💰{amount}",
+      wheel_prize_currency:"🎉 Prize: {amount} 🍪!",
+      wheel_prize_event:"🎉 Prize: a free event — {icon} {name}!",
+      wp_inc5:"Income\n5 min", wp_inc10:"Income\n10 min", wp_c1:"1\ncookie pt", wp_inc30:"Income\n30 min",
+      wp_rain:"Cookie\nRain", wp_inc60:"Income\n1 hour", wp_c3:"3\ncookie pts", wp_fixedPrice:"Price\nFreeze",
+      wp_c5:"5\ncookie pts", wp_inc360:"Income\n6 hours", wp_x2:"x2\nincome",
+      dur_5m:"5 minutes", dur_10m:"10 minutes", dur_30m:"30 minutes", dur_1h:"1 hour", dur_6h:"6 hours",
+      promo_placeholder:"Promo code", promo_apply_btn:"Apply",
+      promo_empty:"Enter a promo code",
+      promo_used:"This code has already been used",
+      promo_not_found:"Promo code not found",
+      promo_got_cookies:"🎁 Got {n} 🍪!",
+      promo_activated_cookies_toast:"🎁 Promo code activated: +{n} 🍪!",
+      promo_got_spins:"🎁 Got {n} bonus spins!",
+      promo_activated_spins_toast:"🎁 Promo code activated: +{n} wheel spins!",
+      upgrades_title:"Upgrades",
+      income_upg_title:"Income Upgrade",
+      income_upg_desc:"Each upgrade adds +0.1 to income per second, forever. The first one costs 1 🍪, each next one costs double.",
+      income_upg_meta:"Level {n} · Bonus +{x}/sec",
+      income_upg_btn:"Upgrade ({cost} 🍪)",
+      offline_upg_title:"Offline Income",
+      offline_upg_desc:"Increases how long income keeps accruing while you're away. 1 hour by default, 8 hours max. Each upgrade adds +1 minute for 1 🍪.",
+      offline_upg_meta:"Currently: {label}",
+      offline_upg_meta_max_suffix:" (max)",
+      offline_upg_btn:"Upgrade (+1 min · 1 🍪)",
+      offline_upg_btn_maxed:"Maximum reached",
+      cell_upg_title:"Cell Upgrades",
+      cell_upg_desc:"Tap a cell below to open the upgrade menu for that specific board cell. The 1st upgrade gives ×1.5 income on that cell, each next one adds another +0.5. The first upgrade costs 1 🍪, each next one costs double. The upgrade stays with the cell forever, even if the cookie on it changes.",
+      offline_h_min:"{h}h {m}m", offline_h_only:"{h}h",
+      cell_modal_title:"🔧 Cell Upgrade",
+      cell_modal_level:"Current level",
+      cell_modal_current_mult:"Current multiplier",
+      cell_modal_next_mult:"After upgrade",
+      cell_modal_cost:"Upgrade price",
+      cell_modal_buy_btn:"Upgrade",
+      cell_modal_buy_btn_cost:"Upgrade for {cost} 🍪",
+      cell_modal_close_btn:"Close",
+      toast_cell_upgraded:"🔧 Cell upgraded! Multiplier ×{x}",
+      leaders_title:"Leaderboards",
+      leaders_hint:"Leaderboards only work inside Yandex Games, where the game runs through the official SDK and the player is signed in.",
+      leaders_balance_title:"Top Balance",
+      leaders_income_title:"Top Income/hour",
+      leaders_merges_title:"Top Merges",
+      lb_loading:"Loading...",
+      lb_empty:"No one has made the leaderboard yet",
+      lb_unavailable:"Unavailable outside Yandex Games",
+      lb_load_error:"Couldn't load the leaderboard (make sure leaderboard \"{name}\" exists in the Yandex Games console)",
+      lb_default_player_name:"Player",
+      toast_cannot_delete_protected:"You can't delete one of the board's top 3 levels 🔒",
+      toast_select_or_drag:"First select or drag a cookie into the trash 🗑️",
+      toast_not_enough_money:"Not enough money 💰",
+      toast_board_full:"The board is full! Merge some cookies to free up space.",
+      income_x2_suffix:" (x2!)",
+      toast_offline_earnings:"While you were away, you earned 💰 {amount}",
+      per_sec:"/sec",
+      toast_income_upgraded:"⚡ Income upgraded! +0.1/sec forever",
+      toast_offline_maxed:"Offline income is already at the maximum — 8 hours",
+      toast_offline_upgraded:"🌙 Offline income is now: {label}"
+    }
+  };
+
+  function detectInitialLang(){
+    try{
+      var nav = (navigator.language || (navigator.languages && navigator.languages[0]) || "ru").toLowerCase();
+      if(nav.indexOf("en") === 0) return "en";
+    }catch(e){}
+    return "ru";
+  }
+
+  var lang = detectInitialLang();
+
+  function t(key, vars){
+    var dict = LANG_STRINGS[lang] || LANG_STRINGS.ru;
+    var str = dict[key];
+    if(str === undefined) str = LANG_STRINGS.ru[key];
+    if(str === undefined) return key;
+    if(vars){
+      for(var k in vars){
+        str = str.split("{"+k+"}").join(vars[k]);
+      }
+    }
+    return str;
+  }
+
+  function applyStaticI18n(){
+    var map = {
+      trashHintText: "trash_hint",
+      currencyBadge: "currency_badge_title:title",
+      tabBtnShop: "tab_shop", tabBtnEvents: "tab_events", tabBtnWheel: "tab_wheel",
+      tabBtnUpgrades: "tab_upgrades", tabBtnLeaders: "tab_leaders",
+      shopTitleEl: "shop_title", shopHintEl: "shop_hint",
+      wheelTitleEl: "wheel_title", wheelHintEl: "wheel_hint",
+      promoInput: "promo_placeholder:placeholder", promoBtn: "promo_apply_btn",
+      upgradesTitleEl: "upgrades_title",
+      incomeUpgTitleEl: "income_upg_title", incomeUpgDescEl: "income_upg_desc",
+      offlineUpgTitleEl: "offline_upg_title", offlineUpgDescEl: "offline_upg_desc",
+      cellUpgTitleEl: "cell_upg_title", cellUpgDescEl: "cell_upg_desc",
+      leadersTitleEl: "leaders_title", leadersHintEl: "leaders_hint",
+      leadersBalanceTitleEl: "leaders_balance_title", leadersIncomeTitleEl: "leaders_income_title",
+      leadersMergesTitleEl: "leaders_merges_title",
+      cellModalTitleEl: "cell_modal_title", cellModalLevelLabelEl: "cell_modal_level",
+      cellModalCurrentMultLabelEl: "cell_modal_current_mult", cellModalNextMultLabelEl: "cell_modal_next_mult",
+      cellModalCostLabelEl: "cell_modal_cost", cellUpgModalCloseBtn: "cell_modal_close_btn",
+      cellUpgModalBuyBtn: "cell_modal_buy_btn",
+      eventsCurrencyPrefixEl: "events_currency_prefix", eventsCurrencySuffixEl: "events_currency_suffix"
+    };
+    Object.keys(map).forEach(function(id){
+      var spec = map[id];
+      var attr = "text";
+      var key = spec;
+      if(spec.indexOf(":") !== -1){
+        var parts = spec.split(":");
+        key = parts[0];
+        attr = parts[1];
+      }
+      var el = document.getElementById(id);
+      if(!el) return;
+      var val = t(key);
+      if(attr === "title") el.title = val;
+      else if(attr === "placeholder") el.placeholder = val;
+      else el.textContent = val;
+    });
+  }
+
+  function applyLanguage(){
+    applyStaticI18n();
+    buildWheel();
+    renderEvents();
+    renderShop();
+    updateUpgradesPanel();
+    updateHeader();
+    updateWheelStatus();
+  }
+
   // ---------- persistence ----------
   function save(){
     state.lastSeen = Date.now();
@@ -941,7 +1197,7 @@
         var earned = rate * elapsed;
         if(earned > 0.005){
           state.money += earned;
-          showToast("Пока вас не было, начислено 💰 " + fmt(earned));
+          showToast(t("toast_offline_earnings", {amount: fmt(earned)}));
         }
       }
     }catch(e){}
@@ -999,7 +1255,7 @@
     var s = offlineCapSeconds();
     var h = Math.floor(s/3600);
     var m = Math.round((s%3600)/60);
-    return m > 0 ? (h+" ч "+m+" мин") : (h+" ч");
+    return m > 0 ? t("offline_h_min", {h:h, m:m}) : t("offline_h_only", {h:h});
   }
 
   function incomeRate(){
@@ -1027,11 +1283,15 @@
 
   // ---------- events ----------
   var EVENT_META = {
-    rain: { icon:"🌧️", name:"Печенькопад", desc:"1 минуту на поле сами появляются печенья разблокированных уровней.", durLabel:"1 минута", duration:60*1000 },
-    x2: { icon:"💰", name:"x2 Деньги", desc:"Доход от всех печений на поле удваивается.", durLabel:"3 часа", duration:3*60*60*1000 },
-    fixedPrice: { icon:"🧊", name:"Заморозка цен", desc:"Цены в магазине не растут при покупках.", durLabel:"5 минут", duration:5*60*1000 }
+    rain: { icon:"🌧️", nameKey:"ev_rain_name", descKey:"ev_rain_desc", durKey:"ev_rain_dur", duration:60*1000 },
+    x2: { icon:"💰", nameKey:"ev_x2_name", descKey:"ev_x2_desc", durKey:"ev_x2_dur", duration:3*60*60*1000 },
+    fixedPrice: { icon:"🧊", nameKey:"ev_fixedPrice_name", descKey:"ev_fixedPrice_desc", durKey:"ev_fixedPrice_dur", duration:5*60*1000 }
   };
   var RAIN_DROP_INTERVAL = 2500;
+
+  function eventName(key){ return t(EVENT_META[key].nameKey); }
+  function eventDesc(key){ return t(EVENT_META[key].descKey); }
+  function eventDur(key){ return t(EVENT_META[key].durKey); }
 
   function isEventActive(key){
     return !!(state.events && state.events[key] && state.events[key] > Date.now());
@@ -1049,7 +1309,7 @@
       state.eventCurrency += gained;
       updateEventCurrencyDisplays();
       updateEventsStatus();
-      showToast("Получено 🍪 x" + gained + " за разблокировку печенья!");
+      showToast(t("toast_unlock_gained", {n: gained}));
     }
   }
 
@@ -1057,11 +1317,11 @@
     var meta = EVENT_META[key];
     if(!meta) return;
     if(isEventActive(key)){
-      showToast("Событие уже активно");
+      showToast(t("toast_event_already_active"));
       return;
     }
     if(state.eventCurrency < 1){
-      showToast("Недостаточно печенек 🍪");
+      showToast(t("toast_not_enough_cookies"));
       return;
     }
     state.eventCurrency -= 1;
@@ -1070,7 +1330,7 @@
     updateEventCurrencyDisplays();
     updateEventsStatus();
     save();
-    showToast(meta.icon + " " + meta.name + " активировано!");
+    showToast(t("toast_event_activated", {icon: meta.icon, name: eventName(key)}));
   }
 
   function randomEmptyIndex(){
@@ -1121,17 +1381,17 @@
 
       var head = document.createElement("div");
       head.className = "event-head";
-      head.innerHTML = "<span class=\"event-icon\">"+meta.icon+"</span><span>"+meta.name+"</span>";
+      head.innerHTML = "<span class=\"event-icon\">"+meta.icon+"</span><span>"+eventName(key)+"</span>";
       card.appendChild(head);
 
       var desc = document.createElement("div");
       desc.className = "event-desc";
-      desc.textContent = meta.desc;
+      desc.textContent = eventDesc(key);
       card.appendChild(desc);
 
       var metaLine = document.createElement("div");
       metaLine.className = "event-meta";
-      metaLine.textContent = "⏱ " + meta.durLabel + "   ·   Цена: 1 🍪";
+      metaLine.textContent = t("event_price_label", {dur: eventDur(key)});
       card.appendChild(metaLine);
 
       var btn = document.createElement("button");
@@ -1159,13 +1419,13 @@
       refs.card.classList.toggle("active", active);
       if(active){
         refs.btn.disabled = true;
-        refs.btn.textContent = "Активно";
-        refs.status.textContent = "Осталось: " + formatCountdown(until-now);
+        refs.btn.textContent = t("event_active_btn");
+        refs.status.textContent = t("event_time_left_prefix") + formatCountdown(until-now);
       }else{
         var afford = state.eventCurrency >= 1;
         refs.btn.disabled = !afford;
-        refs.btn.textContent = "Активировать (1 🍪)";
-        refs.status.textContent = afford ? "" : "Недостаточно печенек";
+        refs.btn.textContent = t("event_activate_btn");
+        refs.status.textContent = afford ? "" : t("event_not_enough");
       }
     });
   }
@@ -1182,17 +1442,17 @@
   // ---------- wheel of fortune ----------
   var WHEEL_SPIN_COOLDOWN = 15*60*1000;
   var WHEEL_PRIZES = [
-    { id:"inc5",   icon:"💰", label:"Доход\n5 мин",   weight:25, color:"#ffdca0", type:"income",  seconds:300,   durLabel:"5 минут" },
-    { id:"inc10",  icon:"💰", label:"Доход\n10 мин",  weight:20, color:"#ffc873", type:"income",  seconds:600,   durLabel:"10 минут" },
-    { id:"c1",     icon:"🍪", label:"1\nпеченька",    weight:15, color:"#cfe8c2", type:"currency", amount:1 },
-    { id:"inc30",  icon:"💰", label:"Доход\n30 мин",  weight:15, color:"#ffb742", type:"income",  seconds:1800,  durLabel:"30 минут" },
-    { id:"rain",   icon:"🌧️", label:"Дождь\nпеченек", weight:12, color:"#d9a6ff", type:"event", key:"rain" },
-    { id:"inc60",  icon:"💰", label:"Доход\n1 час",   weight:10, color:"#ff9a4d", type:"income",  seconds:3600,  durLabel:"1 час" },
-    { id:"c3",     icon:"🍪", label:"3\nпеченьки",    weight:8,  color:"#9ed88c", type:"currency", amount:3 },
-    { id:"fixedPrice", icon:"🧊", label:"Заморозка\nцен", weight:7, color:"#b9c4ff", type:"event", key:"fixedPrice" },
-    { id:"c5",     icon:"🍪", label:"5\nпеченек",     weight:4,  color:"#6fc95a", type:"currency", amount:5 },
-    { id:"inc360", icon:"💎", label:"Доход\n6 часов",  weight:3,  color:"#ff7a3d", type:"income",  seconds:21600, durLabel:"6 часов" },
-    { id:"x2",     icon:"📈", label:"x2\nдоход", weight:3, color:"#ff5f8f", type:"event", key:"x2" }
+    { id:"inc5",   icon:"💰", labelKey:"wp_inc5",   weight:25, color:"#ffdca0", type:"income",  seconds:300,   durKey:"dur_5m" },
+    { id:"inc10",  icon:"💰", labelKey:"wp_inc10",  weight:20, color:"#ffc873", type:"income",  seconds:600,   durKey:"dur_10m" },
+    { id:"c1",     icon:"🍪", labelKey:"wp_c1",     weight:15, color:"#cfe8c2", type:"currency", amount:1 },
+    { id:"inc30",  icon:"💰", labelKey:"wp_inc30",  weight:15, color:"#ffb742", type:"income",  seconds:1800,  durKey:"dur_30m" },
+    { id:"rain",   icon:"🌧️", labelKey:"wp_rain",   weight:12, color:"#d9a6ff", type:"event", key:"rain" },
+    { id:"inc60",  icon:"💰", labelKey:"wp_inc60",  weight:10, color:"#ff9a4d", type:"income",  seconds:3600,  durKey:"dur_1h" },
+    { id:"c3",     icon:"🍪", labelKey:"wp_c3",     weight:8,  color:"#9ed88c", type:"currency", amount:3 },
+    { id:"fixedPrice", icon:"🧊", labelKey:"wp_fixedPrice", weight:7, color:"#b9c4ff", type:"event", key:"fixedPrice" },
+    { id:"c5",     icon:"🍪", labelKey:"wp_c5",     weight:4,  color:"#6fc95a", type:"currency", amount:5 },
+    { id:"inc360", icon:"💎", labelKey:"wp_inc360", weight:3,  color:"#ff7a3d", type:"income",  seconds:21600, durKey:"dur_6h" },
+    { id:"x2",     icon:"📈", labelKey:"wp_x2", weight:3, color:"#ff5f8f", type:"event", key:"x2" }
   ];
 
   var wheelSpinEl = document.getElementById("wheelSpin");
@@ -1223,7 +1483,7 @@
       lbl.className = "wheel-label";
       lbl.style.left = x + "%";
       lbl.style.top = y + "%";
-      lbl.innerHTML = "<span class=\"wl-icon\">"+p.icon+"</span>"+p.label;
+      lbl.innerHTML = "<span class=\"wl-icon\">"+p.icon+"</span>"+t(p.labelKey);
       wheelLabelsEl.appendChild(lbl);
     });
   }
@@ -1246,11 +1506,11 @@
     if(prize.type === "income"){
       var gain = incomeRate() * prize.seconds;
       state.money += gain;
-      showToast("🎉 Приз: доход за " + prize.durLabel + "! +💰" + fmt(gain));
+      showToast(t("wheel_prize_income", {dur: t(prize.durKey), amount: fmt(gain)}));
     }else if(prize.type === "currency"){
       state.eventCurrency += prize.amount;
       updateEventCurrencyDisplays();
-      showToast("🎉 Приз: " + prize.amount + " 🍪!");
+      showToast(t("wheel_prize_currency", {amount: prize.amount}));
     }else if(prize.type === "event"){
       var key = prize.key;
       var meta = EVENT_META[key];
@@ -1262,7 +1522,7 @@
         if(key === "rain") state.events.rainNextDrop = now + 700;
       }
       updateEventsStatus();
-      showToast("🎉 Приз: бесплатное событие — " + meta.icon + " " + meta.name + "!");
+      showToast(t("wheel_prize_event", {icon: meta.icon, name: eventName(key)}));
     }
     updateHeader();
     save();
@@ -1271,7 +1531,7 @@
   function spinWheel(){
     if(wheelSpinning) return;
     if(!isWheelReady()){
-      showToast("Спин ещё не готов 🎡");
+      showToast(t("wheel_not_ready_toast"));
       return;
     }
     var idx = pickWeightedPrize();
@@ -1309,17 +1569,17 @@
     var ready = isWheelReady();
     wheelSpinBtn.disabled = wheelSpinning || !ready;
     if(wheelSpinning){
-      wheelSpinBtn.textContent = "Крутится...";
+      wheelSpinBtn.textContent = t("wheel_spin_btn_spinning");
       wheelStatusEl.textContent = "";
     }else if(bonus > 0){
-      wheelSpinBtn.textContent = "Крутить! 🎡";
-      wheelStatusEl.textContent = "Бонусные спины: " + bonus;
+      wheelSpinBtn.textContent = t("wheel_spin_btn_ready");
+      wheelStatusEl.textContent = t("wheel_bonus_spins_prefix") + bonus;
     }else if(ready){
-      wheelSpinBtn.textContent = "Крутить! 🎡";
-      wheelStatusEl.textContent = "Спин готов!";
+      wheelSpinBtn.textContent = t("wheel_spin_btn_ready");
+      wheelStatusEl.textContent = t("wheel_ready_status");
     }else{
-      wheelSpinBtn.textContent = "Крутить! 🎡";
-      wheelStatusEl.textContent = "Следующий спин через " + formatCountdown(state.wheel.nextSpinAt - now);
+      wheelSpinBtn.textContent = t("wheel_spin_btn_ready");
+      wheelStatusEl.textContent = t("wheel_next_spin_prefix") + formatCountdown(state.wheel.nextSpinAt - now);
     }
   }
 
@@ -1337,29 +1597,29 @@
   function redeemPromo(){
     var code = (promoInputEl.value||"").trim().toUpperCase();
     if(!code){
-      promoStatusEl.textContent = "Введите промокод";
+      promoStatusEl.textContent = t("promo_empty");
       return;
     }
     if(state.redeemedCodes[code]){
-      promoStatusEl.textContent = "Этот промокод уже использован";
+      promoStatusEl.textContent = t("promo_used");
       return;
     }
     var def = PROMO_CODES[code];
     if(!def){
-      promoStatusEl.textContent = "Промокод не найден";
+      promoStatusEl.textContent = t("promo_not_found");
       return;
     }
     state.redeemedCodes[code] = true;
     if(def.type === "currency"){
       state.eventCurrency += def.amount;
       updateEventCurrencyDisplays();
-      promoStatusEl.textContent = "🎁 Получено " + def.amount + " 🍪!";
-      showToast("🎁 Промокод активирован: +" + def.amount + " 🍪!");
+      promoStatusEl.textContent = t("promo_got_cookies", {n: def.amount});
+      showToast(t("promo_activated_cookies_toast", {n: def.amount}));
     }else if(def.type === "spins"){
       state.wheel.bonusSpins = (state.wheel.bonusSpins||0) + def.amount;
       updateWheelStatus();
-      promoStatusEl.textContent = "🎁 Получено " + def.amount + " бонусных спинов!";
-      showToast("🎁 Промокод активирован: +" + def.amount + " спинов колеса!");
+      promoStatusEl.textContent = t("promo_got_spins", {n: def.amount});
+      showToast(t("promo_activated_spins_toast", {n: def.amount}));
     }
     promoInputEl.value = "";
     save();
@@ -1379,7 +1639,7 @@
   function buyIncomeUpgrade(){
     var cost = nextIncomeUpgradeCost();
     if(state.eventCurrency < cost){
-      showToast("Недостаточно печенек 🍪");
+      showToast(t("toast_not_enough_cookies"));
       return;
     }
     state.eventCurrency -= cost;
@@ -1387,34 +1647,34 @@
     updateEventCurrencyDisplays();
     updateHeader();
     save();
-    showToast("⚡ Доход улучшен! +0.1/сек навсегда");
+    showToast(t("toast_income_upgraded"));
   }
 
   function buyOfflineUpgrade(){
     if(offlineCapSeconds() >= OFFLINE_MAX_SECONDS){
-      showToast("Оффлайн-доход уже максимален — 8 часов");
+      showToast(t("toast_offline_maxed"));
       return;
     }
     if(state.eventCurrency < 1){
-      showToast("Недостаточно печенек 🍪");
+      showToast(t("toast_not_enough_cookies"));
       return;
     }
     state.eventCurrency -= 1;
     state.offlineCapLevel = (state.offlineCapLevel||0) + 1;
     updateEventCurrencyDisplays();
     save();
-    showToast("🌙 Оффлайн-доход теперь: " + offlineCapLabel());
+    showToast(t("toast_offline_upgraded", {label: offlineCapLabel()}));
   }
 
   function updateUpgradesPanel(){
     var incCost = nextIncomeUpgradeCost();
-    incomeUpgradeMetaEl.textContent = "Уровень " + (state.incomeUpgradeLevel||0) + " · Бонус +" + incomeUpgradeBonus().toFixed(1) + "/сек";
-    incomeUpgradeBtnEl.textContent = "Улучшить (" + fmt(incCost).replace(/\.00$/,"") + " 🍪)";
+    incomeUpgradeMetaEl.textContent = t("income_upg_meta", {n: state.incomeUpgradeLevel||0, x: incomeUpgradeBonus().toFixed(1)});
+    incomeUpgradeBtnEl.textContent = t("income_upg_btn", {cost: fmt(incCost).replace(/\.00$/,"")});
     incomeUpgradeBtnEl.disabled = state.eventCurrency < incCost;
 
     var capMaxed = offlineCapSeconds() >= OFFLINE_MAX_SECONDS;
-    offlineUpgradeMetaEl.textContent = "Сейчас: " + offlineCapLabel() + (capMaxed ? " (максимум)" : "");
-    offlineUpgradeBtnEl.textContent = capMaxed ? "Максимум достигнут" : "Улучшить (+1 мин · 1 🍪)";
+    offlineUpgradeMetaEl.textContent = t("offline_upg_meta", {label: offlineCapLabel()}) + (capMaxed ? t("offline_upg_meta_max_suffix") : "");
+    offlineUpgradeBtnEl.textContent = capMaxed ? t("offline_upg_btn_maxed") : t("offline_upg_btn");
     offlineUpgradeBtnEl.disabled = capMaxed || state.eventCurrency < 1;
   }
 
@@ -1425,7 +1685,7 @@
     var level = state.cellUpgrades[idx]||0;
     var cost = nextCellUpgradeCost(level);
     if(state.eventCurrency < cost){
-      showToast("Недостаточно печенек 🍪");
+      showToast(t("toast_not_enough_cookies"));
       return;
     }
     state.eventCurrency -= cost;
@@ -1434,7 +1694,7 @@
     renderCell(idx, true);
     updateHeader();
     save();
-    showToast("🔧 Клетка улучшена! Множитель ×" + cellMultiplier(level+1).toFixed(1));
+    showToast(t("toast_cell_upgraded", {x: cellMultiplier(level+1).toFixed(1)}));
     refreshCellUpgradeModal();
     updateCellUpgradeGrid();
   }
@@ -1486,7 +1746,7 @@
     cellUpgModalNextMultEl.textContent = "×" + cellMultiplier(level+1).toFixed(1);
     cellUpgModalCostEl.textContent = cost + " 🍪";
     cellUpgModalBuyBtnEl.disabled = state.eventCurrency < cost;
-    cellUpgModalBuyBtnEl.textContent = "Улучшить за " + cost + " 🍪";
+    cellUpgModalBuyBtnEl.textContent = t("cell_modal_buy_btn_cost", {cost: cost});
   }
 
   function openCellUpgradeModal(idx){
@@ -2115,7 +2375,7 @@
     var level = state.grid[idx];
     if(!level) return false;
     if(!canDeleteLevel(level)){
-      showToast("Нельзя удалить один из 3 старших уровней на поле 🔒");
+      showToast(t("toast_cannot_delete_protected"));
       return false;
     }
     state.grid[idx] = null;
@@ -2136,7 +2396,7 @@
       deleteCookie(selectedIdx);
       renderBoard();
     }else{
-      showToast("Сначала выберите или перетащите печенье в корзину 🗑️");
+      showToast(t("toast_select_or_drag"));
     }
   });
 
@@ -2176,7 +2436,7 @@
 
         var btn = document.createElement("button");
         btn.className = "buy-btn";
-        btn.textContent = "Купить";
+        btn.textContent = t("buy_btn");
         var canAfford = state.money >= price;
         btn.disabled = !canAfford;
         btn.addEventListener("click", function(lv){
@@ -2186,7 +2446,7 @@
       }else{
         var note = document.createElement("div");
         note.className = "lock-note";
-        note.textContent = "🔒 Откроется на уровне " + (level+2);
+        note.textContent = t("locked_note_prefix") + (level+2);
         card.appendChild(note);
       }
 
@@ -2198,12 +2458,12 @@
     if(!isUnlocked(level)) return;
     var price = priceFor(level);
     if(state.money < price){
-      showToast("Недостаточно денег 💰");
+      showToast(t("toast_not_enough_money"));
       return;
     }
     var emptyIdx = state.grid.indexOf(null);
     if(emptyIdx === -1){
-      showToast("Поле заполнено! Объедините печенья, чтобы освободить место.");
+      showToast(t("toast_board_full"));
       return;
     }
     state.money -= price;
@@ -2225,7 +2485,7 @@
   function updateHeader(){
     moneyValEl.textContent = fmt(state.money);
     var mult = isEventActive("x2") ? 2 : 1;
-    incomeValEl.textContent = "+" + fmt(incomeRate()*mult) + "/сек" + (mult>1 ? " (x2!)" : "");
+    incomeValEl.textContent = "+" + fmt(incomeRate()*mult) + t("per_sec") + (mult>1 ? t("income_x2_suffix") : "");
   }
 
   function showToast(msg){
@@ -2283,6 +2543,14 @@
     try{
       YaGames.init().then(function(sdk){
         ysdk = sdk;
+        try{
+          var sdkLang = sdk.environment && sdk.environment.i18n && sdk.environment.i18n.lang;
+          var resolvedLang = SUPPORTED_LANGS[sdkLang] ? sdkLang : "ru";
+          if(resolvedLang !== lang){
+            lang = resolvedLang;
+            applyLanguage();
+          }
+        }catch(e){}
         try{ sdk.features && sdk.features.LoadingAPI && sdk.features.LoadingAPI.ready(); }catch(e){}
         sdk.getPlayer({ scopes: false }).then(function(player){
           try{ ysdkPlayerId = player.getUniqueID ? player.getUniqueID() : null; }catch(e){}
@@ -2321,14 +2589,15 @@
   function renderLeaderboardEntries(entries, listEl){
     listEl.innerHTML = "";
     if(!entries.length){
-      listEl.innerHTML = "<div class=\"lb-empty\">Пока никто не попал в топ</div>";
+      listEl.innerHTML = "<div class=\"lb-empty\"></div>";
+      listEl.firstChild.textContent = t("lb_empty");
       return;
     }
     entries.forEach(function(entry){
       var row = document.createElement("div");
       var isMe = ysdkPlayerId && entry.player && entry.player.uniqueID === ysdkPlayerId;
       row.className = "lb-row" + (isMe ? " me" : "");
-      var name = (entry.player && entry.player.publicName) ? entry.player.publicName : "Игрок";
+      var name = (entry.player && entry.player.publicName) ? entry.player.publicName : t("lb_default_player_name");
       var scoreText = entry.formattedScore || fmt(entry.score||0);
       row.innerHTML = "<span class=\"lb-rank\">#"+(entry.rank||"?")+"</span><span class=\"lb-name\"></span><span class=\"lb-score\"></span>";
       row.querySelector(".lb-name").textContent = name;
@@ -2341,18 +2610,18 @@
     var listEl = document.getElementById(listElId);
     var statusEl = document.getElementById(statusElId);
     if(!ysdkLeaderboards){
-      statusEl.textContent = "Недоступно вне Яндекс Игр";
+      statusEl.textContent = t("lb_unavailable");
       listEl.innerHTML = "";
       return;
     }
-    statusEl.textContent = "Загрузка...";
+    statusEl.textContent = t("lb_loading");
     ysdkLeaderboards.getLeaderboardEntries(name, { quantityTop: 10, includeUser: true })
       .then(function(res){
         statusEl.textContent = "";
         renderLeaderboardEntries(res.entries||[], listEl);
       })
       .catch(function(){
-        statusEl.textContent = "Не удалось загрузить топ (проверьте, что лидерборд \""+name+"\" создан в консоли Яндекс Игр)";
+        statusEl.textContent = t("lb_load_error", {name: name});
         listEl.innerHTML = "";
       });
   }
@@ -2395,6 +2664,7 @@
   });
 
   // ---------- init ----------
+  applyStaticI18n();
   load();
   awardUnlockCurrency();
   buildBoard();
