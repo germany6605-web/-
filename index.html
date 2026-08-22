@@ -40,6 +40,7 @@
     gap:10px;
     height:100vh;
     height:100dvh;
+    height:var(--app-height, 100vh);
   }
   header{
     display:flex;
@@ -875,6 +876,15 @@
 </div>
 
 <script>
+(function(){
+  function setAppHeight(){
+    document.documentElement.style.setProperty("--app-height", window.innerHeight + "px");
+  }
+  setAppHeight();
+  window.addEventListener("resize", setAppHeight);
+  window.addEventListener("orientationchange", function(){ setTimeout(setAppHeight, 60); });
+})();
+
 (function(){
   "use strict";
 
