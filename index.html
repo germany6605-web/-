@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Cookie Merge</title>
+<script src="https://yandex.ru/games/sdk/v2" defer></script>
 <style>
   :root{
     --bg-0:#1b120c;
@@ -660,6 +661,53 @@
   }
   .promo-box button:active{transform:scale(.96);}
 
+  .lb-status{
+    font-size:12px;
+    color:var(--cream-dim);
+    text-align:center;
+    padding:6px 0;
+  }
+  .lb-list{
+    display:flex;
+    flex-direction:column;
+    gap:5px;
+  }
+  .lb-row{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    background:rgba(0,0,0,.2);
+    border-radius:9px;
+    padding:6px 10px;
+    font-size:12.5px;
+  }
+  .lb-row.me{
+    background:rgba(255,183,66,.16);
+    border:1px solid rgba(255,183,66,.4);
+  }
+  .lb-rank{
+    font-weight:800;
+    color:var(--accent);
+    min-width:26px;
+  }
+  .lb-name{
+    flex:1;
+    color:var(--cream);
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .lb-score{
+    font-weight:700;
+    color:var(--cream-dim);
+  }
+  .lb-empty{
+    font-size:12px;
+    color:var(--cream-dim);
+    text-align:center;
+    padding:8px 0;
+  }
+
   .hint{
     font-size:11.5px;
     color:var(--cream-dim);
@@ -702,6 +750,7 @@
         <button class="tab-btn" id="tabBtnEvents" data-tab="events">🎉 События</button>
         <button class="tab-btn" id="tabBtnWheel" data-tab="wheel">🎡 Колесо</button>
         <button class="tab-btn" id="tabBtnUpgrades" data-tab="upgrades">⚡ Улучш.</button>
+        <button class="tab-btn" id="tabBtnLeaders" data-tab="leaders">🏆 Топы</button>
       </div>
       <div class="tab-panel active" id="shopPanel">
         <div class="shop-title">Магазин печенья</div>
@@ -751,6 +800,25 @@
           <div class="cell-upg-grid" id="cellUpgGrid"></div>
         </div>
       </div>
+      <div class="tab-panel" id="leadersPanel">
+        <div class="shop-title">Топы игроков</div>
+        <div class="hint">Топы работают только внутри Яндекс Игр — там, где игра запущена через официальный SDK и игрок авторизован.</div>
+        <div class="event-card">
+          <div class="event-head"><span class="event-icon">💰</span><span>Топ по балансу</span></div>
+          <div class="lb-status" id="lbStatusBalance">Загрузка...</div>
+          <div class="lb-list" id="lbListBalance"></div>
+        </div>
+        <div class="event-card">
+          <div class="event-head"><span class="event-icon">📈</span><span>Топ по доходу в час</span></div>
+          <div class="lb-status" id="lbStatusIncome">Загрузка...</div>
+          <div class="lb-list" id="lbListIncome"></div>
+        </div>
+        <div class="event-card">
+          <div class="event-head"><span class="event-icon">🔀</span><span>Топ по объединениям печенья</span></div>
+          <div class="lb-status" id="lbStatusMerges">Загрузка...</div>
+          <div class="lb-list" id="lbListMerges"></div>
+        </div>
+      </div>
     </div>
   </main>
 </div>
@@ -792,7 +860,8 @@
     cellUpgrades: new Array(CELLS).fill(0),
     incomeUpgradeLevel: 0,
     offlineCapLevel: 0,
-    redeemedCodes: {}
+    redeemedCodes: {},
+    totalMerges: 0
   };
 
   var selectedIdx = null;
@@ -803,6 +872,7 @@
     try{
       localStorage.setItem(SAVE_KEY, JSON.stringify(state));
     }catch(e){}
+    pushLeaderboardScores();
   }
 
   function load(){
@@ -824,6 +894,7 @@
       state.incomeUpgradeLevel = typeof data.incomeUpgradeLevel === "number" ? data.incomeUpgradeLevel : 0;
       state.offlineCapLevel = typeof data.offlineCapLevel === "number" ? data.offlineCapLevel : 0;
       state.redeemedCodes = (data.redeemedCodes && typeof data.redeemedCodes === "object") ? data.redeemedCodes : {};
+      state.totalMerges = typeof data.totalMerges === "number" ? data.totalMerges : 0;
       var elapsed = (Date.now() - (data.lastSeen || Date.now())) / 1000;
       elapsed = Math.max(0, Math.min(elapsed, offlineCapSeconds()));
       if(elapsed > 5){
@@ -1701,18 +1772,6 @@
 
     ctx.save();
 
-    if(tier > 0){
-      var ringColors = [hsl(200,80,60,.55), hsl(320,80,60,.5), hsl(50,90,60,.5), hsl(0,80,60,.5)];
-      var rings = Math.min(tier,3);
-      for(var i=0;i<rings;i++){
-        ctx.strokeStyle = ringColors[(tier+i) % ringColors.length];
-        ctx.lineWidth = 2.4;
-        ctx.beginPath();
-        ctx.arc(50,50, 46 - i*4, 0, Math.PI*2);
-        ctx.stroke();
-      }
-    }
-
     ctx.save();
     if("filter" in ctx && tier > 0){
       ctx.filter = "hue-rotate(" + (tier*47 % 360) + "deg) saturate(" + (1+tierClamped*0.14) + ") brightness(" + (1+tierClamped*0.03) + ")";
@@ -1837,6 +1896,7 @@
       var newLevel = level + 1;
       state.grid[idx] = newLevel;
       state.grid[selectedIdx] = null;
+      state.totalMerges = (state.totalMerges||0) + 1;
       setMaxLevel(newLevel);
       selectedIdx = null;
       renderBoard();
@@ -1942,6 +2002,7 @@
             var newLevel = level+1;
             state.grid[tIdx] = newLevel;
             state.grid[idx] = null;
+            state.totalMerges = (state.totalMerges||0) + 1;
             setMaxLevel(newLevel);
             renderBoard();
             renderCell(tIdx, true);
@@ -2170,12 +2231,102 @@
   var saveTimer = setInterval(save, 4000);
   var tickTimer = setInterval(tick, TICK_MS);
 
+  // ---------- yandex games leaderboards ----------
+  // Requires 3 leaderboards created in the Yandex Games developer console
+  // with these exact technical names: "balance", "income_hour", "merges".
+  // Leaderboards (and score submission) only work when the page is served
+  // through the real Yandex Games SDK with an authorized player; outside
+  // that environment everything here silently no-ops.
+  var ysdk = null;
+  var ysdkLeaderboards = null;
+  var ysdkPlayerId = null;
+  var lastLbPush = 0;
+  var LB_PUSH_MIN_INTERVAL = 3000;
+  var LB_NAMES = { balance: "balance", income: "income_hour", merges: "merges" };
+
+  function initYandexSDK(){
+    if(typeof YaGames === "undefined") return;
+    try{
+      YaGames.init().then(function(sdk){
+        ysdk = sdk;
+        try{ sdk.features && sdk.features.LoadingAPI && sdk.features.LoadingAPI.ready(); }catch(e){}
+        sdk.getPlayer({ scopes: false }).then(function(player){
+          try{ ysdkPlayerId = player.getUniqueID ? player.getUniqueID() : null; }catch(e){}
+        }).catch(function(){});
+        return sdk.getLeaderboards();
+      }).then(function(lb){
+        ysdkLeaderboards = lb;
+        pushLeaderboardScores(true);
+      }).catch(function(){ /* not running inside Yandex Games */ });
+    }catch(e){}
+  }
+
+  function pushLeaderboardScores(force){
+    if(!ysdkLeaderboards) return;
+    var now = Date.now();
+    if(!force && now - lastLbPush < LB_PUSH_MIN_INTERVAL) return;
+    lastLbPush = now;
+    try{
+      ysdkLeaderboards.setLeaderboardScore(LB_NAMES.balance, Math.max(0, Math.floor(state.money))).catch(function(){});
+      ysdkLeaderboards.setLeaderboardScore(LB_NAMES.income, Math.max(0, Math.floor(incomeRate()*3600))).catch(function(){});
+      ysdkLeaderboards.setLeaderboardScore(LB_NAMES.merges, Math.max(0, Math.floor(state.totalMerges||0))).catch(function(){});
+    }catch(e){}
+  }
+
+  function renderLeaderboardEntries(entries, listEl){
+    listEl.innerHTML = "";
+    if(!entries.length){
+      listEl.innerHTML = "<div class=\"lb-empty\">Пока никто не попал в топ</div>";
+      return;
+    }
+    entries.forEach(function(entry){
+      var row = document.createElement("div");
+      var isMe = ysdkPlayerId && entry.player && entry.player.uniqueID === ysdkPlayerId;
+      row.className = "lb-row" + (isMe ? " me" : "");
+      var name = (entry.player && entry.player.publicName) ? entry.player.publicName : "Игрок";
+      var scoreText = entry.formattedScore || fmt(entry.score||0);
+      row.innerHTML = "<span class=\"lb-rank\">#"+(entry.rank||"?")+"</span><span class=\"lb-name\"></span><span class=\"lb-score\"></span>";
+      row.querySelector(".lb-name").textContent = name;
+      row.querySelector(".lb-score").textContent = scoreText;
+      listEl.appendChild(row);
+    });
+  }
+
+  function loadLeaderboard(name, listElId, statusElId){
+    var listEl = document.getElementById(listElId);
+    var statusEl = document.getElementById(statusElId);
+    if(!ysdkLeaderboards){
+      statusEl.textContent = "Недоступно вне Яндекс Игр";
+      listEl.innerHTML = "";
+      return;
+    }
+    statusEl.textContent = "Загрузка...";
+    ysdkLeaderboards.getLeaderboardEntries(name, { quantityTop: 10, includeUser: true })
+      .then(function(res){
+        statusEl.textContent = "";
+        renderLeaderboardEntries(res.entries||[], listEl);
+      })
+      .catch(function(){
+        statusEl.textContent = "Не удалось загрузить топ (проверьте, что лидерборд \""+name+"\" создан в консоли Яндекс Игр)";
+        listEl.innerHTML = "";
+      });
+  }
+
+  function refreshLeaderboardsPanel(){
+    loadLeaderboard(LB_NAMES.balance, "lbListBalance", "lbStatusBalance");
+    loadLeaderboard(LB_NAMES.income, "lbListIncome", "lbStatusIncome");
+    loadLeaderboard(LB_NAMES.merges, "lbListMerges", "lbStatusMerges");
+  }
+
+  initYandexSDK();
+
   // ---------- tabs ----------
   var TABS = {
     shop:   { btn: document.getElementById("tabBtnShop"),   panel: document.getElementById("shopPanel") },
     events: { btn: document.getElementById("tabBtnEvents"), panel: document.getElementById("eventsPanel") },
     wheel:  { btn: document.getElementById("tabBtnWheel"),  panel: document.getElementById("wheelPanel") },
-    upgrades: { btn: document.getElementById("tabBtnUpgrades"), panel: document.getElementById("upgradesPanel") }
+    upgrades: { btn: document.getElementById("tabBtnUpgrades"), panel: document.getElementById("upgradesPanel") },
+    leaders: { btn: document.getElementById("tabBtnLeaders"), panel: document.getElementById("leadersPanel") }
   };
 
   function switchTab(tab){
@@ -2184,6 +2335,7 @@
       TABS[key].btn.classList.toggle("active", active);
       TABS[key].panel.classList.toggle("active", active);
     });
+    if(tab === "leaders") refreshLeaderboardsPanel();
   }
 
   Object.keys(TABS).forEach(function(key){
@@ -2194,7 +2346,7 @@
   // ---------- reset ----------
   document.getElementById("resetBtn").addEventListener("click", function(){
     if(confirm("Сбросить игру и начать заново?")){
-      state = { grid: new Array(CELLS).fill(null), money: 20, maxLevel: 1, prices: {}, lastSeen: Date.now(), eventCurrency: 0, unlockAwarded: 0, events: {}, wheel: { nextSpinAt: Date.now(), bonusSpins: 0 }, cellUpgrades: new Array(CELLS).fill(0), incomeUpgradeLevel: 0, offlineCapLevel: 0, redeemedCodes: {} };
+      state = { grid: new Array(CELLS).fill(null), money: 20, maxLevel: 1, prices: {}, lastSeen: Date.now(), eventCurrency: 0, unlockAwarded: 0, events: {}, wheel: { nextSpinAt: Date.now(), bonusSpins: 0 }, cellUpgrades: new Array(CELLS).fill(0), incomeUpgradeLevel: 0, offlineCapLevel: 0, redeemedCodes: {}, totalMerges: 0 };
       selectedIdx = null;
       closeCellUpgradeModal();
       wheelRotation = 0;
