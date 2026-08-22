@@ -93,16 +93,18 @@
   }
   .cell{
     position:relative;
+    aspect-ratio:1/1;
+    width:100%;
     border-radius:13px;
     background:var(--cell-empty);
     display:flex;
     align-items:center;
     justify-content:center;
     cursor:pointer;
-    touch-action:manipulation;
+    touch-action:none;
     box-shadow:inset 0 2px 5px rgba(0,0,0,.45);
     overflow:hidden;
-    transition:box-shadow .15s ease, transform .1s ease;
+    transition:box-shadow .15s ease, opacity .15s ease;
   }
   .cell.filled{
     background:var(--cell);
@@ -110,6 +112,15 @@
   }
   .cell.selected{
     box-shadow:0 0 0 3px var(--accent), 0 0 14px 2px rgba(255,183,66,.6);
+  }
+  .cell.drag-source{
+    opacity:.3;
+  }
+  .cell.drop-ok{
+    box-shadow:0 0 0 3px var(--good), 0 0 14px 2px rgba(139,209,124,.6);
+  }
+  .cell.drop-bad{
+    box-shadow:0 0 0 3px var(--danger), 0 0 14px 2px rgba(255,107,107,.5);
   }
   .cell canvas{
     width:82%;
@@ -129,6 +140,53 @@
     100%{transform:scale(1);}
   }
   .cell.pop canvas{animation:pop .28s cubic-bezier(.34,1.56,.64,1);}
+
+  .drag-ghost{
+    position:fixed;
+    top:0;left:0;
+    pointer-events:none;
+    z-index:200;
+    transform:translate(-50%,-50%) scale(1.12);
+    filter:drop-shadow(0 10px 18px rgba(0,0,0,.55));
+  }
+  .drag-ghost canvas{
+    width:100%;
+    height:100%;
+    display:block;
+  }
+
+  .trash-zone{
+    margin-top:10px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    padding:10px 12px;
+    border-radius:14px;
+    border:2px dashed rgba(255,255,255,.15);
+    color:var(--cream-dim);
+    font-size:12px;
+    font-weight:600;
+    text-align:center;
+    cursor:pointer;
+    transition:border-color .15s ease, background .15s ease, color .15s ease;
+  }
+  .trash-zone .trash-icon{font-size:16px;}
+  .trash-zone.ready{
+    border-color:var(--accent);
+    color:var(--cream);
+    background:rgba(255,183,66,.08);
+  }
+  .trash-zone.drop-ok{
+    border-color:var(--danger);
+    background:rgba(255,107,107,.18);
+    color:#fff;
+  }
+  .trash-zone.drop-bad{
+    border-color:#776a58;
+    background:rgba(120,110,95,.15);
+    color:var(--cream-dim);
+  }
 
   .shop-wrap{
     background:linear-gradient(180deg,var(--panel),var(--panel-2));
@@ -242,11 +300,15 @@
   <main>
     <div class="board-wrap">
       <div id="board"></div>
+      <div class="trash-zone" id="trashZone">
+        <span class="trash-icon">🗑️</span>
+        <span>Корзина — перетащите печенье сюда или выберите его и нажмите здесь (нельзя удалить 3 старших уровня)</span>
+      </div>
     </div>
     <div class="shop-wrap">
       <div class="shop-title">Магазин печенья</div>
       <div id="shop"></div>
-      <div class="hint">Нажмите на печенье, затем на такое же — чтобы объединить. Пустую клетку — чтобы переставить выбранное.</div>
+      <div class="hint">Перетащите печенье на такое же — чтобы объединить, на пустую клетку — чтобы переставить. Короткое нажатие тоже работает.</div>
     </div>
   </main>
 </div>
@@ -623,7 +685,9 @@
       plus.className = "plus";
       plus.textContent = "";
       cell.appendChild(plus);
-      cell.addEventListener("click", onCellClick);
+      (function(idx){
+        cell.addEventListener("pointerdown", function(e){ onCellPointerDown(e, idx); });
+      })(i);
       boardEl.appendChild(cell);
       cellEls.push({cell:cell, canvas:canvas});
     }
@@ -649,10 +713,10 @@
 
   function renderBoard(){
     for(var i=0;i<CELLS;i++) renderCell(i,false);
+    updateTrashState();
   }
 
-  function onCellClick(e){
-    var idx = parseInt(e.currentTarget.dataset.idx, 10);
+  function handleCellTap(idx){
     var level = state.grid[idx];
 
     if(selectedIdx === null){
@@ -699,6 +763,195 @@
     selectedIdx = idx;
     renderBoard();
   }
+
+  // ---------- drag & drop ----------
+  var DRAG_THRESHOLD = 8;
+
+  function onCellPointerDown(e, idx){
+    if(e.button !== undefined && e.button !== 0) return;
+    var level = state.grid[idx];
+    if(!level){
+      handleCellTap(idx);
+      return;
+    }
+
+    var startX = e.clientX, startY = e.clientY;
+    var pointerId = e.pointerId;
+    var moved = false;
+    var ghost = null;
+    var rect = cellEls[idx].cell.getBoundingClientRect();
+
+    function positionGhost(x,y){
+      if(!ghost) return;
+      ghost.style.left = x+"px";
+      ghost.style.top = y+"px";
+    }
+
+    function startDragVisual(x,y){
+      selectedIdx = null;
+      renderBoard();
+      cellEls[idx].cell.classList.add("drag-source");
+      ghost = document.createElement("div");
+      ghost.className = "drag-ghost";
+      ghost.style.width = rect.width+"px";
+      ghost.style.height = rect.height+"px";
+      var c = document.createElement("canvas");
+      drawCookie(c, level);
+      ghost.appendChild(c);
+      document.body.appendChild(ghost);
+      positionGhost(x,y);
+    }
+
+    function clearHoverHighlights(){
+      var els = document.querySelectorAll(".drop-ok,.drop-bad");
+      for(var k=0;k<els.length;k++) els[k].classList.remove("drop-ok","drop-bad");
+    }
+
+    function updateHoverHighlight(x,y){
+      clearHoverHighlights();
+      var el = document.elementFromPoint(x,y);
+      if(!el) return;
+      var trashEl = el.closest ? el.closest("#trashZone") : null;
+      if(trashEl){
+        trashEl.classList.add(canDeleteLevel(level) ? "drop-ok" : "drop-bad");
+        return;
+      }
+      var cellEl = el.closest ? el.closest(".cell") : null;
+      if(cellEl){
+        var tIdx = parseInt(cellEl.dataset.idx, 10);
+        if(tIdx === idx) return;
+        var tLevel = state.grid[tIdx];
+        cellEl.classList.add((!tLevel || tLevel === level) ? "drop-ok" : "drop-bad");
+      }
+    }
+
+    function finishDrag(x,y){
+      if(ghost){ ghost.remove(); ghost = null; }
+      cellEls[idx].cell.classList.remove("drag-source");
+      clearHoverHighlights();
+
+      var el = document.elementFromPoint(x,y);
+      if(!el){ renderBoard(); return; }
+
+      var trashEl = el.closest ? el.closest("#trashZone") : null;
+      if(trashEl){
+        deleteCookie(idx);
+        renderBoard();
+        return;
+      }
+
+      var cellEl = el.closest ? el.closest(".cell") : null;
+      if(cellEl){
+        var tIdx = parseInt(cellEl.dataset.idx, 10);
+        if(tIdx !== idx){
+          var tLevel = state.grid[tIdx];
+          if(!tLevel){
+            state.grid[tIdx] = level;
+            state.grid[idx] = null;
+            renderBoard();
+            renderCell(tIdx, true);
+            save();
+          }else if(tLevel === level){
+            var newLevel = level+1;
+            state.grid[tIdx] = newLevel;
+            state.grid[idx] = null;
+            if(newLevel > state.maxLevel) state.maxLevel = newLevel;
+            renderBoard();
+            renderCell(tIdx, true);
+            renderShop();
+            save();
+          }
+        }
+      }
+      renderBoard();
+    }
+
+    function onMove(ev){
+      if(ev.pointerId !== pointerId) return;
+      var dx = ev.clientX-startX, dy = ev.clientY-startY;
+      if(!moved && Math.hypot(dx,dy) > DRAG_THRESHOLD){
+        moved = true;
+        startDragVisual(ev.clientX, ev.clientY);
+      }
+      if(moved){
+        positionGhost(ev.clientX, ev.clientY);
+        updateHoverHighlight(ev.clientX, ev.clientY);
+        ev.preventDefault();
+      }
+    }
+
+    function onUp(ev){
+      if(ev.pointerId !== pointerId) return;
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onCancel);
+      if(moved){
+        finishDrag(ev.clientX, ev.clientY);
+      }else{
+        handleCellTap(idx);
+      }
+    }
+
+    function onCancel(ev){
+      if(ev.pointerId !== pointerId) return;
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onCancel);
+      if(ghost){ ghost.remove(); ghost = null; }
+      cellEls[idx].cell.classList.remove("drag-source");
+      clearHoverHighlights();
+      renderBoard();
+    }
+
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", onCancel);
+  }
+
+  // ---------- deletion ----------
+  function protectedLevels(){
+    var seen = {};
+    var distinct = [];
+    for(var i=0;i<state.grid.length;i++){
+      var lv = state.grid[i];
+      if(lv && !seen[lv]){ seen[lv]=true; distinct.push(lv); }
+    }
+    distinct.sort(function(a,b){ return b-a; });
+    return distinct.slice(0,3);
+  }
+
+  function canDeleteLevel(level){
+    return protectedLevels().indexOf(level) === -1;
+  }
+
+  function deleteCookie(idx){
+    var level = state.grid[idx];
+    if(!level) return false;
+    if(!canDeleteLevel(level)){
+      showToast("Нельзя удалить один из 3 старших уровней на поле 🔒");
+      return false;
+    }
+    state.grid[idx] = null;
+    if(selectedIdx === idx) selectedIdx = null;
+    save();
+    return true;
+  }
+
+  var trashZoneEl = document.getElementById("trashZone");
+
+  function updateTrashState(){
+    var ready = selectedIdx !== null && state.grid[selectedIdx] && canDeleteLevel(state.grid[selectedIdx]);
+    trashZoneEl.classList.toggle("ready", !!ready);
+  }
+
+  trashZoneEl.addEventListener("click", function(){
+    if(selectedIdx !== null){
+      deleteCookie(selectedIdx);
+      renderBoard();
+    }else{
+      showToast("Сначала выберите или перетащите печенье в корзину 🗑️");
+    }
+  });
 
   // ---------- shop ----------
   var shopEl = document.getElementById("shop");
