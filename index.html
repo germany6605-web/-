@@ -174,6 +174,75 @@
     color:#2a1608;
   }
   .cell-upg:active{transform:scale(.9);}
+
+  .modal-backdrop{
+    position:fixed;
+    inset:0;
+    background:rgba(10,6,3,.65);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    z-index:100;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .2s ease;
+    padding:16px;
+  }
+  .modal-backdrop.show{
+    opacity:1;
+    pointer-events:auto;
+  }
+  .modal-card{
+    width:300px;
+    max-width:100%;
+    background:linear-gradient(180deg,var(--panel),var(--panel-2));
+    border-radius:18px;
+    padding:18px;
+    box-shadow:0 14px 34px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.06);
+    transform:scale(.92);
+    transition:transform .2s ease;
+  }
+  .modal-backdrop.show .modal-card{
+    transform:scale(1);
+  }
+  .modal-title{
+    font-size:15px;
+    font-weight:800;
+    color:var(--accent);
+    text-align:center;
+    margin-bottom:12px;
+  }
+  .modal-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    font-size:12.5px;
+    color:var(--cream-dim);
+    padding:7px 2px;
+    border-bottom:1px solid rgba(255,255,255,.07);
+  }
+  .modal-row:last-of-type{border-bottom:none;}
+  .modal-row b{
+    color:var(--cream);
+    font-size:13px;
+  }
+  .modal-actions{
+    display:flex;
+    gap:8px;
+    margin-top:14px;
+  }
+  .modal-actions button{flex:1;}
+  .modal-close-btn{
+    border:1px solid rgba(255,255,255,.14);
+    border-radius:9px;
+    padding:8px 4px;
+    font-size:12.5px;
+    font-weight:700;
+    background:rgba(255,255,255,.06);
+    color:var(--cream-dim);
+    cursor:pointer;
+  }
+  .modal-close-btn:active{transform:scale(.96);}
   @keyframes pop{
     0%{transform:scale(.55);}
     60%{transform:scale(1.12);}
@@ -654,13 +723,27 @@
         </div>
         <div class="event-card">
           <div class="event-head"><span class="event-icon">🔧</span><span>Улучшения клеток</span></div>
-          <div class="event-desc">Нажмите на значок в углу клетки на игровом поле, чтобы улучшить её. 1-е улучшение даёт ×1.5 к доходу этой клетки, каждое следующее — ещё +0.5. Цена первого улучшения — 1 🍪, каждое следующее вдвое дороже. Улучшение остаётся у клетки навсегда, даже если печенье в ней сменится.</div>
+          <div class="event-desc">Нажмите на значок ⚙ в углу клетки на игровом поле — откроется меню улучшения этой клетки. 1-е улучшение даёт ×1.5 к доходу этой клетки, каждое следующее — ещё +0.5. Цена первого улучшения — 1 🍪, каждое следующее вдвое дороже. Улучшение остаётся у клетки навсегда, даже если печенье в ней сменится.</div>
         </div>
       </div>
     </div>
   </main>
 </div>
 <div class="toast" id="toast"></div>
+
+<div class="modal-backdrop" id="cellUpgModalBackdrop">
+  <div class="modal-card" id="cellUpgModalCard">
+    <div class="modal-title">🔧 Улучшение клетки</div>
+    <div class="modal-row"><span>Текущий уровень</span><b id="cellUpgModalLevel">0</b></div>
+    <div class="modal-row"><span>Текущий множитель</span><b id="cellUpgModalCurrentMult">×1.0</b></div>
+    <div class="modal-row"><span>После улучшения</span><b id="cellUpgModalNextMult">×1.5</b></div>
+    <div class="modal-row"><span>Цена улучшения</span><b id="cellUpgModalCost">1 🍪</b></div>
+    <div class="modal-actions">
+      <button class="event-btn" id="cellUpgModalBuyBtn">Улучшить</button>
+      <button class="modal-close-btn" id="cellUpgModalCloseBtn">Закрыть</button>
+    </div>
+  </div>
+</div>
 
 <script>
 (function(){
@@ -967,11 +1050,13 @@
     { id:"inc10",  icon:"💰", label:"Доход\n10 мин",  weight:20, color:"#ffc873", type:"income",  seconds:600,   durLabel:"10 минут" },
     { id:"c1",     icon:"🍪", label:"1\nпеченька",    weight:15, color:"#cfe8c2", type:"currency", amount:1 },
     { id:"inc30",  icon:"💰", label:"Доход\n30 мин",  weight:15, color:"#ffb742", type:"income",  seconds:1800,  durLabel:"30 минут" },
-    { id:"random", icon:"🎁", label:"Случайное\nсобытие", weight:10, color:"#d9a6ff", type:"randomEvent" },
+    { id:"rain",   icon:"🌧️", label:"Дождь\nпеченек", weight:12, color:"#d9a6ff", type:"event", key:"rain" },
     { id:"inc60",  icon:"💰", label:"Доход\n1 час",   weight:10, color:"#ff9a4d", type:"income",  seconds:3600,  durLabel:"1 час" },
     { id:"c3",     icon:"🍪", label:"3\nпеченьки",    weight:8,  color:"#9ed88c", type:"currency", amount:3 },
+    { id:"fixedPrice", icon:"🧊", label:"Заморозка\nцен", weight:7, color:"#b9c4ff", type:"event", key:"fixedPrice" },
     { id:"c5",     icon:"🍪", label:"5\nпеченек",     weight:4,  color:"#6fc95a", type:"currency", amount:5 },
-    { id:"inc360", icon:"💎", label:"Доход\n6 часов",  weight:3,  color:"#ff7a3d", type:"income",  seconds:21600, durLabel:"6 часов" }
+    { id:"inc360", icon:"💎", label:"Доход\n6 часов",  weight:3,  color:"#ff7a3d", type:"income",  seconds:21600, durLabel:"6 часов" },
+    { id:"x2",     icon:"📈", label:"x2\nдоход", weight:3, color:"#ff5f8f", type:"event", key:"x2" }
   ];
 
   var wheelSpinEl = document.getElementById("wheelSpin");
@@ -1030,9 +1115,8 @@
       state.eventCurrency += prize.amount;
       updateEventCurrencyDisplays();
       showToast("🎉 Приз: " + prize.amount + " 🍪!");
-    }else if(prize.type === "randomEvent"){
-      var keys = Object.keys(EVENT_META);
-      var key = keys[Math.floor(Math.random()*keys.length)];
+    }else if(prize.type === "event"){
+      var key = prize.key;
       var meta = EVENT_META[key];
       var now = Date.now();
       if(isEventActive(key)){
@@ -1216,7 +1300,49 @@
     updateHeader();
     save();
     showToast("🔧 Клетка улучшена! Множитель ×" + cellMultiplier(level+1).toFixed(1));
+    refreshCellUpgradeModal();
   }
+
+  // ---------- cell upgrade menu ----------
+  var cellUpgModalIdx = null;
+  var cellUpgModalBackdropEl = document.getElementById("cellUpgModalBackdrop");
+  var cellUpgModalLevelEl = document.getElementById("cellUpgModalLevel");
+  var cellUpgModalCurrentMultEl = document.getElementById("cellUpgModalCurrentMult");
+  var cellUpgModalNextMultEl = document.getElementById("cellUpgModalNextMult");
+  var cellUpgModalCostEl = document.getElementById("cellUpgModalCost");
+  var cellUpgModalBuyBtnEl = document.getElementById("cellUpgModalBuyBtn");
+  var cellUpgModalCloseBtnEl = document.getElementById("cellUpgModalCloseBtn");
+
+  function refreshCellUpgradeModal(){
+    if(cellUpgModalIdx === null) return;
+    var level = state.cellUpgrades[cellUpgModalIdx]||0;
+    var cost = nextCellUpgradeCost(level);
+    cellUpgModalLevelEl.textContent = String(level);
+    cellUpgModalCurrentMultEl.textContent = "×" + cellMultiplier(level).toFixed(1);
+    cellUpgModalNextMultEl.textContent = "×" + cellMultiplier(level+1).toFixed(1);
+    cellUpgModalCostEl.textContent = cost + " 🍪";
+    cellUpgModalBuyBtnEl.disabled = state.eventCurrency < cost;
+    cellUpgModalBuyBtnEl.textContent = "Улучшить за " + cost + " 🍪";
+  }
+
+  function openCellUpgradeModal(idx){
+    cellUpgModalIdx = idx;
+    refreshCellUpgradeModal();
+    cellUpgModalBackdropEl.classList.add("show");
+  }
+
+  function closeCellUpgradeModal(){
+    cellUpgModalBackdropEl.classList.remove("show");
+    cellUpgModalIdx = null;
+  }
+
+  cellUpgModalBuyBtnEl.addEventListener("click", function(){
+    if(cellUpgModalIdx !== null) buyCellUpgrade(cellUpgModalIdx);
+  });
+  cellUpgModalCloseBtnEl.addEventListener("click", closeCellUpgradeModal);
+  cellUpgModalBackdropEl.addEventListener("click", function(e){
+    if(e.target === cellUpgModalBackdropEl) closeCellUpgradeModal();
+  });
 
   // ---------- rng ----------
   function mulberry32(seed){
@@ -1507,7 +1633,7 @@
       (function(idx){
         cell.addEventListener("pointerdown", function(e){ onCellPointerDown(e, idx); });
         upg.addEventListener("pointerdown", function(e){ e.stopPropagation(); });
-        upg.addEventListener("click", function(e){ e.stopPropagation(); buyCellUpgrade(idx); });
+        upg.addEventListener("click", function(e){ e.stopPropagation(); openCellUpgradeModal(idx); });
       })(i);
       boardEl.appendChild(cell);
       cellEls.push({cell:cell, canvas:canvas, upg:upg});
@@ -1527,10 +1653,8 @@
     }
     var upgLevel = state.cellUpgrades[i]||0;
     ref.upg.classList.toggle("leveled", upgLevel > 0);
-    ref.upg.textContent = upgLevel > 0 ? ("×"+cellMultiplier(upgLevel).toFixed(1)) : "+";
-    ref.upg.title = upgLevel > 0
-      ? ("Улучшение клетки: ×"+cellMultiplier(upgLevel).toFixed(1)+" к доходу. Следующее: "+nextCellUpgradeCost(upgLevel)+" 🍪")
-      : ("Улучшить клетку: ×1.5 к доходу за "+nextCellUpgradeCost(0)+" 🍪");
+    ref.upg.textContent = upgLevel > 0 ? ("×"+cellMultiplier(upgLevel).toFixed(1)) : "⚙";
+    ref.upg.title = "Открыть меню улучшения клетки";
     if(animate){
       ref.cell.classList.remove("pop", "falling");
       void ref.cell.offsetWidth;
@@ -1936,6 +2060,7 @@
     if(confirm("Сбросить игру и начать заново?")){
       state = { grid: new Array(CELLS).fill(null), money: 20, maxLevel: 1, prices: {}, lastSeen: Date.now(), eventCurrency: 0, unlockAwarded: 0, events: {}, wheel: { nextSpinAt: Date.now(), bonusSpins: 0 }, cellUpgrades: new Array(CELLS).fill(0), incomeUpgradeLevel: 0, offlineCapLevel: 0, redeemedCodes: {} };
       selectedIdx = null;
+      closeCellUpgradeModal();
       wheelRotation = 0;
       wheelSpinEl.style.transition = "none";
       wheelSpinEl.style.transform = "rotate(0deg)";
