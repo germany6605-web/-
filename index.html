@@ -150,30 +150,31 @@
     font-weight:300;
     pointer-events:none;
   }
-  .cell-upg{
-    position:absolute;
-    top:3px;
-    left:3px;
-    min-width:16px;
-    height:16px;
-    padding:0 4px;
-    border-radius:8px;
-    background:rgba(0,0,0,.5);
-    color:var(--cream-dim);
-    font-size:9px;
-    font-weight:800;
+  .cell-upg-grid{
+    display:grid;
+    grid-template-columns:repeat(5,1fr);
+    gap:6px;
+    margin-top:12px;
+  }
+  .cell-upg-mini{
+    aspect-ratio:1/1;
+    border-radius:10px;
+    background:rgba(0,0,0,.28);
+    border:1px solid rgba(255,255,255,.06);
     display:flex;
     align-items:center;
     justify-content:center;
-    line-height:1;
-    z-index:3;
+    font-size:11px;
+    font-weight:800;
+    color:var(--cream-dim);
     cursor:pointer;
   }
-  .cell-upg.leveled{
+  .cell-upg-mini.leveled{
     background:linear-gradient(180deg,var(--accent),var(--accent-2));
     color:#2a1608;
+    border-color:transparent;
   }
-  .cell-upg:active{transform:scale(.9);}
+  .cell-upg-mini:active{transform:scale(.93);}
 
   .modal-backdrop{
     position:fixed;
@@ -723,7 +724,8 @@
         </div>
         <div class="event-card">
           <div class="event-head"><span class="event-icon">🔧</span><span>Улучшения клеток</span></div>
-          <div class="event-desc">Нажмите на значок ⚙ в углу клетки на игровом поле — откроется меню улучшения этой клетки. 1-е улучшение даёт ×1.5 к доходу этой клетки, каждое следующее — ещё +0.5. Цена первого улучшения — 1 🍪, каждое следующее вдвое дороже. Улучшение остаётся у клетки навсегда, даже если печенье в ней сменится.</div>
+          <div class="event-desc">Нажмите на клетку ниже, чтобы открыть меню улучшения именно этой клетки поля. 1-е улучшение даёт ×1.5 к доходу этой клетки, каждое следующее — ещё +0.5. Цена первого улучшения — 1 🍪, каждое следующее вдвое дороже. Улучшение остаётся у клетки навсегда, даже если печенье в ней сменится.</div>
+          <div class="cell-upg-grid" id="cellUpgGrid"></div>
         </div>
       </div>
     </div>
@@ -1301,9 +1303,38 @@
     save();
     showToast("🔧 Клетка улучшена! Множитель ×" + cellMultiplier(level+1).toFixed(1));
     refreshCellUpgradeModal();
+    updateCellUpgradeGrid();
   }
 
   // ---------- cell upgrade menu ----------
+  var cellUpgGridEl = document.getElementById("cellUpgGrid");
+  var cellUpgGridEls = [];
+
+  function buildCellUpgradeGrid(){
+    cellUpgGridEl.innerHTML = "";
+    cellUpgGridEls = [];
+    for(var i=0;i<CELLS;i++){
+      var mini = document.createElement("div");
+      mini.className = "cell-upg-mini";
+      (function(idx){
+        mini.addEventListener("click", function(){ openCellUpgradeModal(idx); });
+      })(i);
+      cellUpgGridEl.appendChild(mini);
+      cellUpgGridEls.push(mini);
+    }
+    updateCellUpgradeGrid();
+  }
+
+  function updateCellUpgradeGrid(){
+    for(var i=0;i<CELLS;i++){
+      var level = state.cellUpgrades[i]||0;
+      var mini = cellUpgGridEls[i];
+      if(!mini) continue;
+      mini.classList.toggle("leveled", level > 0);
+      mini.textContent = "×" + cellMultiplier(level).toFixed(1);
+    }
+  }
+
   var cellUpgModalIdx = null;
   var cellUpgModalBackdropEl = document.getElementById("cellUpgModalBackdrop");
   var cellUpgModalLevelEl = document.getElementById("cellUpgModalLevel");
@@ -1627,16 +1658,11 @@
       plus.className = "plus";
       plus.textContent = "";
       cell.appendChild(plus);
-      var upg = document.createElement("div");
-      upg.className = "cell-upg";
-      cell.appendChild(upg);
       (function(idx){
         cell.addEventListener("pointerdown", function(e){ onCellPointerDown(e, idx); });
-        upg.addEventListener("pointerdown", function(e){ e.stopPropagation(); });
-        upg.addEventListener("click", function(e){ e.stopPropagation(); openCellUpgradeModal(idx); });
       })(i);
       boardEl.appendChild(cell);
-      cellEls.push({cell:cell, canvas:canvas, upg:upg});
+      cellEls.push({cell:cell, canvas:canvas});
     }
   }
 
@@ -1651,10 +1677,6 @@
     }else{
       ref.canvas.style.display = "none";
     }
-    var upgLevel = state.cellUpgrades[i]||0;
-    ref.upg.classList.toggle("leveled", upgLevel > 0);
-    ref.upg.textContent = upgLevel > 0 ? ("×"+cellMultiplier(upgLevel).toFixed(1)) : "⚙";
-    ref.upg.title = "Открыть меню улучшения клетки";
     if(animate){
       ref.cell.classList.remove("pop", "falling");
       void ref.cell.offsetWidth;
@@ -2074,6 +2096,7 @@
       updateHeader();
       updateEventCurrencyDisplays();
       updateWheelStatus();
+      updateCellUpgradeGrid();
     }
   });
 
@@ -2090,6 +2113,7 @@
   renderShop();
   renderEvents();
   buildWheel();
+  buildCellUpgradeGrid();
   updateHeader();
   updateEventCurrencyDisplays();
   updateWheelStatus();
