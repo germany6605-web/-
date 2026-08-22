@@ -157,6 +157,29 @@
   }
   .cell.pop canvas{animation:pop .28s cubic-bezier(.34,1.56,.64,1);}
 
+  @keyframes cookieFall{
+    0%{transform:translateY(-260%) rotate(-18deg) scale(.85); opacity:0;}
+    55%{transform:translateY(10%) rotate(6deg) scale(1.06); opacity:1;}
+    75%{transform:translateY(-5%) rotate(-3deg) scale(.97);}
+    100%{transform:translateY(0) rotate(0deg) scale(1);}
+  }
+  .cell.falling canvas{animation:cookieFall .65s cubic-bezier(.34,1.1,.34,1);}
+  @keyframes fallShadow{
+    0%{opacity:0; transform:translateX(-50%) scaleX(.3);}
+    60%{opacity:.35;}
+    100%{opacity:.22; transform:translateX(-50%) scaleX(1);}
+  }
+  .cell.falling::after{
+    content:"";
+    position:absolute;
+    left:50%; bottom:9%;
+    width:60%; height:10%;
+    background:radial-gradient(ellipse at center, rgba(0,0,0,.55), transparent 70%);
+    transform:translateX(-50%);
+    animation:fallShadow .65s ease-out;
+    pointer-events:none;
+  }
+
   .drag-ghost{
     position:fixed;
     top:0;left:0;
@@ -380,6 +403,114 @@
   }
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 
+  .wheel-outer{
+    position:relative;
+    width:220px;
+    height:220px;
+    max-width:80vw;
+    max-height:80vw;
+    margin:6px auto 14px;
+  }
+  .wheel-spin{
+    position:absolute;
+    inset:0;
+    border-radius:50%;
+    transition:transform 4s cubic-bezier(.12,.72,.14,.99);
+    will-change:transform;
+    box-shadow:0 8px 22px rgba(0,0,0,.5), inset 0 0 0 5px rgba(20,12,7,.55), inset 0 0 0 8px rgba(255,233,201,.15);
+  }
+  .wheel-bg{
+    position:absolute;
+    inset:0;
+    border-radius:50%;
+  }
+  .wheel-labels{
+    position:absolute;
+    inset:0;
+  }
+  .wheel-label{
+    position:absolute;
+    transform:translate(-50%,-50%);
+    text-align:center;
+    width:56px;
+    font-size:9.5px;
+    font-weight:800;
+    color:#2a1608;
+    line-height:1.15;
+    white-space:pre-line;
+    text-shadow:0 1px 0 rgba(255,255,255,.25);
+  }
+  .wheel-label .wl-icon{
+    display:block;
+    font-size:16px;
+    margin-bottom:1px;
+  }
+  .wheel-pointer{
+    position:absolute;
+    top:-10px;
+    left:50%;
+    transform:translateX(-50%);
+    font-size:24px;
+    z-index:5;
+    filter:drop-shadow(0 3px 3px rgba(0,0,0,.6));
+  }
+  .wheel-hub{
+    position:absolute;
+    top:50%;left:50%;
+    transform:translate(-50%,-50%);
+    width:46px;height:46px;
+    border-radius:50%;
+    background:linear-gradient(180deg,var(--accent),var(--accent-2));
+    display:flex;align-items:center;justify-content:center;
+    font-size:20px;
+    box-shadow:0 3px 10px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.4);
+    z-index:4;
+  }
+  .spin-btn{
+    display:block;
+    margin:0 auto;
+    border:none;
+    border-radius:12px;
+    padding:12px 28px;
+    font-size:14px;
+    font-weight:800;
+    background:linear-gradient(180deg,var(--accent),var(--accent-2));
+    color:#2a1608;
+    cursor:pointer;
+    box-shadow:0 4px 10px rgba(0,0,0,.35);
+  }
+  .spin-btn:disabled{
+    background:#4a3f34;
+    color:#8a7a68;
+    cursor:not-allowed;
+    box-shadow:none;
+  }
+  .spin-btn:active:not(:disabled){transform:scale(.96);}
+  .wheel-status{
+    text-align:center;
+    font-size:12.5px;
+    color:var(--cream-dim);
+    font-weight:600;
+    margin-top:8px;
+    min-height:16px;
+  }
+  .wheel-prize-list{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:6px;
+    margin-top:14px;
+  }
+  .wheel-prize-chip{
+    background:rgba(0,0,0,.22);
+    border-radius:10px;
+    padding:6px 4px;
+    text-align:center;
+    font-size:9.5px;
+    color:var(--cream-dim);
+    line-height:1.3;
+  }
+  .wheel-prize-chip .wl-icon{display:block;font-size:14px;}
+
   .hint{
     font-size:11.5px;
     color:var(--cream-dim);
@@ -420,6 +551,7 @@
       <div class="tabs">
         <button class="tab-btn active" id="tabBtnShop" data-tab="shop">🛒 Магазин</button>
         <button class="tab-btn" id="tabBtnEvents" data-tab="events">🎉 События</button>
+        <button class="tab-btn" id="tabBtnWheel" data-tab="wheel">🎡 Колесо</button>
       </div>
       <div class="tab-panel active" id="shopPanel">
         <div class="shop-title">Магазин печенья</div>
@@ -429,6 +561,20 @@
       <div class="tab-panel" id="eventsPanel">
         <div class="events-currency">🍪 Печеньки: <span id="eventCurrencyVal">0</span> — даются за каждый разблокированный уровень печенья</div>
         <div id="events"></div>
+      </div>
+      <div class="tab-panel" id="wheelPanel">
+        <div class="shop-title">Колесо фортуны</div>
+        <div class="wheel-outer">
+          <div class="wheel-pointer">🔻</div>
+          <div class="wheel-spin" id="wheelSpin">
+            <div class="wheel-bg" id="wheelBg"></div>
+            <div class="wheel-labels" id="wheelLabels"></div>
+          </div>
+          <div class="wheel-hub">🎡</div>
+        </div>
+        <button class="spin-btn" id="wheelSpinBtn">Крутить!</button>
+        <div class="wheel-status" id="wheelStatus"></div>
+        <div class="hint">Один бесплатный спин каждые 15 минут. Приз — деньги, печеньки или бесплатное событие.</div>
       </div>
     </div>
   </main>
@@ -452,7 +598,8 @@
     lastSeen: Date.now(),
     eventCurrency: 0,
     unlockAwarded: 0,
-    events: {}
+    events: {},
+    wheel: { nextSpinAt: Date.now() }
   };
 
   var selectedIdx = null;
@@ -478,6 +625,7 @@
       state.eventCurrency = typeof data.eventCurrency === "number" ? data.eventCurrency : 0;
       state.unlockAwarded = typeof data.unlockAwarded === "number" ? data.unlockAwarded : 0;
       state.events = (data.events && typeof data.events === "object") ? data.events : {};
+      state.wheel = (data.wheel && typeof data.wheel === "object") ? data.wheel : { nextSpinAt: Date.now() };
       var elapsed = (Date.now() - (data.lastSeen || Date.now())) / 1000;
       elapsed = Math.max(0, Math.min(elapsed, 4*3600));
       if(elapsed > 5){
@@ -585,16 +733,25 @@
     showToast(meta.icon + " " + meta.name + " активировано!");
   }
 
+  function randomEmptyIndex(){
+    var empties = [];
+    for(var i=0;i<state.grid.length;i++){
+      if(!state.grid[i]) empties.push(i);
+    }
+    if(!empties.length) return -1;
+    return empties[Math.floor(Math.random()*empties.length)];
+  }
+
   function rainTick(now){
     if(!isEventActive("rain")) return;
     if(now < (state.events.rainNextDrop || 0)) return;
     state.events.rainNextDrop = now + RAIN_DROP_INTERVAL;
     var maxUnlocked = unlockedShopCount(state.maxLevel);
     var level = 1 + Math.floor(Math.random()*maxUnlocked);
-    var emptyIdx = state.grid.indexOf(null);
+    var emptyIdx = randomEmptyIndex();
     if(emptyIdx !== -1){
       state.grid[emptyIdx] = level;
-      renderCell(emptyIdx, true);
+      renderCell(emptyIdx, true, "fall");
       save();
     }
   }
@@ -680,6 +837,143 @@
     if(h) h.textContent = v;
     if(p) p.textContent = v;
   }
+
+  // ---------- wheel of fortune ----------
+  var WHEEL_SPIN_COOLDOWN = 15*60*1000;
+  var WHEEL_PRIZES = [
+    { id:"inc5",   icon:"💰", label:"Доход\n5 мин",   weight:25, color:"#ffdca0", type:"income",  seconds:300,   durLabel:"5 минут" },
+    { id:"inc10",  icon:"💰", label:"Доход\n10 мин",  weight:20, color:"#ffc873", type:"income",  seconds:600,   durLabel:"10 минут" },
+    { id:"c1",     icon:"🍪", label:"1\nпеченька",    weight:15, color:"#cfe8c2", type:"currency", amount:1 },
+    { id:"inc30",  icon:"💰", label:"Доход\n30 мин",  weight:15, color:"#ffb742", type:"income",  seconds:1800,  durLabel:"30 минут" },
+    { id:"random", icon:"🎁", label:"Случайное\nсобытие", weight:10, color:"#d9a6ff", type:"randomEvent" },
+    { id:"inc60",  icon:"💰", label:"Доход\n1 час",   weight:10, color:"#ff9a4d", type:"income",  seconds:3600,  durLabel:"1 час" },
+    { id:"c3",     icon:"🍪", label:"3\nпеченьки",    weight:8,  color:"#9ed88c", type:"currency", amount:3 },
+    { id:"c5",     icon:"🍪", label:"5\nпеченек",     weight:4,  color:"#6fc95a", type:"currency", amount:5 },
+    { id:"inc360", icon:"💎", label:"Доход\n6 часов",  weight:3,  color:"#ff7a3d", type:"income",  seconds:21600, durLabel:"6 часов" }
+  ];
+
+  var wheelSpinEl = document.getElementById("wheelSpin");
+  var wheelBgEl = document.getElementById("wheelBg");
+  var wheelLabelsEl = document.getElementById("wheelLabels");
+  var wheelSpinBtn = document.getElementById("wheelSpinBtn");
+  var wheelStatusEl = document.getElementById("wheelStatus");
+  var wheelRotation = 0;
+  var wheelSpinning = false;
+
+  function buildWheel(){
+    var n = WHEEL_PRIZES.length;
+    var seg = 360/n;
+    var gradParts = [];
+    WHEEL_PRIZES.forEach(function(p, i){
+      gradParts.push(p.color + " " + (i*seg) + "deg " + ((i+1)*seg) + "deg");
+    });
+    wheelBgEl.style.background = "conic-gradient(" + gradParts.join(",") + ")";
+
+    wheelLabelsEl.innerHTML = "";
+    WHEEL_PRIZES.forEach(function(p, i){
+      var center = i*seg + seg/2;
+      var rad = (center-90) * Math.PI/180;
+      var radiusPct = 33;
+      var x = 50 + radiusPct*Math.cos(rad);
+      var y = 50 + radiusPct*Math.sin(rad);
+      var lbl = document.createElement("div");
+      lbl.className = "wheel-label";
+      lbl.style.left = x + "%";
+      lbl.style.top = y + "%";
+      lbl.innerHTML = "<span class=\"wl-icon\">"+p.icon+"</span>"+p.label;
+      wheelLabelsEl.appendChild(lbl);
+    });
+  }
+
+  function pickWeightedPrize(){
+    var total = WHEEL_PRIZES.reduce(function(s,p){ return s+p.weight; }, 0);
+    var r = Math.random()*total;
+    for(var i=0;i<WHEEL_PRIZES.length;i++){
+      r -= WHEEL_PRIZES[i].weight;
+      if(r <= 0) return i;
+    }
+    return WHEEL_PRIZES.length-1;
+  }
+
+  function isWheelReady(){
+    return Date.now() >= (state.wheel.nextSpinAt || 0);
+  }
+
+  function applyWheelPrize(prize){
+    if(prize.type === "income"){
+      var gain = incomeRate() * prize.seconds;
+      state.money += gain;
+      showToast("🎉 Приз: доход за " + prize.durLabel + "! +💰" + fmt(gain));
+    }else if(prize.type === "currency"){
+      state.eventCurrency += prize.amount;
+      updateEventCurrencyDisplays();
+      showToast("🎉 Приз: " + prize.amount + " 🍪!");
+    }else if(prize.type === "randomEvent"){
+      var keys = Object.keys(EVENT_META);
+      var key = keys[Math.floor(Math.random()*keys.length)];
+      var meta = EVENT_META[key];
+      var now = Date.now();
+      if(isEventActive(key)){
+        state.events[key] += meta.duration;
+      }else{
+        state.events[key] = now + meta.duration;
+        if(key === "rain") state.events.rainNextDrop = now + 700;
+      }
+      updateEventsStatus();
+      showToast("🎉 Приз: бесплатное событие — " + meta.icon + " " + meta.name + "!");
+    }
+    updateHeader();
+    save();
+  }
+
+  function spinWheel(){
+    if(wheelSpinning) return;
+    if(!isWheelReady()){
+      showToast("Спин ещё не готов 🎡");
+      return;
+    }
+    var idx = pickWeightedPrize();
+    var prize = WHEEL_PRIZES[idx];
+    var n = WHEEL_PRIZES.length;
+    var seg = 360/n;
+    var center = idx*seg + seg/2;
+    var jitter = (Math.random()-0.5) * seg * 0.6;
+    var desiredFinal = ((360 - center - jitter) % 360 + 360) % 360;
+    var extraSpins = 6 + Math.floor(Math.random()*3);
+    var currentMod = ((wheelRotation % 360) + 360) % 360;
+    var delta = extraSpins*360 + ((desiredFinal - currentMod + 360) % 360);
+    wheelRotation += delta;
+
+    wheelSpinning = true;
+    state.wheel.nextSpinAt = Date.now() + WHEEL_SPIN_COOLDOWN;
+    save();
+    updateWheelStatus();
+
+    wheelSpinEl.style.transform = "rotate(" + wheelRotation + "deg)";
+    setTimeout(function(){
+      wheelSpinning = false;
+      applyWheelPrize(prize);
+      updateWheelStatus();
+    }, 4050);
+  }
+
+  function updateWheelStatus(){
+    var now = Date.now();
+    var ready = isWheelReady();
+    wheelSpinBtn.disabled = wheelSpinning || !ready;
+    if(wheelSpinning){
+      wheelSpinBtn.textContent = "Крутится...";
+      wheelStatusEl.textContent = "";
+    }else if(ready){
+      wheelSpinBtn.textContent = "Крутить! 🎡";
+      wheelStatusEl.textContent = "Спин готов!";
+    }else{
+      wheelSpinBtn.textContent = "Крутить! 🎡";
+      wheelStatusEl.textContent = "Следующий спин через " + formatCountdown(state.wheel.nextSpinAt - now);
+    }
+  }
+
+  wheelSpinBtn.addEventListener("click", spinWheel);
 
   // ---------- rng ----------
   function mulberry32(seed){
@@ -972,7 +1266,7 @@
     }
   }
 
-  function renderCell(i, animate){
+  function renderCell(i, animate, kind){
     var level = state.grid[i];
     var ref = cellEls[i];
     ref.cell.classList.toggle("filled", !!level);
@@ -984,9 +1278,9 @@
       ref.canvas.style.display = "none";
     }
     if(animate){
-      ref.cell.classList.remove("pop");
+      ref.cell.classList.remove("pop", "falling");
       void ref.cell.offsetWidth;
-      ref.cell.classList.add("pop");
+      ref.cell.classList.add(kind === "fall" ? "falling" : "pop");
     }
   }
 
@@ -1346,6 +1640,7 @@
     updateHeader();
     renderShopAffordability();
     updateEventsStatus();
+    updateWheelStatus();
   }
 
   function renderShopAffordability(){
@@ -1362,28 +1657,35 @@
   var tickTimer = setInterval(tick, TICK_MS);
 
   // ---------- tabs ----------
-  var tabBtnShop = document.getElementById("tabBtnShop");
-  var tabBtnEvents = document.getElementById("tabBtnEvents");
-  var shopPanelEl = document.getElementById("shopPanel");
-  var eventsPanelEl = document.getElementById("eventsPanel");
+  var TABS = {
+    shop:   { btn: document.getElementById("tabBtnShop"),   panel: document.getElementById("shopPanel") },
+    events: { btn: document.getElementById("tabBtnEvents"), panel: document.getElementById("eventsPanel") },
+    wheel:  { btn: document.getElementById("tabBtnWheel"),  panel: document.getElementById("wheelPanel") }
+  };
 
   function switchTab(tab){
-    var toEvents = tab === "events";
-    tabBtnShop.classList.toggle("active", !toEvents);
-    tabBtnEvents.classList.toggle("active", toEvents);
-    shopPanelEl.classList.toggle("active", !toEvents);
-    eventsPanelEl.classList.toggle("active", toEvents);
+    Object.keys(TABS).forEach(function(key){
+      var active = key === tab;
+      TABS[key].btn.classList.toggle("active", active);
+      TABS[key].panel.classList.toggle("active", active);
+    });
   }
 
-  tabBtnShop.addEventListener("click", function(){ switchTab("shop"); });
-  tabBtnEvents.addEventListener("click", function(){ switchTab("events"); });
+  Object.keys(TABS).forEach(function(key){
+    TABS[key].btn.addEventListener("click", function(){ switchTab(key); });
+  });
   document.getElementById("currencyBadge").addEventListener("click", function(){ switchTab("events"); });
 
   // ---------- reset ----------
   document.getElementById("resetBtn").addEventListener("click", function(){
     if(confirm("Сбросить игру и начать заново?")){
-      state = { grid: new Array(CELLS).fill(null), money: 20, maxLevel: 1, prices: {}, lastSeen: Date.now(), eventCurrency: 0, unlockAwarded: 0, events: {} };
+      state = { grid: new Array(CELLS).fill(null), money: 20, maxLevel: 1, prices: {}, lastSeen: Date.now(), eventCurrency: 0, unlockAwarded: 0, events: {}, wheel: { nextSpinAt: Date.now() } };
       selectedIdx = null;
+      wheelRotation = 0;
+      wheelSpinEl.style.transition = "none";
+      wheelSpinEl.style.transform = "rotate(0deg)";
+      void wheelSpinEl.offsetWidth;
+      wheelSpinEl.style.transition = "";
       awardUnlockCurrency();
       save();
       renderBoard();
@@ -1391,6 +1693,7 @@
       renderEvents();
       updateHeader();
       updateEventCurrencyDisplays();
+      updateWheelStatus();
     }
   });
 
@@ -1406,8 +1709,10 @@
   renderBoard();
   renderShop();
   renderEvents();
+  buildWheel();
   updateHeader();
   updateEventCurrencyDisplays();
+  updateWheelStatus();
 })();
 </script>
 </body>
