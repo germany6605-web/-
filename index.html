@@ -407,11 +407,20 @@
     margin:2px 4px 10px;
   }
   #shop{
-    display:grid;
-    grid-template-columns:repeat(auto-fill,minmax(112px,1fr));
+    display:flex;
+    flex-direction:row;
     gap:8px;
+    overflow-x:auto;
+    overflow-y:hidden;
+    padding:2px 2px 8px;
+    margin:0 -2px;
+    scroll-snap-type:x proximity;
+    -webkit-overflow-scrolling:touch;
+    overscroll-behavior-x:contain;
   }
   .shop-card{
+    flex:0 0 112px;
+    scroll-snap-align:start;
     background:rgba(0,0,0,.22);
     border-radius:14px;
     padding:8px 6px 9px;
@@ -745,7 +754,7 @@
     main{flex-direction:row;}
     .board-wrap{flex:0 0 auto;width:520px;align-self:flex-start;}
     .shop-wrap{flex:1;}
-    #shop{grid-template-columns:repeat(auto-fill,minmax(120px,1fr));}
+    .shop-card{flex-basis:130px;}
   }
 </style>
 </head>
