@@ -150,6 +150,30 @@
     font-weight:300;
     pointer-events:none;
   }
+  .cell-upg{
+    position:absolute;
+    top:3px;
+    left:3px;
+    min-width:16px;
+    height:16px;
+    padding:0 4px;
+    border-radius:8px;
+    background:rgba(0,0,0,.5);
+    color:var(--cream-dim);
+    font-size:9px;
+    font-weight:800;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    line-height:1;
+    z-index:3;
+    cursor:pointer;
+  }
+  .cell-upg.leveled{
+    background:linear-gradient(180deg,var(--accent),var(--accent-2));
+    color:#2a1608;
+  }
+  .cell-upg:active{transform:scale(.9);}
   @keyframes pop{
     0%{transform:scale(.55);}
     60%{transform:scale(1.12);}
@@ -511,6 +535,38 @@
   }
   .wheel-prize-chip .wl-icon{display:block;font-size:14px;}
 
+  .promo-box{
+    display:flex;
+    gap:8px;
+    margin-top:14px;
+  }
+  .promo-box input{
+    flex:1;
+    min-width:0;
+    background:rgba(0,0,0,.25);
+    border:1px solid rgba(255,255,255,.12);
+    border-radius:10px;
+    padding:9px 10px;
+    color:var(--cream);
+    font-size:13px;
+    text-transform:uppercase;
+  }
+  .promo-box input::placeholder{
+    color:var(--cream-dim);
+    text-transform:none;
+  }
+  .promo-box button{
+    border:none;
+    border-radius:10px;
+    padding:9px 14px;
+    font-size:13px;
+    font-weight:700;
+    background:linear-gradient(180deg,var(--accent),var(--accent-2));
+    color:#2a1608;
+    cursor:pointer;
+  }
+  .promo-box button:active{transform:scale(.96);}
+
   .hint{
     font-size:11.5px;
     color:var(--cream-dim);
@@ -552,6 +608,7 @@
         <button class="tab-btn active" id="tabBtnShop" data-tab="shop">🛒 Магазин</button>
         <button class="tab-btn" id="tabBtnEvents" data-tab="events">🎉 События</button>
         <button class="tab-btn" id="tabBtnWheel" data-tab="wheel">🎡 Колесо</button>
+        <button class="tab-btn" id="tabBtnUpgrades" data-tab="upgrades">⚡ Улучш.</button>
       </div>
       <div class="tab-panel active" id="shopPanel">
         <div class="shop-title">Магазин печенья</div>
@@ -575,6 +632,30 @@
         <button class="spin-btn" id="wheelSpinBtn">Крутить!</button>
         <div class="wheel-status" id="wheelStatus"></div>
         <div class="hint">Один бесплатный спин каждые 15 минут. Приз — деньги, печеньки или бесплатное событие.</div>
+        <div class="promo-box">
+          <input type="text" id="promoInput" placeholder="Промокод" maxlength="24">
+          <button id="promoBtn">Применить</button>
+        </div>
+        <div class="wheel-status" id="promoStatus"></div>
+      </div>
+      <div class="tab-panel" id="upgradesPanel">
+        <div class="shop-title">Улучшения</div>
+        <div class="event-card" id="incomeUpgradeCard">
+          <div class="event-head"><span class="event-icon">⚡</span><span>Улучшение дохода</span></div>
+          <div class="event-desc">Каждое улучшение прибавляет +0.1 к доходу в секунду навсегда. Цена первого — 1 🍪, каждое следующее вдвое дороже.</div>
+          <div class="event-meta" id="incomeUpgradeMeta">Уровень 0 · Бонус +0.0/сек</div>
+          <button class="event-btn" id="incomeUpgradeBtn">Улучшить (1 🍪)</button>
+        </div>
+        <div class="event-card" id="offlineUpgradeCard">
+          <div class="event-head"><span class="event-icon">🌙</span><span>Оффлайн-доход</span></div>
+          <div class="event-desc">Увеличивает время, за которое начисляется доход, пока вас нет в игре. Без улучшений — 1 час, максимум — 8 часов. Каждое улучшение — +1 минута за 1 🍪.</div>
+          <div class="event-meta" id="offlineUpgradeMeta">Сейчас: 1 ч</div>
+          <button class="event-btn" id="offlineUpgradeBtn">Улучшить (+1 мин · 1 🍪)</button>
+        </div>
+        <div class="event-card">
+          <div class="event-head"><span class="event-icon">🔧</span><span>Улучшения клеток</span></div>
+          <div class="event-desc">Нажмите на значок в углу клетки на игровом поле, чтобы улучшить её. 1-е улучшение даёт ×1.5 к доходу этой клетки, каждое следующее — ещё +0.5. Цена первого улучшения — 1 🍪, каждое следующее вдвое дороже. Улучшение остаётся у клетки навсегда, даже если печенье в ней сменится.</div>
+        </div>
       </div>
     </div>
   </main>
@@ -599,7 +680,11 @@
     eventCurrency: 0,
     unlockAwarded: 0,
     events: {},
-    wheel: { nextSpinAt: Date.now() }
+    wheel: { nextSpinAt: Date.now(), bonusSpins: 0 },
+    cellUpgrades: new Array(CELLS).fill(0),
+    incomeUpgradeLevel: 0,
+    offlineCapLevel: 0,
+    redeemedCodes: {}
   };
 
   var selectedIdx = null;
@@ -625,9 +710,14 @@
       state.eventCurrency = typeof data.eventCurrency === "number" ? data.eventCurrency : 0;
       state.unlockAwarded = typeof data.unlockAwarded === "number" ? data.unlockAwarded : 0;
       state.events = (data.events && typeof data.events === "object") ? data.events : {};
-      state.wheel = (data.wheel && typeof data.wheel === "object") ? data.wheel : { nextSpinAt: Date.now() };
+      state.wheel = (data.wheel && typeof data.wheel === "object") ? data.wheel : { nextSpinAt: Date.now(), bonusSpins: 0 };
+      if(typeof state.wheel.bonusSpins !== "number") state.wheel.bonusSpins = 0;
+      state.cellUpgrades = (Array.isArray(data.cellUpgrades) && data.cellUpgrades.length === CELLS) ? data.cellUpgrades : new Array(CELLS).fill(0);
+      state.incomeUpgradeLevel = typeof data.incomeUpgradeLevel === "number" ? data.incomeUpgradeLevel : 0;
+      state.offlineCapLevel = typeof data.offlineCapLevel === "number" ? data.offlineCapLevel : 0;
+      state.redeemedCodes = (data.redeemedCodes && typeof data.redeemedCodes === "object") ? data.redeemedCodes : {};
       var elapsed = (Date.now() - (data.lastSeen || Date.now())) / 1000;
-      elapsed = Math.max(0, Math.min(elapsed, 4*3600));
+      elapsed = Math.max(0, Math.min(elapsed, offlineCapSeconds()));
       if(elapsed > 5){
         var rate = incomeRate();
         var earned = rate * elapsed;
@@ -662,12 +752,43 @@
     return state.maxLevel >= level + 2;
   }
 
+  function cellMultiplier(level){
+    if(!level || level <= 0) return 1;
+    return 1.5 + (level-1)*0.5;
+  }
+
+  function nextCellUpgradeCost(level){
+    return Math.pow(2, level||0);
+  }
+
+  function nextIncomeUpgradeCost(){
+    return Math.pow(2, state.incomeUpgradeLevel||0);
+  }
+
+  function incomeUpgradeBonus(){
+    return (state.incomeUpgradeLevel||0) * 0.1;
+  }
+
+  var OFFLINE_BASE_SECONDS = 3600;
+  var OFFLINE_MAX_SECONDS = 8*3600;
+
+  function offlineCapSeconds(){
+    return Math.min(OFFLINE_MAX_SECONDS, OFFLINE_BASE_SECONDS + (state.offlineCapLevel||0)*60);
+  }
+
+  function offlineCapLabel(){
+    var s = offlineCapSeconds();
+    var h = Math.floor(s/3600);
+    var m = Math.round((s%3600)/60);
+    return m > 0 ? (h+" ч "+m+" мин") : (h+" ч");
+  }
+
   function incomeRate(){
     var sum = 0;
     for(var i=0;i<state.grid.length;i++){
-      if(state.grid[i]) sum += state.grid[i];
+      if(state.grid[i]) sum += state.grid[i] * cellMultiplier(state.cellUpgrades[i]);
     }
-    return sum;
+    return sum + incomeUpgradeBonus();
   }
 
   function fmt(n){
@@ -836,6 +957,7 @@
     var p = document.getElementById("eventCurrencyVal");
     if(h) h.textContent = v;
     if(p) p.textContent = v;
+    updateUpgradesPanel();
   }
 
   // ---------- wheel of fortune ----------
@@ -896,7 +1018,7 @@
   }
 
   function isWheelReady(){
-    return Date.now() >= (state.wheel.nextSpinAt || 0);
+    return (state.wheel.bonusSpins||0) > 0 || Date.now() >= (state.wheel.nextSpinAt || 0);
   }
 
   function applyWheelPrize(prize){
@@ -945,7 +1067,11 @@
     wheelRotation += delta;
 
     wheelSpinning = true;
-    state.wheel.nextSpinAt = Date.now() + WHEEL_SPIN_COOLDOWN;
+    if((state.wheel.bonusSpins||0) > 0){
+      state.wheel.bonusSpins -= 1;
+    }else{
+      state.wheel.nextSpinAt = Date.now() + WHEEL_SPIN_COOLDOWN;
+    }
     save();
     updateWheelStatus();
 
@@ -959,11 +1085,15 @@
 
   function updateWheelStatus(){
     var now = Date.now();
+    var bonus = state.wheel.bonusSpins||0;
     var ready = isWheelReady();
     wheelSpinBtn.disabled = wheelSpinning || !ready;
     if(wheelSpinning){
       wheelSpinBtn.textContent = "Крутится...";
       wheelStatusEl.textContent = "";
+    }else if(bonus > 0){
+      wheelSpinBtn.textContent = "Крутить! 🎡";
+      wheelStatusEl.textContent = "Бонусные спины: " + bonus;
     }else if(ready){
       wheelSpinBtn.textContent = "Крутить! 🎡";
       wheelStatusEl.textContent = "Спин готов!";
@@ -974,6 +1104,119 @@
   }
 
   wheelSpinBtn.addEventListener("click", spinWheel);
+
+  // ---------- promo codes ----------
+  var PROMO_CODES = {
+    "COOKIE100": { type:"currency", amount:100 },
+    "SPIN100": { type:"spins", amount:100 }
+  };
+
+  var promoInputEl = document.getElementById("promoInput");
+  var promoBtnEl = document.getElementById("promoBtn");
+  var promoStatusEl = document.getElementById("promoStatus");
+
+  function redeemPromo(){
+    var code = (promoInputEl.value||"").trim().toUpperCase();
+    if(!code){
+      promoStatusEl.textContent = "Введите промокод";
+      return;
+    }
+    if(state.redeemedCodes[code]){
+      promoStatusEl.textContent = "Этот промокод уже использован";
+      return;
+    }
+    var def = PROMO_CODES[code];
+    if(!def){
+      promoStatusEl.textContent = "Промокод не найден";
+      return;
+    }
+    state.redeemedCodes[code] = true;
+    if(def.type === "currency"){
+      state.eventCurrency += def.amount;
+      updateEventCurrencyDisplays();
+      promoStatusEl.textContent = "🎁 Получено " + def.amount + " 🍪!";
+      showToast("🎁 Промокод активирован: +" + def.amount + " 🍪!");
+    }else if(def.type === "spins"){
+      state.wheel.bonusSpins = (state.wheel.bonusSpins||0) + def.amount;
+      updateWheelStatus();
+      promoStatusEl.textContent = "🎁 Получено " + def.amount + " бонусных спинов!";
+      showToast("🎁 Промокод активирован: +" + def.amount + " спинов колеса!");
+    }
+    promoInputEl.value = "";
+    save();
+  }
+
+  promoBtnEl.addEventListener("click", redeemPromo);
+  promoInputEl.addEventListener("keydown", function(e){
+    if(e.key === "Enter") redeemPromo();
+  });
+
+  // ---------- upgrades ----------
+  var incomeUpgradeMetaEl = document.getElementById("incomeUpgradeMeta");
+  var incomeUpgradeBtnEl = document.getElementById("incomeUpgradeBtn");
+  var offlineUpgradeMetaEl = document.getElementById("offlineUpgradeMeta");
+  var offlineUpgradeBtnEl = document.getElementById("offlineUpgradeBtn");
+
+  function buyIncomeUpgrade(){
+    var cost = nextIncomeUpgradeCost();
+    if(state.eventCurrency < cost){
+      showToast("Недостаточно печенек 🍪");
+      return;
+    }
+    state.eventCurrency -= cost;
+    state.incomeUpgradeLevel = (state.incomeUpgradeLevel||0) + 1;
+    updateEventCurrencyDisplays();
+    updateHeader();
+    save();
+    showToast("⚡ Доход улучшен! +0.1/сек навсегда");
+  }
+
+  function buyOfflineUpgrade(){
+    if(offlineCapSeconds() >= OFFLINE_MAX_SECONDS){
+      showToast("Оффлайн-доход уже максимален — 8 часов");
+      return;
+    }
+    if(state.eventCurrency < 1){
+      showToast("Недостаточно печенек 🍪");
+      return;
+    }
+    state.eventCurrency -= 1;
+    state.offlineCapLevel = (state.offlineCapLevel||0) + 1;
+    updateEventCurrencyDisplays();
+    save();
+    showToast("🌙 Оффлайн-доход теперь: " + offlineCapLabel());
+  }
+
+  function updateUpgradesPanel(){
+    var incCost = nextIncomeUpgradeCost();
+    incomeUpgradeMetaEl.textContent = "Уровень " + (state.incomeUpgradeLevel||0) + " · Бонус +" + incomeUpgradeBonus().toFixed(1) + "/сек";
+    incomeUpgradeBtnEl.textContent = "Улучшить (" + fmt(incCost).replace(/\.00$/,"") + " 🍪)";
+    incomeUpgradeBtnEl.disabled = state.eventCurrency < incCost;
+
+    var capMaxed = offlineCapSeconds() >= OFFLINE_MAX_SECONDS;
+    offlineUpgradeMetaEl.textContent = "Сейчас: " + offlineCapLabel() + (capMaxed ? " (максимум)" : "");
+    offlineUpgradeBtnEl.textContent = capMaxed ? "Максимум достигнут" : "Улучшить (+1 мин · 1 🍪)";
+    offlineUpgradeBtnEl.disabled = capMaxed || state.eventCurrency < 1;
+  }
+
+  incomeUpgradeBtnEl.addEventListener("click", buyIncomeUpgrade);
+  offlineUpgradeBtnEl.addEventListener("click", buyOfflineUpgrade);
+
+  function buyCellUpgrade(idx){
+    var level = state.cellUpgrades[idx]||0;
+    var cost = nextCellUpgradeCost(level);
+    if(state.eventCurrency < cost){
+      showToast("Недостаточно печенек 🍪");
+      return;
+    }
+    state.eventCurrency -= cost;
+    state.cellUpgrades[idx] = level+1;
+    updateEventCurrencyDisplays();
+    renderCell(idx, true);
+    updateHeader();
+    save();
+    showToast("🔧 Клетка улучшена! Множитель ×" + cellMultiplier(level+1).toFixed(1));
+  }
 
   // ---------- rng ----------
   function mulberry32(seed){
@@ -1258,11 +1501,16 @@
       plus.className = "plus";
       plus.textContent = "";
       cell.appendChild(plus);
+      var upg = document.createElement("div");
+      upg.className = "cell-upg";
+      cell.appendChild(upg);
       (function(idx){
         cell.addEventListener("pointerdown", function(e){ onCellPointerDown(e, idx); });
+        upg.addEventListener("pointerdown", function(e){ e.stopPropagation(); });
+        upg.addEventListener("click", function(e){ e.stopPropagation(); buyCellUpgrade(idx); });
       })(i);
       boardEl.appendChild(cell);
-      cellEls.push({cell:cell, canvas:canvas});
+      cellEls.push({cell:cell, canvas:canvas, upg:upg});
     }
   }
 
@@ -1277,6 +1525,12 @@
     }else{
       ref.canvas.style.display = "none";
     }
+    var upgLevel = state.cellUpgrades[i]||0;
+    ref.upg.classList.toggle("leveled", upgLevel > 0);
+    ref.upg.textContent = upgLevel > 0 ? ("×"+cellMultiplier(upgLevel).toFixed(1)) : "+";
+    ref.upg.title = upgLevel > 0
+      ? ("Улучшение клетки: ×"+cellMultiplier(upgLevel).toFixed(1)+" к доходу. Следующее: "+nextCellUpgradeCost(upgLevel)+" 🍪")
+      : ("Улучшить клетку: ×1.5 к доходу за "+nextCellUpgradeCost(0)+" 🍪");
     if(animate){
       ref.cell.classList.remove("pop", "falling");
       void ref.cell.offsetWidth;
@@ -1660,7 +1914,8 @@
   var TABS = {
     shop:   { btn: document.getElementById("tabBtnShop"),   panel: document.getElementById("shopPanel") },
     events: { btn: document.getElementById("tabBtnEvents"), panel: document.getElementById("eventsPanel") },
-    wheel:  { btn: document.getElementById("tabBtnWheel"),  panel: document.getElementById("wheelPanel") }
+    wheel:  { btn: document.getElementById("tabBtnWheel"),  panel: document.getElementById("wheelPanel") },
+    upgrades: { btn: document.getElementById("tabBtnUpgrades"), panel: document.getElementById("upgradesPanel") }
   };
 
   function switchTab(tab){
@@ -1679,7 +1934,7 @@
   // ---------- reset ----------
   document.getElementById("resetBtn").addEventListener("click", function(){
     if(confirm("Сбросить игру и начать заново?")){
-      state = { grid: new Array(CELLS).fill(null), money: 20, maxLevel: 1, prices: {}, lastSeen: Date.now(), eventCurrency: 0, unlockAwarded: 0, events: {}, wheel: { nextSpinAt: Date.now() } };
+      state = { grid: new Array(CELLS).fill(null), money: 20, maxLevel: 1, prices: {}, lastSeen: Date.now(), eventCurrency: 0, unlockAwarded: 0, events: {}, wheel: { nextSpinAt: Date.now(), bonusSpins: 0 }, cellUpgrades: new Array(CELLS).fill(0), incomeUpgradeLevel: 0, offlineCapLevel: 0, redeemedCodes: {} };
       selectedIdx = null;
       wheelRotation = 0;
       wheelSpinEl.style.transition = "none";
