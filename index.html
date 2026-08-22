@@ -100,6 +100,9 @@
     flex:1;
     min-height:0;
   }
+  main.board-hidden .board-wrap{
+    display:none;
+  }
   .board-wrap{
     flex:0 0 auto;
     background:linear-gradient(180deg,var(--panel),var(--panel-2));
@@ -434,7 +437,6 @@
   .shop-card canvas{
     width:52px;height:52px;
   }
-  .shop-lvl{font-size:11px;color:var(--cream-dim);font-weight:600;}
   .shop-price{font-size:12.5px;font-weight:700;color:var(--accent);}
   .buy-btn{
     margin-top:2px;
@@ -770,8 +772,8 @@
     <button class="reset-btn" id="resetBtn" title="Сбросить игру">⟲</button>
   </header>
 
-  <main>
-    <div class="board-wrap">
+  <main id="main">
+    <div class="board-wrap" id="boardWrap">
       <div id="board"></div>
       <div class="trash-zone" id="trashZone">
         <span class="trash-icon">🗑️</span>
@@ -2163,11 +2165,6 @@
       drawCookie(canvas, level);
       card.appendChild(canvas);
 
-      var lvl = document.createElement("div");
-      lvl.className = "shop-lvl";
-      lvl.textContent = "Уровень " + level;
-      card.appendChild(lvl);
-
       if(unlocked){
         var price = priceFor(level);
         var priceEl = document.createElement("div");
@@ -2373,12 +2370,15 @@
     leaders: { btn: document.getElementById("tabBtnLeaders"), panel: document.getElementById("leadersPanel") }
   };
 
+  var mainEl = document.getElementById("main");
+
   function switchTab(tab){
     Object.keys(TABS).forEach(function(key){
       var active = key === tab;
       TABS[key].btn.classList.toggle("active", active);
       TABS[key].panel.classList.toggle("active", active);
     });
+    mainEl.classList.toggle("board-hidden", tab !== "shop");
     if(tab === "leaders") refreshLeaderboardsPanel();
   }
 
