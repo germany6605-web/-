@@ -185,6 +185,24 @@
     background:linear-gradient(180deg,var(--accent),var(--accent-2));
     color:#2a1608;
   }
+  .money-bag{
+    display:none;
+    align-items:center;
+    justify-content:center;
+    font-size:34px;
+    width:100%;
+    height:100%;
+    filter:drop-shadow(0 3px 5px rgba(0,0,0,.5));
+    animation:bagBob 1.4s ease-in-out infinite;
+  }
+  @keyframes bagBob{
+    0%,100%{transform:translateY(0) scale(1);}
+    50%{transform:translateY(-4px) scale(1.06);}
+  }
+  .cell.has-bag{
+    background:var(--cell-empty);
+    box-shadow:0 0 0 2px rgba(255,183,66,.55), 0 0 14px 2px rgba(255,183,66,.35);
+  }
   .cell-upg-grid{
     display:grid;
     grid-template-columns:repeat(5,1fr);
@@ -279,6 +297,20 @@
     cursor:pointer;
   }
   .modal-close-btn:active{transform:scale(.96);}
+
+  .bag-modal-desc{
+    text-align:center;
+    font-size:12.5px;
+    color:var(--cream-dim);
+    margin-bottom:6px;
+  }
+  .bag-modal-amount{
+    text-align:center;
+    font-size:26px;
+    font-weight:800;
+    color:var(--accent);
+    margin-bottom:10px;
+  }
 
   .sound-row{
     padding:12px 2px;
@@ -580,6 +612,55 @@
     min-height:14px;
   }
 
+  .iap-section-title{
+    font-size:12px;
+    font-weight:700;
+    color:var(--cream-dim);
+    text-transform:uppercase;
+    letter-spacing:.6px;
+    margin:14px 4px 8px;
+  }
+  .iap-section-title:first-child{margin-top:2px;}
+  .iap-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(96px,1fr));
+    gap:8px;
+  }
+  .iap-card{
+    background:rgba(0,0,0,.22);
+    border-radius:14px;
+    padding:8px 6px 9px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:4px;
+    border:1px solid rgba(255,255,255,.05);
+  }
+  .iap-card.owned{
+    border-color:rgba(139,209,124,.5);
+    background:rgba(139,209,124,.08);
+  }
+  .iap-card canvas{width:48px;height:48px;}
+  .iap-card-title{
+    font-size:10.5px;
+    font-weight:600;
+    color:var(--cream-dim);
+    text-align:center;
+    line-height:1.25;
+    min-height:26px;
+  }
+  .iap-owned-btn{
+    width:100%;
+    border:none;
+    border-radius:9px;
+    padding:6px 4px;
+    font-size:11.5px;
+    font-weight:700;
+    background:rgba(139,209,124,.25);
+    color:#c8f0c0;
+    cursor:default;
+  }
+
   .toast{
     position:fixed;
     left:50%;
@@ -685,6 +766,47 @@
     box-shadow:none;
   }
   .spin-btn:active:not(:disabled){transform:scale(.96);}
+  .ad-btn{
+    display:block;
+    margin:8px auto 0;
+    border:none;
+    border-radius:11px;
+    padding:9px 20px;
+    font-size:12.5px;
+    font-weight:700;
+    background:linear-gradient(180deg,#7fc4ff,#4a90d9);
+    color:#0c2038;
+    cursor:pointer;
+    box-shadow:0 4px 10px rgba(0,0,0,.3);
+  }
+  .ad-btn:disabled{
+    background:#41505c;
+    color:#8b98a3;
+    cursor:not-allowed;
+    box-shadow:none;
+  }
+  .ad-btn:active:not(:disabled){transform:scale(.96);}
+  .ad-btn-small{
+    display:inline-block;
+    margin:0;
+    border:none;
+    border-radius:9px;
+    padding:7px 8px;
+    font-size:11.5px;
+    font-weight:700;
+    background:linear-gradient(180deg,#7fc4ff,#4a90d9);
+    color:#0c2038;
+    cursor:pointer;
+    box-shadow:0 3px 8px rgba(0,0,0,.3);
+    width:100%;
+  }
+  .ad-btn-small:disabled{
+    background:#41505c;
+    color:#8b98a3;
+    cursor:not-allowed;
+    box-shadow:none;
+  }
+  .ad-btn-small:active:not(:disabled){transform:scale(.96);}
   .wheel-status{
     text-align:center;
     font-size:12.5px;
@@ -838,6 +960,7 @@
         <button class="tab-btn" id="tabBtnWheel" data-tab="wheel">🎡 Колесо</button>
         <button class="tab-btn" id="tabBtnUpgrades" data-tab="upgrades">⚡ Улучш.</button>
         <button class="tab-btn" id="tabBtnLeaders" data-tab="leaders">🏆 Топы</button>
+        <button class="tab-btn" id="tabBtnBonus" data-tab="bonus">🎁 Бонусы</button>
       </div>
       <div class="tab-panel active" id="shopPanel">
         <div class="shop-title" id="shopTitleEl">Магазин печенья</div>
@@ -859,6 +982,7 @@
           <div class="wheel-hub">🎡</div>
         </div>
         <button class="spin-btn" id="wheelSpinBtn">Крутить!</button>
+        <button class="ad-btn" id="wheelAdSpinBtn">🎬 Крутить за рекламу</button>
         <div class="wheel-status" id="wheelStatus"></div>
         <div class="hint" id="wheelHintEl">Один бесплатный спин каждые 15 минут. Приз — деньги, печеньки или бесплатное событие.</div>
         <div class="promo-box">
@@ -906,6 +1030,11 @@
           <div class="lb-list" id="lbListMerges"></div>
         </div>
       </div>
+      <div class="tab-panel" id="bonusPanel">
+        <div class="shop-title" id="bonusTitleEl">Бонусы</div>
+        <div class="hint" id="bonusHintEl">Смотрите рекламу или покупайте бонусы за реальные деньги — печеньки, доход, спины колеса и постоянные усиления.</div>
+        <div id="iapContainer"></div>
+      </div>
     </div>
   </main>
 </div>
@@ -942,6 +1071,20 @@
   </div>
 </div>
 
+<div class="modal-backdrop" id="bagModalBackdrop">
+  <div class="modal-card" id="bagModalCard">
+    <div class="modal-title" id="bagModalTitleEl">💰 Мешок с деньгами</div>
+    <div class="bag-modal-desc" id="bagModalDescEl">Посмотрите рекламу и заберите:</div>
+    <div class="bag-modal-amount">💰 <span id="bagModalAmount">0</span></div>
+    <div class="modal-actions">
+      <button class="ad-btn-small" id="bagModalAdBtn" style="flex:1">🎬 Смотреть рекламу</button>
+    </div>
+    <div class="modal-actions">
+      <button class="modal-close-btn" id="bagModalCloseBtn" style="flex:1">Закрыть</button>
+    </div>
+  </div>
+</div>
+
 <script>
 (function(){
   function setAppHeight(){
@@ -959,6 +1102,8 @@
   var CELLS = GRID_SIZE*GRID_SIZE;
   var SAVE_KEY = "cookieMergeSave_v1";
   var TICK_MS = 200;
+  var MONEY_BAG_INTERVAL = 15*60*1000;
+  var MONEY_BAG_INCOME_SECONDS = 5*60;
 
   var state = {
     grid: new Array(CELLS).fill(null),
@@ -974,7 +1119,10 @@
     incomeUpgradeLevel: 0,
     offlineCapLevel: 0,
     redeemedCodes: {},
-    totalMerges: 0
+    totalMerges: 0,
+    permanentX2: false,
+    moneyBag: null,
+    moneyBagNextAt: Date.now() + MONEY_BAG_INTERVAL
   };
 
   var selectedIdx = null;
@@ -985,7 +1133,7 @@
     ru:{
       trash_hint:"Корзина — перетащите печенье или выберите его и нажмите. Топ-3 уровня защищены.",
       currency_badge_title:"Печеньки — валюта для событий, откройте вкладку События",
-      tab_shop:"🛒 Магазин", tab_events:"🎉 События", tab_wheel:"🎡 Колесо", tab_upgrades:"⚡ Улучш.", tab_leaders:"🏆 Топы",
+      tab_shop:"🛒 Магазин", tab_events:"🎉 События", tab_wheel:"🎡 Колесо", tab_upgrades:"⚡ Улучш.", tab_leaders:"🏆 Топы", tab_bonus:"🎁 Бонусы",
       shop_title:"Магазин печенья",
       shop_hint:"Перетащите печенье на такое же — чтобы объединить, на пустую клетку — чтобы переставить. Короткое нажатие тоже работает.",
       buy_btn:"Купить",
@@ -1074,12 +1222,46 @@
       sound_modal_title:"🔊 Звук",
       music_volume_label:"Музыка",
       sfx_volume_label:"Звуковые эффекты",
-      sound_close_btn:"Закрыть"
+      sound_close_btn:"Закрыть",
+      toast_ad_fallback:"🎬 Показ рекламы (демо-режим вне Яндекс Игр)...",
+      dev_purchase_confirm:"Демо-покупка вне Яндекс Игр: подтвердить \"оплату\" и получить бонус?",
+      event_ad_btn:"🎬 За рекламу",
+      wheel_ad_spin_btn:"🎬 Крутить за рекламу",
+      toast_bag_claimed:"💰 Забрано {amount} монет!",
+      toast_bag_granted:"🎁 На поле появилось печенек: {n}",
+      toast_income_boost:"💰 Начислено {amount} дохода!",
+      bonus_title:"Бонусы",
+      bonus_hint:"Смотрите рекламу или покупайте бонусы за реальные деньги — печеньки, доход, спины колеса и постоянные усиления.",
+      bag_modal_title:"💰 Мешок с деньгами",
+      bag_modal_desc:"Посмотрите рекламу и заберите:",
+      bag_modal_ad_btn:"🎬 Смотреть рекламу",
+      bag_modal_close_btn:"Закрыть",
+      iap_group_bags:"Мешочки печенек",
+      iap_group_income:"Доход",
+      iap_group_currency:"Печеньки",
+      iap_group_spins:"Спины колеса",
+      iap_group_perm:"Постоянный бонус",
+      iap_bag5_title:"5 печенек на поле",
+      iap_bag10_title:"10 печенек на поле",
+      iap_bag20_title:"20 печенек на поле",
+      iap_income5m_title:"Доход за 5 минут",
+      iap_income30m_title:"Доход за 30 минут",
+      iap_income3h_title:"Доход за 3 часа",
+      iap_income24h_title:"Доход за 24 часа",
+      iap_cur5_title:"5 печенек (валюта)",
+      iap_cur10_title:"10 печенек (валюта)",
+      iap_cur50_title:"50 печенек (валюта)",
+      iap_spin1_title:"1 спин колеса",
+      iap_spins3_title:"3 спина колеса",
+      iap_spins10_title:"10 спинов колеса",
+      iap_x2_title:"x2 деньги навсегда (стакуется с улучшениями и событиями)",
+      iap_ad_btn:"🎬 Реклама",
+      iap_owned_btn:"Куплено ✓"
     },
     en:{
       trash_hint:"Trash — drag a cookie here, or select it and tap. The top 3 levels are protected.",
       currency_badge_title:"Cookie Points — currency for events, open the Events tab",
-      tab_shop:"🛒 Shop", tab_events:"🎉 Events", tab_wheel:"🎡 Wheel", tab_upgrades:"⚡ Upgr.", tab_leaders:"🏆 Ranks",
+      tab_shop:"🛒 Shop", tab_events:"🎉 Events", tab_wheel:"🎡 Wheel", tab_upgrades:"⚡ Upgr.", tab_leaders:"🏆 Ranks", tab_bonus:"🎁 Bonuses",
       shop_title:"Cookie Shop",
       shop_hint:"Drag a cookie onto a matching one to merge, or onto an empty cell to move it. A short tap works too.",
       buy_btn:"Buy",
@@ -1168,7 +1350,41 @@
       sound_modal_title:"🔊 Sound",
       music_volume_label:"Music",
       sfx_volume_label:"Sound effects",
-      sound_close_btn:"Close"
+      sound_close_btn:"Close",
+      toast_ad_fallback:"🎬 Showing ad (demo mode outside Yandex Games)...",
+      dev_purchase_confirm:"Demo purchase outside Yandex Games: confirm \"payment\" and receive the bonus?",
+      event_ad_btn:"🎬 Watch ad",
+      wheel_ad_spin_btn:"🎬 Spin for an ad",
+      toast_bag_claimed:"💰 Claimed {amount} coins!",
+      toast_bag_granted:"🎁 {n} cookies appeared on the board!",
+      toast_income_boost:"💰 Received {amount} income!",
+      bonus_title:"Bonuses",
+      bonus_hint:"Watch an ad or spend real money for bonuses — cookie points, income, wheel spins and permanent boosts.",
+      bag_modal_title:"💰 Money bag",
+      bag_modal_desc:"Watch an ad to claim:",
+      bag_modal_ad_btn:"🎬 Watch ad",
+      bag_modal_close_btn:"Close",
+      iap_group_bags:"Cookie bags",
+      iap_group_income:"Income",
+      iap_group_currency:"Cookie points",
+      iap_group_spins:"Wheel spins",
+      iap_group_perm:"Permanent bonus",
+      iap_bag5_title:"5 cookies on the board",
+      iap_bag10_title:"10 cookies on the board",
+      iap_bag20_title:"20 cookies on the board",
+      iap_income5m_title:"5 minutes of income",
+      iap_income30m_title:"30 minutes of income",
+      iap_income3h_title:"3 hours of income",
+      iap_income24h_title:"24 hours of income",
+      iap_cur5_title:"5 cookie points",
+      iap_cur10_title:"10 cookie points",
+      iap_cur50_title:"50 cookie points",
+      iap_spin1_title:"1 wheel spin",
+      iap_spins3_title:"3 wheel spins",
+      iap_spins10_title:"10 wheel spins",
+      iap_x2_title:"x2 money forever (stacks with upgrades and events)",
+      iap_ad_btn:"🎬 Ad",
+      iap_owned_btn:"Owned ✓"
     }
   };
 
@@ -1218,7 +1434,11 @@
       eventsCurrencyPrefixEl: "events_currency_prefix", eventsCurrencySuffixEl: "events_currency_suffix",
       soundBtn: "sound_btn_title:title", soundModalTitleEl: "sound_modal_title",
       musicVolumeLabelEl: "music_volume_label", sfxVolumeLabelEl: "sfx_volume_label",
-      soundModalCloseBtn: "sound_close_btn"
+      soundModalCloseBtn: "sound_close_btn",
+      tabBtnBonus: "tab_bonus", bonusTitleEl: "bonus_title", bonusHintEl: "bonus_hint",
+      wheelAdSpinBtn: "wheel_ad_spin_btn",
+      bagModalTitleEl: "bag_modal_title", bagModalDescEl: "bag_modal_desc",
+      bagModalAdBtn: "bag_modal_ad_btn", bagModalCloseBtn: "bag_modal_close_btn"
     };
     Object.keys(map).forEach(function(id){
       var spec = map[id];
@@ -1246,6 +1466,7 @@
     updateUpgradesPanel();
     updateHeader();
     updateWheelStatus();
+    if(typeof renderIapPanel === "function") renderIapPanel();
   }
 
   // ---------- audio (procedurally generated, no external files / no copyright) ----------
@@ -1495,6 +1716,9 @@
       state.offlineCapLevel = typeof data.offlineCapLevel === "number" ? data.offlineCapLevel : 0;
       state.redeemedCodes = (data.redeemedCodes && typeof data.redeemedCodes === "object") ? data.redeemedCodes : {};
       state.totalMerges = typeof data.totalMerges === "number" ? data.totalMerges : 0;
+      state.permanentX2 = !!data.permanentX2;
+      state.moneyBag = (data.moneyBag && typeof data.moneyBag === "object" && state.grid[data.moneyBag.idx] === null) ? data.moneyBag : null;
+      state.moneyBagNextAt = typeof data.moneyBagNextAt === "number" ? data.moneyBagNextAt : (Date.now() + MONEY_BAG_INTERVAL);
       var elapsed = (Date.now() - (data.lastSeen || Date.now())) / 1000;
       elapsed = Math.max(0, Math.min(elapsed, offlineCapSeconds()));
       if(elapsed > 5){
@@ -1568,7 +1792,17 @@
     for(var i=0;i<state.grid.length;i++){
       if(state.grid[i]) sum += state.grid[i] * cellMultiplier(state.cellUpgrades[i]);
     }
-    return sum + incomeUpgradeBonus();
+    sum += incomeUpgradeBonus();
+    if(state.permanentX2) sum *= 2;
+    return sum;
+  }
+
+  function moneyMultiplier(){
+    return isEventActive("x2") ? 2 : 1;
+  }
+
+  function effectiveIncomeRate(){
+    return incomeRate() * moneyMultiplier();
   }
 
   function fmt(n){
@@ -1583,6 +1817,72 @@
     if(newLevel > state.maxLevel){
       state.maxLevel = newLevel;
       awardUnlockCurrency();
+    }
+  }
+
+  // ---------- yandex games monetization (rewarded ads + real-money payments) ----------
+  // ysdk / ysdkPayments are populated once the real Yandex Games SDK finishes
+  // initializing (see initYandexSDK below). Outside Yandex Games (local file
+  // preview, other hosting) both stay null and every helper here falls back
+  // to a simulated flow so the feature can still be built and tested.
+  var adRewardPending = false;
+
+  function isAdsAvailable(){
+    return !!(ysdk && ysdk.adv && typeof ysdk.adv.showRewardedVideo === "function");
+  }
+
+  function showRewardedAd(onReward, onError){
+    if(adRewardPending) return;
+    if(isAdsAvailable()){
+      adRewardPending = true;
+      var rewarded = false;
+      try{
+        ysdk.adv.showRewardedVideo({
+          callbacks: {
+            onRewarded: function(){ rewarded = true; },
+            onClose: function(){
+              adRewardPending = false;
+              if(rewarded) onReward();
+              else if(onError) onError();
+            },
+            onError: function(err){
+              adRewardPending = false;
+              if(onError) onError(err);
+            }
+          }
+        });
+      }catch(e){
+        adRewardPending = false;
+        if(onError) onError(e);
+      }
+    }else{
+      // Dev/offline fallback: simulate watching an ad so the bonus flows
+      // remain fully testable outside the real Yandex Games environment.
+      adRewardPending = true;
+      showToast(t("toast_ad_fallback"));
+      setTimeout(function(){
+        adRewardPending = false;
+        onReward();
+      }, 900);
+    }
+  }
+
+  function isPaymentsAvailable(){
+    return !!ysdkPayments;
+  }
+
+  function purchaseProduct(productId, onSuccess){
+    if(isPaymentsAvailable()){
+      ysdkPayments.purchase({ id: productId }).then(function(purchase){
+        onSuccess();
+        ysdkPayments.consumePurchase(purchase.purchaseToken).catch(function(){});
+      }).catch(function(){ /* cancelled or failed - no-op */ });
+    }else{
+      // Dev/offline fallback: outside Yandex Games there is no real payments
+      // provider, so a confirm dialog stands in for the purchase sheet.
+      if(window.confirm(t("dev_purchase_confirm"))){
+        onSuccess();
+      }
     }
   }
 
@@ -1642,10 +1942,33 @@
     sfxUpgrade();
   }
 
+  function activateEventViaAd(key){
+    var meta = EVENT_META[key];
+    if(!meta) return;
+    if(isEventActive(key)){
+      showToast(t("toast_event_already_active"));
+      sfxError();
+      return;
+    }
+    if(adRewardPending) return;
+    showRewardedAd(function(){
+      state.events[key] = Date.now() + meta.duration;
+      if(key === "rain") state.events.rainNextDrop = Date.now() + 700;
+      updateEventsStatus();
+      save();
+      showToast(t("toast_event_activated", {icon: meta.icon, name: eventName(key)}));
+      sfxUpgrade();
+    }, function(){ sfxError(); });
+  }
+
+  function isCellFree(idx){
+    return state.grid[idx] === null && !(state.moneyBag && state.moneyBag.idx === idx);
+  }
+
   function randomEmptyIndex(){
     var empties = [];
     for(var i=0;i<state.grid.length;i++){
-      if(!state.grid[i]) empties.push(i);
+      if(isCellFree(i)) empties.push(i);
     }
     if(!empties.length) return -1;
     return empties[Math.floor(Math.random()*empties.length)];
@@ -1663,6 +1986,18 @@
       renderCell(emptyIdx, true, "fall");
       save();
     }
+  }
+
+  function moneyBagTick(now){
+    if(state.moneyBag) return;
+    if(now < (state.moneyBagNextAt || 0)) return;
+    var idx = randomEmptyIndex();
+    if(idx === -1) return;
+    var amount = Math.max(1, effectiveIncomeRate() * MONEY_BAG_INCOME_SECONDS);
+    state.moneyBag = { idx: idx, amount: amount };
+    state.moneyBagNextAt = now + MONEY_BAG_INTERVAL;
+    renderCell(idx, true, "fall");
+    save();
   }
 
   function pad2(n){ return n < 10 ? "0"+n : ""+n; }
@@ -1708,12 +2043,18 @@
       btn.addEventListener("click", function(){ activateEvent(key); });
       card.appendChild(btn);
 
+      var adBtn = document.createElement("button");
+      adBtn.className = "ad-btn-small";
+      adBtn.style.marginTop = "6px";
+      adBtn.addEventListener("click", function(){ activateEventViaAd(key); });
+      card.appendChild(adBtn);
+
       var status = document.createElement("div");
       status.className = "event-status";
       card.appendChild(status);
 
       eventsEl.appendChild(card);
-      eventEls[key] = { card:card, btn:btn, status:status };
+      eventEls[key] = { card:card, btn:btn, adBtn:adBtn, status:status };
     });
     updateEventsStatus();
   }
@@ -1726,14 +2067,17 @@
       var until = (state.events && state.events[key]) || 0;
       var active = until > now;
       refs.card.classList.toggle("active", active);
+      refs.adBtn.textContent = t("event_ad_btn");
       if(active){
         refs.btn.disabled = true;
         refs.btn.textContent = t("event_active_btn");
+        refs.adBtn.disabled = true;
         refs.status.textContent = t("event_time_left_prefix") + formatCountdown(until-now);
       }else{
         var afford = state.eventCurrency >= 1;
         refs.btn.disabled = !afford;
         refs.btn.textContent = t("event_activate_btn");
+        refs.adBtn.disabled = adRewardPending;
         refs.status.textContent = afford ? "" : t("event_not_enough");
       }
     });
@@ -1838,13 +2182,7 @@
     sfxWin();
   }
 
-  function spinWheel(){
-    if(wheelSpinning) return;
-    if(!isWheelReady()){
-      showToast(t("wheel_not_ready_toast"));
-      sfxError();
-      return;
-    }
+  function performSpin(consumeCooldown){
     var idx = pickWeightedPrize();
     var prize = WHEEL_PRIZES[idx];
     var n = WHEEL_PRIZES.length;
@@ -1858,10 +2196,12 @@
     wheelRotation += delta;
 
     wheelSpinning = true;
-    if((state.wheel.bonusSpins||0) > 0){
-      state.wheel.bonusSpins -= 1;
-    }else{
-      state.wheel.nextSpinAt = Date.now() + WHEEL_SPIN_COOLDOWN;
+    if(consumeCooldown){
+      if((state.wheel.bonusSpins||0) > 0){
+        state.wheel.bonusSpins -= 1;
+      }else{
+        state.wheel.nextSpinAt = Date.now() + WHEEL_SPIN_COOLDOWN;
+      }
     }
     save();
     updateWheelStatus();
@@ -1875,11 +2215,31 @@
     }, 4050);
   }
 
+  function spinWheel(){
+    if(wheelSpinning) return;
+    if(!isWheelReady()){
+      showToast(t("wheel_not_ready_toast"));
+      sfxError();
+      return;
+    }
+    performSpin(true);
+  }
+
+  function spinWheelViaAd(){
+    if(wheelSpinning || adRewardPending) return;
+    showRewardedAd(function(){
+      performSpin(false);
+    }, function(){
+      sfxError();
+    });
+  }
+
   function updateWheelStatus(){
     var now = Date.now();
     var bonus = state.wheel.bonusSpins||0;
     var ready = isWheelReady();
     wheelSpinBtn.disabled = wheelSpinning || !ready;
+    wheelAdSpinBtnEl.disabled = wheelSpinning || adRewardPending;
     if(wheelSpinning){
       wheelSpinBtn.textContent = t("wheel_spin_btn_spinning");
       wheelStatusEl.textContent = "";
@@ -1896,6 +2256,8 @@
   }
 
   wheelSpinBtn.addEventListener("click", spinWheel);
+  var wheelAdSpinBtnEl = document.getElementById("wheelAdSpinBtn");
+  wheelAdSpinBtnEl.addEventListener("click", spinWheelViaAd);
 
   // ---------- promo codes ----------
   var PROMO_CODES = {
@@ -2090,6 +2452,176 @@
   cellUpgModalBackdropEl.addEventListener("click", function(e){
     if(e.target === cellUpgModalBackdropEl) closeCellUpgradeModal();
   });
+
+  // ---------- money bag (appears every 15 min, claimed via rewarded ad) ----------
+  var bagModalBackdropEl = document.getElementById("bagModalBackdrop");
+  var bagModalAmountEl = document.getElementById("bagModalAmount");
+  var bagModalAdBtnEl = document.getElementById("bagModalAdBtn");
+  var bagModalCloseBtnEl = document.getElementById("bagModalCloseBtn");
+
+  function openMoneyBagModal(){
+    if(!state.moneyBag) return;
+    bagModalAmountEl.textContent = fmt(state.moneyBag.amount);
+    bagModalAdBtnEl.disabled = adRewardPending;
+    bagModalBackdropEl.classList.add("show");
+  }
+
+  function closeMoneyBagModal(){
+    bagModalBackdropEl.classList.remove("show");
+  }
+
+  function claimMoneyBag(){
+    if(!state.moneyBag || adRewardPending) return;
+    var bag = state.moneyBag;
+    bagModalAdBtnEl.disabled = true;
+    showRewardedAd(function(){
+      state.money += bag.amount;
+      state.moneyBag = null;
+      renderCell(bag.idx, false);
+      updateHeader();
+      save();
+      closeMoneyBagModal();
+      showToast(t("toast_bag_claimed", {amount: fmt(bag.amount)}));
+      sfxWin();
+    }, function(){
+      bagModalAdBtnEl.disabled = false;
+      sfxError();
+    });
+  }
+
+  bagModalAdBtnEl.addEventListener("click", claimMoneyBag);
+  bagModalCloseBtnEl.addEventListener("click", closeMoneyBagModal);
+  bagModalBackdropEl.addEventListener("click", function(e){
+    if(e.target === bagModalBackdropEl) closeMoneyBagModal();
+  });
+
+  // ---------- bonuses shop (rewarded ads + real-money IAP) ----------
+  function grantCurrency(n){
+    state.eventCurrency += n;
+    updateEventCurrencyDisplays();
+  }
+
+  function grantSpins(n){
+    state.wheel.bonusSpins = (state.wheel.bonusSpins||0) + n;
+    updateWheelStatus();
+  }
+
+  function grantIncomeBoost(seconds){
+    var gain = effectiveIncomeRate() * seconds;
+    state.money += gain;
+    updateHeader();
+    showToast(t("toast_income_boost", {amount: fmt(gain)}));
+  }
+
+  function grantCookieBag(count){
+    var placed = 0;
+    for(var i=0;i<count;i++){
+      var idx = randomEmptyIndex();
+      if(idx === -1) break;
+      var maxUnlocked = unlockedShopCount(state.maxLevel);
+      var level = 1 + Math.floor(Math.random()*maxUnlocked);
+      state.grid[idx] = level;
+      renderCell(idx, true, "fall");
+      placed++;
+    }
+    renderShop();
+    showToast(t("toast_bag_granted", {n: placed}));
+  }
+
+  var IAP_ITEMS = [
+    { id:"bag_ad", group:"bags", icon:"bag", kind:"ad", titleKey:"iap_bag5_title", action:function(){ grantCookieBag(5); } },
+    { id:"bag10", group:"bags", icon:"bag", kind:"pay", price:"25 ₽", titleKey:"iap_bag10_title", action:function(){ grantCookieBag(10); } },
+    { id:"bag20", group:"bags", icon:"bag", kind:"pay", price:"40 ₽", titleKey:"iap_bag20_title", action:function(){ grantCookieBag(20); } },
+
+    { id:"income5m", group:"income", icon:"clock", kind:"pay", price:"10 ₽", titleKey:"iap_income5m_title", action:function(){ grantIncomeBoost(5*60); } },
+    { id:"income30m", group:"income", icon:"clock", kind:"pay", price:"50 ₽", titleKey:"iap_income30m_title", action:function(){ grantIncomeBoost(30*60); } },
+    { id:"income3h", group:"income", icon:"clock", kind:"pay", price:"200 ₽", titleKey:"iap_income3h_title", action:function(){ grantIncomeBoost(3*3600); } },
+    { id:"income24h", group:"income", icon:"clock", kind:"pay", price:"850 ₽", titleKey:"iap_income24h_title", action:function(){ grantIncomeBoost(24*3600); } },
+
+    { id:"cur5", group:"currency", icon:"currency", kind:"pay", price:"25 ₽", titleKey:"iap_cur5_title", action:function(){ grantCurrency(5); } },
+    { id:"cur10", group:"currency", icon:"currency", kind:"pay", price:"40 ₽", titleKey:"iap_cur10_title", action:function(){ grantCurrency(10); } },
+    { id:"cur50", group:"currency", icon:"currency", kind:"pay", price:"150 ₽", titleKey:"iap_cur50_title", action:function(){ grantCurrency(50); } },
+
+    { id:"spin_ad", group:"spins", icon:"wheel", kind:"ad", titleKey:"iap_spin1_title", action:function(){ grantSpins(1); } },
+    { id:"spins3", group:"spins", icon:"wheel", kind:"pay", price:"25 ₽", titleKey:"iap_spins3_title", action:function(){ grantSpins(3); } },
+    { id:"spins10", group:"spins", icon:"wheel", kind:"pay", price:"67 ₽", titleKey:"iap_spins10_title", action:function(){ grantSpins(10); } },
+
+    { id:"x2forever", group:"perm", icon:"x2", kind:"pay", price:"399 ₽", titleKey:"iap_x2_title", oneTime:true, action:function(){ state.permanentX2 = true; updateHeader(); } }
+  ];
+  var IAP_GROUP_TITLE_KEY = { bags:"iap_group_bags", income:"iap_group_income", currency:"iap_group_currency", spins:"iap_group_spins", perm:"iap_group_perm" };
+  var IAP_GROUP_ORDER = ["bags","income","currency","spins","perm"];
+
+  function buyIapItem(item){
+    if(item.oneTime && state.permanentX2) return;
+    if(item.kind === "ad"){
+      if(adRewardPending) return;
+      showRewardedAd(function(){
+        item.action();
+        save();
+        sfxWin();
+        renderIapPanel();
+      }, function(){ sfxError(); });
+    }else{
+      purchaseProduct(item.id, function(){
+        item.action();
+        save();
+        sfxWin();
+        renderIapPanel();
+      });
+    }
+  }
+
+  var iapContainerEl = document.getElementById("iapContainer");
+
+  function renderIapPanel(){
+    iapContainerEl.innerHTML = "";
+    IAP_GROUP_ORDER.forEach(function(group){
+      var items = IAP_ITEMS.filter(function(it){ return it.group === group; });
+      if(!items.length) return;
+
+      var title = document.createElement("div");
+      title.className = "iap-section-title";
+      title.textContent = t(IAP_GROUP_TITLE_KEY[group]);
+      iapContainerEl.appendChild(title);
+
+      var grid = document.createElement("div");
+      grid.className = "iap-grid";
+      items.forEach(function(item){
+        var owned = !!(item.oneTime && state.permanentX2);
+        var card = document.createElement("div");
+        card.className = "iap-card" + (owned ? " owned" : "");
+
+        var canvas = document.createElement("canvas");
+        drawIapIcon(canvas, item.icon);
+        card.appendChild(canvas);
+
+        var titleEl = document.createElement("div");
+        titleEl.className = "iap-card-title";
+        titleEl.textContent = t(item.titleKey);
+        card.appendChild(titleEl);
+
+        var btn = document.createElement("button");
+        if(owned){
+          btn.className = "iap-owned-btn";
+          btn.textContent = t("iap_owned_btn");
+          btn.disabled = true;
+        }else if(item.kind === "ad"){
+          btn.className = "ad-btn-small";
+          btn.textContent = t("iap_ad_btn");
+          btn.disabled = adRewardPending;
+          btn.addEventListener("click", function(){ buyIapItem(item); });
+        }else{
+          btn.className = "buy-btn";
+          btn.textContent = item.price;
+          btn.addEventListener("click", function(){ buyIapItem(item); });
+        }
+        card.appendChild(btn);
+
+        grid.appendChild(card);
+      });
+      iapContainerEl.appendChild(grid);
+    });
+  }
 
   // ---------- rng ----------
   function mulberry32(seed){
@@ -2430,6 +2962,110 @@
     ctx.restore();
   }
 
+  function drawIapIcon(canvas, kind){
+    var dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+    var size = 80;
+    if(canvas.width !== size*dpr){
+      canvas.width = size*dpr;
+      canvas.height = size*dpr;
+    }
+    var ctx = canvas.getContext("2d");
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    ctx.clearRect(0,0,size,size);
+    ctx.save();
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+
+    if(kind === "bag"){
+      var grad = ctx.createLinearGradient(0,20,0,72);
+      grad.addColorStop(0, hsl(28,55,42));
+      grad.addColorStop(1, hsl(28,55,26));
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.moveTo(24,34);
+      ctx.quadraticCurveTo(12,70,40,74);
+      ctx.quadraticCurveTo(68,70,56,34);
+      ctx.quadraticCurveTo(50,26,40,26);
+      ctx.quadraticCurveTo(30,26,24,34);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = hsl(28,40,18);
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(29,26);
+      ctx.quadraticCurveTo(40,17,51,26);
+      ctx.stroke();
+      ctx.fillStyle = hsl(28,40,18);
+      circlePath(ctx,40,22,4);
+      ctx.fill();
+      ctx.fillStyle = hsl(32,60,58);
+      circlePath(ctx,40,50,13);
+      ctx.fill();
+      ctx.fillStyle = "rgba(90,50,20,.5)";
+      [[-4,-3],[4,-4],[0,4],[-5,5],[5,3]].forEach(function(p){
+        circlePath(ctx,40+p[0],50+p[1],1.6);
+        ctx.fill();
+      });
+    }else if(kind === "clock"){
+      ctx.fillStyle = hsl(200,15,50);
+      circlePath(ctx,24,20,5);
+      ctx.fill();
+      circlePath(ctx,56,20,5);
+      ctx.fill();
+      ctx.fillStyle = hsl(42,70,58);
+      circlePath(ctx,40,45,26);
+      ctx.fill();
+      ctx.fillStyle = hsl(42,82,72);
+      circlePath(ctx,40,45,21);
+      ctx.fill();
+      ctx.strokeStyle = hsl(28,40,20);
+      ctx.lineWidth = 3;
+      ctx.lineCap = "round";
+      ctx.beginPath(); ctx.moveTo(40,45); ctx.lineTo(40,30); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(40,45); ctx.lineTo(50,45); ctx.stroke();
+      ctx.fillStyle = hsl(28,40,20);
+      circlePath(ctx,40,45,2.6);
+      ctx.fill();
+    }else if(kind === "currency"){
+      [[30,53],[50,53],[40,33]].forEach(function(p, i){
+        ctx.fillStyle = hsl(32,60,56 - i*3);
+        circlePath(ctx,p[0],p[1],16);
+        ctx.fill();
+        ctx.fillStyle = "rgba(90,50,20,.5)";
+        circlePath(ctx,p[0]-4,p[1]-3,1.4);
+        ctx.fill();
+        circlePath(ctx,p[0]+4,p[1]+2,1.4);
+        ctx.fill();
+      });
+    }else if(kind === "wheel"){
+      var segColors = [hsl(0,70,55),hsl(45,80,55),hsl(95,50,45),hsl(200,60,55),hsl(280,45,55),hsl(330,65,55)];
+      var cx=40, cy=44, r=27;
+      for(var s=0;s<6;s++){
+        ctx.fillStyle = segColors[s];
+        ctx.beginPath();
+        ctx.moveTo(cx,cy);
+        ctx.arc(cx,cy,r, s*Math.PI/3, (s+1)*Math.PI/3);
+        ctx.closePath();
+        ctx.fill();
+      }
+      ctx.fillStyle = hsl(40,80,90);
+      circlePath(ctx,cx,cy,6);
+      ctx.fill();
+    }else if(kind === "x2"){
+      var g2 = ctx.createLinearGradient(0,16,0,72);
+      g2.addColorStop(0, hsl(46,90,64));
+      g2.addColorStop(1, hsl(36,85,46));
+      ctx.fillStyle = g2;
+      circlePath(ctx,40,44,28);
+      ctx.fill();
+      ctx.fillStyle = "#3a2308";
+      ctx.font = "bold 26px sans-serif";
+      ctx.fillText("×2", 40, 47);
+    }
+
+    ctx.restore();
+  }
+
   // ---------- board ----------
   var boardEl = document.getElementById("board");
   var cellEls = [];
@@ -2450,20 +3086,27 @@
       var mult = document.createElement("div");
       mult.className = "cell-mult";
       cell.appendChild(mult);
+      var bag = document.createElement("div");
+      bag.className = "money-bag";
+      bag.textContent = "💰";
+      cell.appendChild(bag);
       (function(idx){
         cell.addEventListener("pointerdown", function(e){ onCellPointerDown(e, idx); });
       })(i);
       boardEl.appendChild(cell);
-      cellEls.push({cell:cell, canvas:canvas, mult:mult});
+      cellEls.push({cell:cell, canvas:canvas, mult:mult, bag:bag});
     }
   }
 
   function renderCell(i, animate, kind){
     var level = state.grid[i];
     var ref = cellEls[i];
+    var hasBag = !!(state.moneyBag && state.moneyBag.idx === i);
     ref.cell.classList.toggle("filled", !!level);
     ref.cell.classList.toggle("selected", selectedIdx === i);
-    if(level){
+    ref.cell.classList.toggle("has-bag", hasBag);
+    ref.bag.style.display = hasBag ? "flex" : "none";
+    if(level && !hasBag){
       ref.canvas.style.display = "block";
       drawCookie(ref.canvas, level);
     }else{
@@ -2485,6 +3128,10 @@
   }
 
   function handleCellTap(idx){
+    if(state.moneyBag && state.moneyBag.idx === idx){
+      openMoneyBagModal();
+      return;
+    }
     var level = state.grid[idx];
 
     if(selectedIdx === null){
@@ -2591,7 +3238,7 @@
         var tIdx = parseInt(cellEl.dataset.idx, 10);
         if(tIdx === idx) return;
         var tLevel = state.grid[tIdx];
-        cellEl.classList.add((!tLevel || tLevel === level) ? "drop-ok" : "drop-bad");
+        cellEl.classList.add((isCellFree(tIdx) || tLevel === level) ? "drop-ok" : "drop-bad");
       }
     }
 
@@ -2615,7 +3262,7 @@
         var tIdx = parseInt(cellEl.dataset.idx, 10);
         if(tIdx !== idx){
           var tLevel = state.grid[tIdx];
-          if(!tLevel){
+          if(isCellFree(tIdx)){
             state.grid[tIdx] = level;
             state.grid[idx] = null;
             renderBoard();
@@ -2789,7 +3436,10 @@
       sfxError();
       return;
     }
-    var emptyIdx = state.grid.indexOf(null);
+    var emptyIdx = -1;
+    for(var i=0;i<state.grid.length;i++){
+      if(isCellFree(i)){ emptyIdx = i; break; }
+    }
     if(emptyIdx === -1){
       showToast(t("toast_board_full"));
       sfxError();
@@ -2814,7 +3464,7 @@
 
   function updateHeader(){
     moneyValEl.textContent = fmt(state.money);
-    var mult = isEventActive("x2") ? 2 : 1;
+    var mult = moneyMultiplier();
     incomeValEl.textContent = "+" + fmt(incomeRate()*mult) + t("per_sec") + (mult>1 ? t("income_x2_suffix") : "");
   }
 
@@ -2833,9 +3483,10 @@
     var now = Date.now();
     var dt = (now - lastTick) / 1000;
     lastTick = now;
-    var mult = isEventActive("x2") ? 2 : 1;
+    var mult = moneyMultiplier();
     state.money += incomeRate() * mult * dt;
     rainTick(now);
+    moneyBagTick(now);
     updateHeader();
     renderShopAffordability();
     updateEventsStatus();
@@ -2863,11 +3514,21 @@
   // that environment everything here silently no-ops.
   var ysdk = null;
   var ysdkLeaderboards = null;
+  var ysdkPayments = null;
   var ysdkPlayerId = null;
   var lastLbPush = 0;
   var LB_PUSH_MIN_INTERVAL = 3000;
   var LB_NAMES = { balance: "balance", income: "income_hour", merges: "merges" };
 
+  // Real-money purchases (see IAP_ITEMS below) require a matching catalog of
+  // consumable products created in the Yandex Games developer console, each
+  // with the exact technical id used here and the price the shop text
+  // promises: bag10 (25₽), bag20 (40₽), income5m (10₽), income30m (50₽),
+  // income3h (200₽), income24h (850₽), cur5 (25₽), cur10 (40₽), cur50 (150₽),
+  // spins3 (25₽), spins10 (67₽), x2forever (399₽). Rewarded video ads need no
+  // console setup beyond the ads unit being enabled for the game. Outside
+  // Yandex Games both silently fall back to simulated flows (see
+  // showRewardedAd / purchaseProduct above) so the feature stays testable.
   function initYandexSDK(){
     if(typeof YaGames === "undefined") return;
     try{
@@ -2884,6 +3545,9 @@
         try{ sdk.features && sdk.features.LoadingAPI && sdk.features.LoadingAPI.ready(); }catch(e){}
         sdk.getPlayer({ scopes: false }).then(function(player){
           try{ ysdkPlayerId = player.getUniqueID ? player.getUniqueID() : null; }catch(e){}
+        }).catch(function(){});
+        sdk.getPayments({ signed: false }).then(function(payments){
+          ysdkPayments = payments;
         }).catch(function(){});
         return sdk.getLeaderboards();
       }).then(function(lb){
@@ -2968,7 +3632,8 @@
     events: { btn: document.getElementById("tabBtnEvents"), panel: document.getElementById("eventsPanel") },
     wheel:  { btn: document.getElementById("tabBtnWheel"),  panel: document.getElementById("wheelPanel") },
     upgrades: { btn: document.getElementById("tabBtnUpgrades"), panel: document.getElementById("upgradesPanel") },
-    leaders: { btn: document.getElementById("tabBtnLeaders"), panel: document.getElementById("leadersPanel") }
+    leaders: { btn: document.getElementById("tabBtnLeaders"), panel: document.getElementById("leadersPanel") },
+    bonus: { btn: document.getElementById("tabBtnBonus"), panel: document.getElementById("bonusPanel") }
   };
 
   var mainEl = document.getElementById("main");
@@ -3007,6 +3672,7 @@
   updateHeader();
   updateEventCurrencyDisplays();
   updateWheelStatus();
+  renderIapPanel();
   loadYandexSDKScript();
 })();
 </script>
