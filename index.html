@@ -923,7 +923,8 @@
 
   function bumpPrice(level){
     if(isEventActive("fixedPrice")) return;
-    state.prices[level] = Math.round((priceFor(level) + 0.01)*100)/100;
+    var x = priceFor(level);
+    state.prices[level] = Math.round((x*0.01 + x)*100)/100;
   }
 
   function isUnlocked(level){
