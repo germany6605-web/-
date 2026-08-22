@@ -754,10 +754,16 @@
   }
 
   @media (min-width:820px){
-    main{flex-direction:row;}
+    #app{height:auto;min-height:100%;}
+    main{flex-direction:row;flex:none;}
     .board-wrap{flex:0 0 auto;width:520px;align-self:flex-start;}
-    .shop-wrap{flex:1;}
-    .shop-card{flex-basis:130px;}
+    main.board-hidden .board-wrap{display:block;}
+    .shop-wrap{flex:1;display:block;min-height:0;overflow:visible;}
+    .tabs{flex-wrap:nowrap;}
+    .tab-btn{flex:1 1 0;}
+    .tab-panel.active{display:block;flex:none;overflow-y:visible;}
+    #shop{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));overflow:visible;padding:2px;margin:0;}
+    .shop-card{flex:none;}
   }
 </style>
 </head>
