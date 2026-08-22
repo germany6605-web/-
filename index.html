@@ -73,6 +73,22 @@
   }
   .reset-btn:active{transform:scale(.94);}
 
+  .currency-badge{
+    display:flex;
+    align-items:center;
+    gap:4px;
+    background:rgba(255,255,255,.06);
+    border:1px solid rgba(255,255,255,.12);
+    color:var(--cream);
+    border-radius:10px;
+    padding:7px 10px;
+    font-size:13px;
+    font-weight:700;
+    cursor:pointer;
+    white-space:nowrap;
+  }
+  .currency-badge:active{transform:scale(.94);}
+
   main{
     display:flex;
     flex-direction:column;
@@ -194,6 +210,28 @@
     padding:12px;
     box-shadow:0 6px 20px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.06);
   }
+  .tabs{
+    display:flex;
+    gap:6px;
+    margin-bottom:10px;
+  }
+  .tab-btn{
+    flex:1;
+    border:none;
+    border-radius:11px;
+    padding:9px 6px;
+    font-size:12.5px;
+    font-weight:700;
+    background:rgba(0,0,0,.2);
+    color:var(--cream-dim);
+    cursor:pointer;
+  }
+  .tab-btn.active{
+    background:linear-gradient(180deg,var(--accent),var(--accent-2));
+    color:#2a1608;
+  }
+  .tab-panel{display:none;}
+  .tab-panel.active{display:block;}
   .shop-title{
     font-size:13px;
     font-weight:700;
@@ -248,6 +286,78 @@
     text-align:center;
     line-height:1.25;
   }
+  .events-currency{
+    font-size:13px;
+    font-weight:700;
+    color:var(--cream);
+    background:rgba(0,0,0,.22);
+    border-radius:12px;
+    padding:9px 12px;
+    margin:2px 4px 10px;
+  }
+  #events{
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+  }
+  .event-card{
+    background:rgba(0,0,0,.22);
+    border-radius:14px;
+    padding:12px 14px;
+    border:1px solid rgba(255,255,255,.05);
+  }
+  .event-card.active{
+    border-color:rgba(139,209,124,.5);
+    background:rgba(139,209,124,.08);
+  }
+  .event-head{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    font-size:14px;
+    font-weight:700;
+    color:var(--cream);
+    margin-bottom:4px;
+  }
+  .event-icon{font-size:18px;}
+  .event-desc{
+    font-size:12px;
+    color:var(--cream-dim);
+    line-height:1.4;
+    margin-bottom:6px;
+  }
+  .event-meta{
+    font-size:11.5px;
+    color:var(--cream-dim);
+    opacity:.85;
+    margin-bottom:8px;
+  }
+  .event-btn{
+    width:100%;
+    border:none;
+    border-radius:9px;
+    padding:8px 4px;
+    font-size:12.5px;
+    font-weight:700;
+    background:linear-gradient(180deg,var(--accent),var(--accent-2));
+    color:#2a1608;
+    cursor:pointer;
+  }
+  .event-btn:disabled{
+    background:#4a3f34;
+    color:#8a7a68;
+    cursor:not-allowed;
+  }
+  .event-btn:active:not(:disabled){transform:scale(.97);}
+  .event-status{
+    font-size:11.5px;
+    color:var(--good);
+    font-weight:600;
+    text-align:center;
+    margin-top:6px;
+    min-height:14px;
+  }
+
   .toast{
     position:fixed;
     left:50%;
@@ -294,6 +404,7 @@
       <div class="money">💰 <span id="moneyVal">0</span></div>
       <div class="income" id="incomeVal">+0.0/сек</div>
     </div>
+    <div class="currency-badge" id="currencyBadge" title="Печеньки — валюта для событий, откройте вкладку События">🍪 <span id="eventCurrencyHeader">0</span></div>
     <button class="reset-btn" id="resetBtn" title="Сбросить игру">⟲</button>
   </header>
 
@@ -306,9 +417,19 @@
       </div>
     </div>
     <div class="shop-wrap">
-      <div class="shop-title">Магазин печенья</div>
-      <div id="shop"></div>
-      <div class="hint">Перетащите печенье на такое же — чтобы объединить, на пустую клетку — чтобы переставить. Короткое нажатие тоже работает.</div>
+      <div class="tabs">
+        <button class="tab-btn active" id="tabBtnShop" data-tab="shop">🛒 Магазин</button>
+        <button class="tab-btn" id="tabBtnEvents" data-tab="events">🎉 События</button>
+      </div>
+      <div class="tab-panel active" id="shopPanel">
+        <div class="shop-title">Магазин печенья</div>
+        <div id="shop"></div>
+        <div class="hint">Перетащите печенье на такое же — чтобы объединить, на пустую клетку — чтобы переставить. Короткое нажатие тоже работает.</div>
+      </div>
+      <div class="tab-panel" id="eventsPanel">
+        <div class="events-currency">🍪 Печеньки: <span id="eventCurrencyVal">0</span> — даются за каждый разблокированный уровень печенья</div>
+        <div id="events"></div>
+      </div>
     </div>
   </main>
 </div>
@@ -328,7 +449,10 @@
     money: 20,
     maxLevel: 1,
     prices: {},
-    lastSeen: Date.now()
+    lastSeen: Date.now(),
+    eventCurrency: 0,
+    unlockAwarded: 0,
+    events: {}
   };
 
   var selectedIdx = null;
@@ -351,6 +475,9 @@
       state.money = typeof data.money === "number" ? data.money : 20;
       state.maxLevel = data.maxLevel || 1;
       state.prices = data.prices || {};
+      state.eventCurrency = typeof data.eventCurrency === "number" ? data.eventCurrency : 0;
+      state.unlockAwarded = typeof data.unlockAwarded === "number" ? data.unlockAwarded : 0;
+      state.events = (data.events && typeof data.events === "object") ? data.events : {};
       var elapsed = (Date.now() - (data.lastSeen || Date.now())) / 1000;
       elapsed = Math.max(0, Math.min(elapsed, 4*3600));
       if(elapsed > 5){
@@ -378,6 +505,7 @@
   }
 
   function bumpPrice(level){
+    if(isEventActive("fixedPrice")) return;
     state.prices[level] = Math.round((priceFor(level) + 0.01)*100)/100;
   }
 
@@ -400,6 +528,157 @@
     if(n >= 1e6) return (n/1e6).toFixed(2)+"M";
     if(n >= 1e3) return (n/1e3).toFixed(2)+"K";
     return n.toFixed(2);
+  }
+
+  function setMaxLevel(newLevel){
+    if(newLevel > state.maxLevel){
+      state.maxLevel = newLevel;
+      awardUnlockCurrency();
+    }
+  }
+
+  // ---------- events ----------
+  var EVENT_META = {
+    rain: { icon:"🌧️", name:"Печенькопад", desc:"1 минуту на поле сами появляются печенья разблокированных уровней.", durLabel:"1 минута", duration:60*1000 },
+    x2: { icon:"💰", name:"x2 Деньги", desc:"Доход от всех печений на поле удваивается.", durLabel:"3 часа", duration:3*60*60*1000 },
+    fixedPrice: { icon:"🧊", name:"Заморозка цен", desc:"Цены в магазине не растут при покупках.", durLabel:"5 минут", duration:5*60*1000 }
+  };
+  var RAIN_DROP_INTERVAL = 2500;
+
+  function isEventActive(key){
+    return !!(state.events && state.events[key] && state.events[key] > Date.now());
+  }
+
+  function unlockedShopCount(maxLevel){
+    return Math.max(1, maxLevel - 2);
+  }
+
+  function awardUnlockCurrency(){
+    var count = unlockedShopCount(state.maxLevel);
+    if(count > state.unlockAwarded){
+      var gained = count - state.unlockAwarded;
+      state.unlockAwarded = count;
+      state.eventCurrency += gained;
+      updateEventCurrencyDisplays();
+      updateEventsStatus();
+      showToast("Получено 🍪 x" + gained + " за разблокировку печенья!");
+    }
+  }
+
+  function activateEvent(key){
+    var meta = EVENT_META[key];
+    if(!meta) return;
+    if(isEventActive(key)){
+      showToast("Событие уже активно");
+      return;
+    }
+    if(state.eventCurrency < 1){
+      showToast("Недостаточно печенек 🍪");
+      return;
+    }
+    state.eventCurrency -= 1;
+    state.events[key] = Date.now() + meta.duration;
+    if(key === "rain") state.events.rainNextDrop = Date.now() + 700;
+    updateEventCurrencyDisplays();
+    updateEventsStatus();
+    save();
+    showToast(meta.icon + " " + meta.name + " активировано!");
+  }
+
+  function rainTick(now){
+    if(!isEventActive("rain")) return;
+    if(now < (state.events.rainNextDrop || 0)) return;
+    state.events.rainNextDrop = now + RAIN_DROP_INTERVAL;
+    var maxUnlocked = unlockedShopCount(state.maxLevel);
+    var level = 1 + Math.floor(Math.random()*maxUnlocked);
+    var emptyIdx = state.grid.indexOf(null);
+    if(emptyIdx !== -1){
+      state.grid[emptyIdx] = level;
+      renderCell(emptyIdx, true);
+      save();
+    }
+  }
+
+  function pad2(n){ return n < 10 ? "0"+n : ""+n; }
+
+  function formatCountdown(ms){
+    if(ms < 0) ms = 0;
+    var totalSec = Math.ceil(ms/1000);
+    var h = Math.floor(totalSec/3600);
+    var m = Math.floor((totalSec%3600)/60);
+    var s = totalSec%60;
+    if(h > 0) return h+":"+pad2(m)+":"+pad2(s);
+    return m+":"+pad2(s);
+  }
+
+  var eventsEl = document.getElementById("events");
+  var eventEls = {};
+
+  function renderEvents(){
+    eventsEl.innerHTML = "";
+    eventEls = {};
+    Object.keys(EVENT_META).forEach(function(key){
+      var meta = EVENT_META[key];
+      var card = document.createElement("div");
+      card.className = "event-card";
+
+      var head = document.createElement("div");
+      head.className = "event-head";
+      head.innerHTML = "<span class=\"event-icon\">"+meta.icon+"</span><span>"+meta.name+"</span>";
+      card.appendChild(head);
+
+      var desc = document.createElement("div");
+      desc.className = "event-desc";
+      desc.textContent = meta.desc;
+      card.appendChild(desc);
+
+      var metaLine = document.createElement("div");
+      metaLine.className = "event-meta";
+      metaLine.textContent = "⏱ " + meta.durLabel + "   ·   Цена: 1 🍪";
+      card.appendChild(metaLine);
+
+      var btn = document.createElement("button");
+      btn.className = "event-btn";
+      btn.addEventListener("click", function(){ activateEvent(key); });
+      card.appendChild(btn);
+
+      var status = document.createElement("div");
+      status.className = "event-status";
+      card.appendChild(status);
+
+      eventsEl.appendChild(card);
+      eventEls[key] = { card:card, btn:btn, status:status };
+    });
+    updateEventsStatus();
+  }
+
+  function updateEventsStatus(){
+    var now = Date.now();
+    Object.keys(EVENT_META).forEach(function(key){
+      var refs = eventEls[key];
+      if(!refs) return;
+      var until = (state.events && state.events[key]) || 0;
+      var active = until > now;
+      refs.card.classList.toggle("active", active);
+      if(active){
+        refs.btn.disabled = true;
+        refs.btn.textContent = "Активно";
+        refs.status.textContent = "Осталось: " + formatCountdown(until-now);
+      }else{
+        var afford = state.eventCurrency >= 1;
+        refs.btn.disabled = !afford;
+        refs.btn.textContent = "Активировать (1 🍪)";
+        refs.status.textContent = afford ? "" : "Недостаточно печенек";
+      }
+    });
+  }
+
+  function updateEventCurrencyDisplays(){
+    var v = String(Math.max(0, Math.round(state.eventCurrency)));
+    var h = document.getElementById("eventCurrencyHeader");
+    var p = document.getElementById("eventCurrencyVal");
+    if(h) h.textContent = v;
+    if(p) p.textContent = v;
   }
 
   // ---------- rng ----------
@@ -750,7 +1029,7 @@
       var newLevel = level + 1;
       state.grid[idx] = newLevel;
       state.grid[selectedIdx] = null;
-      if(newLevel > state.maxLevel) state.maxLevel = newLevel;
+      setMaxLevel(newLevel);
       selectedIdx = null;
       renderBoard();
       renderCell(idx, true);
@@ -855,7 +1134,7 @@
             var newLevel = level+1;
             state.grid[tIdx] = newLevel;
             state.grid[idx] = null;
-            if(newLevel > state.maxLevel) state.maxLevel = newLevel;
+            setMaxLevel(newLevel);
             renderBoard();
             renderCell(tIdx, true);
             renderShop();
@@ -1026,7 +1305,7 @@
     }
     state.money -= price;
     state.grid[emptyIdx] = level;
-    if(level > state.maxLevel) state.maxLevel = level;
+    setMaxLevel(level);
     bumpPrice(level);
     renderCell(emptyIdx, true);
     renderShop();
@@ -1042,7 +1321,8 @@
 
   function updateHeader(){
     moneyValEl.textContent = fmt(state.money);
-    incomeValEl.textContent = "+" + fmt(incomeRate()) + "/сек";
+    var mult = isEventActive("x2") ? 2 : 1;
+    incomeValEl.textContent = "+" + fmt(incomeRate()*mult) + "/сек" + (mult>1 ? " (x2!)" : "");
   }
 
   function showToast(msg){
@@ -1060,9 +1340,12 @@
     var now = Date.now();
     var dt = (now - lastTick) / 1000;
     lastTick = now;
-    state.money += incomeRate() * dt;
+    var mult = isEventActive("x2") ? 2 : 1;
+    state.money += incomeRate() * mult * dt;
+    rainTick(now);
     updateHeader();
     renderShopAffordability();
+    updateEventsStatus();
   }
 
   function renderShopAffordability(){
@@ -1078,15 +1361,36 @@
   var saveTimer = setInterval(save, 4000);
   var tickTimer = setInterval(tick, TICK_MS);
 
+  // ---------- tabs ----------
+  var tabBtnShop = document.getElementById("tabBtnShop");
+  var tabBtnEvents = document.getElementById("tabBtnEvents");
+  var shopPanelEl = document.getElementById("shopPanel");
+  var eventsPanelEl = document.getElementById("eventsPanel");
+
+  function switchTab(tab){
+    var toEvents = tab === "events";
+    tabBtnShop.classList.toggle("active", !toEvents);
+    tabBtnEvents.classList.toggle("active", toEvents);
+    shopPanelEl.classList.toggle("active", !toEvents);
+    eventsPanelEl.classList.toggle("active", toEvents);
+  }
+
+  tabBtnShop.addEventListener("click", function(){ switchTab("shop"); });
+  tabBtnEvents.addEventListener("click", function(){ switchTab("events"); });
+  document.getElementById("currencyBadge").addEventListener("click", function(){ switchTab("events"); });
+
   // ---------- reset ----------
   document.getElementById("resetBtn").addEventListener("click", function(){
     if(confirm("Сбросить игру и начать заново?")){
-      state = { grid: new Array(CELLS).fill(null), money: 20, maxLevel: 1, prices: {}, lastSeen: Date.now() };
+      state = { grid: new Array(CELLS).fill(null), money: 20, maxLevel: 1, prices: {}, lastSeen: Date.now(), eventCurrency: 0, unlockAwarded: 0, events: {} };
       selectedIdx = null;
+      awardUnlockCurrency();
       save();
       renderBoard();
       renderShop();
+      renderEvents();
       updateHeader();
+      updateEventCurrencyDisplays();
     }
   });
 
@@ -1097,10 +1401,13 @@
 
   // ---------- init ----------
   load();
+  awardUnlockCurrency();
   buildBoard();
   renderBoard();
   renderShop();
+  renderEvents();
   updateHeader();
+  updateEventCurrencyDisplays();
 })();
 </script>
 </body>
