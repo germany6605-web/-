@@ -66,18 +66,6 @@
   .money{font-size:19px;font-weight:800;color:var(--cream);}
   .money span{color:var(--accent);}
   .income{font-size:12px;color:var(--good);font-weight:600;}
-  .reset-btn{
-    background:rgba(255,255,255,.06);
-    border:1px solid rgba(255,255,255,.12);
-    color:var(--cream-dim);
-    border-radius:10px;
-    padding:8px 9px;
-    font-size:14px;
-    cursor:pointer;
-    line-height:1;
-  }
-  .reset-btn:active{transform:scale(.94);}
-
   .currency-badge{
     display:flex;
     align-items:center;
@@ -776,7 +764,6 @@
       <div class="income" id="incomeVal">+0.0/сек</div>
     </div>
     <div class="currency-badge" id="currencyBadge" title="Печеньки — валюта для событий, откройте вкладку События">🍪 <span id="eventCurrencyHeader">0</span></div>
-    <button class="reset-btn" id="resetBtn" title="Сбросить игру">⟲</button>
   </header>
 
   <main id="main">
@@ -1340,8 +1327,7 @@
 
   // ---------- promo codes ----------
   var PROMO_CODES = {
-    "COOKIE100": { type:"currency", amount:100 },
-    "SPIN100": { type:"spins", amount:100 }
+    "OLD": { type:"spins", amount:5 }
   };
 
   var promoInputEl = document.getElementById("promoInput");
@@ -2402,29 +2388,6 @@
     TABS[key].btn.addEventListener("click", function(){ switchTab(key); });
   });
   document.getElementById("currencyBadge").addEventListener("click", function(){ switchTab("events"); });
-
-  // ---------- reset ----------
-  document.getElementById("resetBtn").addEventListener("click", function(){
-    if(confirm("Сбросить игру и начать заново?")){
-      state = { grid: new Array(CELLS).fill(null), money: 20, maxLevel: 1, prices: {}, lastSeen: Date.now(), eventCurrency: 0, unlockAwarded: 0, events: {}, wheel: { nextSpinAt: Date.now(), bonusSpins: 0 }, cellUpgrades: new Array(CELLS).fill(0), incomeUpgradeLevel: 0, offlineCapLevel: 0, redeemedCodes: {}, totalMerges: 0 };
-      selectedIdx = null;
-      closeCellUpgradeModal();
-      wheelRotation = 0;
-      wheelSpinEl.style.transition = "none";
-      wheelSpinEl.style.transform = "rotate(0deg)";
-      void wheelSpinEl.offsetWidth;
-      wheelSpinEl.style.transition = "";
-      awardUnlockCurrency();
-      save();
-      renderBoard();
-      renderShop();
-      renderEvents();
-      updateHeader();
-      updateEventCurrencyDisplays();
-      updateWheelStatus();
-      updateCellUpgradeGrid();
-    }
-  });
 
   window.addEventListener("beforeunload", save);
   document.addEventListener("visibilitychange", function(){
