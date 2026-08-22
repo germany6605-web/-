@@ -82,6 +82,19 @@
   }
   .currency-badge:active{transform:scale(.94);}
 
+  .sound-btn{
+    flex-shrink:0;
+    background:rgba(255,255,255,.06);
+    border:1px solid rgba(255,255,255,.12);
+    color:var(--cream-dim);
+    border-radius:10px;
+    padding:8px 9px;
+    font-size:15px;
+    cursor:pointer;
+    line-height:1;
+  }
+  .sound-btn:active{transform:scale(.94);}
+
   main{
     display:flex;
     flex-direction:column;
@@ -266,6 +279,49 @@
     cursor:pointer;
   }
   .modal-close-btn:active{transform:scale(.96);}
+
+  .sound-row{
+    padding:12px 2px;
+  }
+  .sound-row-head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    font-size:13px;
+    color:var(--cream-dim);
+    font-weight:700;
+    margin-bottom:8px;
+  }
+  .sound-row-head b{
+    color:var(--cream);
+    font-weight:800;
+  }
+  .sound-row input[type="range"]{
+    width:100%;
+    height:6px;
+    border-radius:6px;
+    background:rgba(255,255,255,.12);
+    appearance:none;
+    -webkit-appearance:none;
+    outline:none;
+  }
+  .sound-row input[type="range"]::-webkit-slider-thumb{
+    appearance:none;
+    -webkit-appearance:none;
+    width:20px;height:20px;
+    border-radius:50%;
+    background:linear-gradient(180deg,var(--accent),var(--accent-2));
+    box-shadow:0 2px 6px rgba(0,0,0,.5);
+    cursor:pointer;
+  }
+  .sound-row input[type="range"]::-moz-range-thumb{
+    width:20px;height:20px;
+    border:none;
+    border-radius:50%;
+    background:linear-gradient(180deg,var(--accent),var(--accent-2));
+    box-shadow:0 2px 6px rgba(0,0,0,.5);
+    cursor:pointer;
+  }
   @keyframes pop{
     0%{transform:scale(.55);}
     60%{transform:scale(1.12);}
@@ -764,6 +820,7 @@
       <div class="income" id="incomeVal">+0.0/сек</div>
     </div>
     <div class="currency-badge" id="currencyBadge">🍪 <span id="eventCurrencyHeader">0</span></div>
+    <button class="sound-btn" id="soundBtn" title="Звук">🔊</button>
   </header>
 
   <main id="main">
@@ -864,6 +921,23 @@
     <div class="modal-actions">
       <button class="event-btn" id="cellUpgModalBuyBtn">Улучшить</button>
       <button class="modal-close-btn" id="cellUpgModalCloseBtn">Закрыть</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="soundModalBackdrop">
+  <div class="modal-card" id="soundModalCard">
+    <div class="modal-title" id="soundModalTitleEl">🔊 Звук</div>
+    <div class="sound-row">
+      <div class="sound-row-head"><span id="musicVolumeLabelEl">Музыка</span><b id="musicVolumeValEl">50%</b></div>
+      <input type="range" id="musicVolumeSlider" min="0" max="100" step="1" value="35">
+    </div>
+    <div class="sound-row">
+      <div class="sound-row-head"><span id="sfxVolumeLabelEl">Звуковые эффекты</span><b id="sfxVolumeValEl">50%</b></div>
+      <input type="range" id="sfxVolumeSlider" min="0" max="100" step="1" value="50">
+    </div>
+    <div class="modal-actions">
+      <button class="modal-close-btn" id="soundModalCloseBtn" style="flex:1">Закрыть</button>
     </div>
   </div>
 </div>
@@ -995,7 +1069,12 @@
       per_sec:"/сек",
       toast_income_upgraded:"⚡ Доход улучшен! +0.1/сек навсегда",
       toast_offline_maxed:"Оффлайн-доход уже максимален — 8 часов",
-      toast_offline_upgraded:"🌙 Оффлайн-доход теперь: {label}"
+      toast_offline_upgraded:"🌙 Оффлайн-доход теперь: {label}",
+      sound_btn_title:"Звук",
+      sound_modal_title:"🔊 Звук",
+      music_volume_label:"Музыка",
+      sfx_volume_label:"Звуковые эффекты",
+      sound_close_btn:"Закрыть"
     },
     en:{
       trash_hint:"Trash — drag a cookie here, or select it and tap. The top 3 levels are protected.",
@@ -1084,7 +1163,12 @@
       per_sec:"/sec",
       toast_income_upgraded:"⚡ Income upgraded! +0.1/sec forever",
       toast_offline_maxed:"Offline income is already at the maximum — 8 hours",
-      toast_offline_upgraded:"🌙 Offline income is now: {label}"
+      toast_offline_upgraded:"🌙 Offline income is now: {label}",
+      sound_btn_title:"Sound",
+      sound_modal_title:"🔊 Sound",
+      music_volume_label:"Music",
+      sfx_volume_label:"Sound effects",
+      sound_close_btn:"Close"
     }
   };
 
@@ -1131,7 +1215,10 @@
       cellModalCurrentMultLabelEl: "cell_modal_current_mult", cellModalNextMultLabelEl: "cell_modal_next_mult",
       cellModalCostLabelEl: "cell_modal_cost", cellUpgModalCloseBtn: "cell_modal_close_btn",
       cellUpgModalBuyBtn: "cell_modal_buy_btn",
-      eventsCurrencyPrefixEl: "events_currency_prefix", eventsCurrencySuffixEl: "events_currency_suffix"
+      eventsCurrencyPrefixEl: "events_currency_prefix", eventsCurrencySuffixEl: "events_currency_suffix",
+      soundBtn: "sound_btn_title:title", soundModalTitleEl: "sound_modal_title",
+      musicVolumeLabelEl: "music_volume_label", sfxVolumeLabelEl: "sfx_volume_label",
+      soundModalCloseBtn: "sound_close_btn"
     };
     Object.keys(map).forEach(function(id){
       var spec = map[id];
@@ -1160,6 +1247,224 @@
     updateHeader();
     updateWheelStatus();
   }
+
+  // ---------- audio (procedurally generated, no external files / no copyright) ----------
+  var AUDIO_SAVE_KEY = "cookieMergeAudio_v1";
+  var audioSettings = { music: 0.35, sfx: 0.5 };
+
+  function loadAudioSettings(){
+    try{
+      var raw = localStorage.getItem(AUDIO_SAVE_KEY);
+      if(raw){
+        var d = JSON.parse(raw);
+        if(typeof d.music === "number") audioSettings.music = Math.min(1, Math.max(0, d.music));
+        if(typeof d.sfx === "number") audioSettings.sfx = Math.min(1, Math.max(0, d.sfx));
+      }
+    }catch(e){}
+  }
+
+  function saveAudioSettings(){
+    try{ localStorage.setItem(AUDIO_SAVE_KEY, JSON.stringify(audioSettings)); }catch(e){}
+  }
+
+  var audioCtx = null;
+  var musicGain = null;
+  var sfxGain = null;
+
+  function ensureAudioCtx(){
+    if(audioCtx) return audioCtx;
+    try{
+      var Ctx = window.AudioContext || window.webkitAudioContext;
+      if(!Ctx) return null;
+      audioCtx = new Ctx();
+      var master = audioCtx.createGain();
+      master.gain.value = 1;
+      master.connect(audioCtx.destination);
+      musicGain = audioCtx.createGain();
+      musicGain.gain.value = audioSettings.music;
+      musicGain.connect(master);
+      sfxGain = audioCtx.createGain();
+      sfxGain.gain.value = audioSettings.sfx;
+      sfxGain.connect(master);
+    }catch(e){ audioCtx = null; }
+    return audioCtx;
+  }
+
+  function playToneAt(freq, duration, type, peakGain, atTime, destGain){
+    var ctx = audioCtx;
+    if(!ctx || !destGain) return;
+    var osc = ctx.createOscillator();
+    osc.type = type || "sine";
+    osc.frequency.setValueAtTime(freq, atTime);
+    var g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, atTime);
+    g.gain.exponentialRampToValueAtTime(Math.max(peakGain, 0.001), atTime + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001, atTime + duration);
+    osc.connect(g);
+    g.connect(destGain);
+    osc.start(atTime);
+    osc.stop(atTime + duration + 0.03);
+  }
+
+  function playSfx(notes){
+    var ctx = ensureAudioCtx();
+    if(!ctx || !sfxGain) return;
+    if(ctx.state === "suspended") ctx.resume().catch(function(){});
+    var t0 = ctx.currentTime;
+    notes.forEach(function(n){
+      playToneAt(n.f, n.d, n.type, n.g, t0 + (n.at||0), sfxGain);
+    });
+  }
+
+  function sfxMerge(level){
+    var base = 420 + Math.min(level||1, 14) * 10;
+    playSfx([
+      { f: base, d: 0.09, type: "sine", g: 0.22, at: 0 },
+      { f: base * 1.5, d: 0.14, type: "sine", g: 0.2, at: 0.06 }
+    ]);
+  }
+  function sfxBuy(){
+    playSfx([
+      { f: 587, d: 0.06, type: "square", g: 0.12, at: 0 },
+      { f: 880, d: 0.1, type: "square", g: 0.12, at: 0.06 }
+    ]);
+  }
+  function sfxClick(){
+    playSfx([{ f: 320, d: 0.035, type: "square", g: 0.06, at: 0 }]);
+  }
+  function sfxError(){
+    playSfx([{ f: 170, d: 0.18, type: "sawtooth", g: 0.14, at: 0 }]);
+  }
+  function sfxUpgrade(){
+    playSfx([
+      { f: 392, d: 0.08, type: "triangle", g: 0.16, at: 0 },
+      { f: 523, d: 0.08, type: "triangle", g: 0.16, at: 0.06 },
+      { f: 659, d: 0.14, type: "triangle", g: 0.18, at: 0.12 }
+    ]);
+  }
+  function sfxDelete(){
+    playSfx([
+      { f: 220, d: 0.12, type: "sawtooth", g: 0.12, at: 0 },
+      { f: 140, d: 0.16, type: "sawtooth", g: 0.1, at: 0.08 }
+    ]);
+  }
+  function sfxUnlock(){
+    playSfx([
+      { f: 660, d: 0.08, type: "sine", g: 0.16, at: 0 },
+      { f: 880, d: 0.08, type: "sine", g: 0.16, at: 0.08 },
+      { f: 1108, d: 0.16, type: "sine", g: 0.18, at: 0.16 }
+    ]);
+  }
+  function sfxWin(){
+    playSfx([
+      { f: 523, d: 0.1, type: "sine", g: 0.18, at: 0 },
+      { f: 659, d: 0.1, type: "sine", g: 0.18, at: 0.1 },
+      { f: 784, d: 0.1, type: "sine", g: 0.18, at: 0.2 },
+      { f: 1046, d: 0.18, type: "sine", g: 0.2, at: 0.3 }
+    ]);
+  }
+  function sfxSpin(){
+    playSfx([
+      { f: 260, d: 0.4, type: "triangle", g: 0.1, at: 0 },
+      { f: 340, d: 0.3, type: "triangle", g: 0.08, at: 0.12 }
+    ]);
+  }
+
+  var MUSIC_TEMPO = 122;
+  var MUSIC_STEP = 60 / MUSIC_TEMPO / 2;
+  var MUSIC_MELODY = [
+    523,0,659,0, 784,0,659,587,
+    523,0,392,0, 440,0,523,0,
+    659,0,784,0, 880,784,659,0,
+    587,0,523,0, 392,440,523,0
+  ];
+  var MUSIC_BASS = [
+    262,0,0,0, 0,0,0,0,
+    196,0,0,0, 0,0,0,0,
+    220,0,0,0, 0,0,0,0,
+    196,0,0,0, 0,0,0,0
+  ];
+  var musicNextStepTime = 0;
+  var musicStepIndex = 0;
+  var musicTimerId = null;
+  var musicStarted = false;
+
+  function scheduleMusicStep(){
+    var ctx = audioCtx;
+    if(!ctx || !musicGain) return;
+    var lookahead = 0.2;
+    while(musicNextStepTime < ctx.currentTime + lookahead){
+      var i = musicStepIndex % MUSIC_MELODY.length;
+      var freq = MUSIC_MELODY[i];
+      if(freq) playToneAt(freq, MUSIC_STEP*1.15, "triangle", 0.05, musicNextStepTime, musicGain);
+      var bassFreq = MUSIC_BASS[i];
+      if(bassFreq) playToneAt(bassFreq, MUSIC_STEP*3.6, "sine", 0.045, musicNextStepTime, musicGain);
+      musicNextStepTime += MUSIC_STEP;
+      musicStepIndex++;
+    }
+  }
+
+  function startMusic(){
+    var ctx = ensureAudioCtx();
+    if(!ctx || musicStarted) return;
+    musicStarted = true;
+    if(ctx.state === "suspended") ctx.resume().catch(function(){});
+    musicNextStepTime = ctx.currentTime + 0.1;
+    musicStepIndex = 0;
+    scheduleMusicStep();
+    musicTimerId = setInterval(scheduleMusicStep, 150);
+  }
+
+  function unlockAudioOnce(){
+    var ctx = ensureAudioCtx();
+    if(ctx && ctx.state === "suspended") ctx.resume().catch(function(){});
+    startMusic();
+    document.removeEventListener("pointerdown", unlockAudioOnce);
+  }
+  document.addEventListener("pointerdown", unlockAudioOnce);
+
+  var soundBtnEl = document.getElementById("soundBtn");
+  var soundModalBackdropEl = document.getElementById("soundModalBackdrop");
+  var soundModalCloseBtnEl = document.getElementById("soundModalCloseBtn");
+  var musicVolumeSliderEl = document.getElementById("musicVolumeSlider");
+  var sfxVolumeSliderEl = document.getElementById("sfxVolumeSlider");
+  var musicVolumeValEl = document.getElementById("musicVolumeValEl");
+  var sfxVolumeValEl = document.getElementById("sfxVolumeValEl");
+
+  function updateSoundUI(){
+    musicVolumeSliderEl.value = Math.round(audioSettings.music*100);
+    sfxVolumeSliderEl.value = Math.round(audioSettings.sfx*100);
+    musicVolumeValEl.textContent = Math.round(audioSettings.music*100) + "%";
+    sfxVolumeValEl.textContent = Math.round(audioSettings.sfx*100) + "%";
+    soundBtnEl.textContent = (audioSettings.music <= 0 && audioSettings.sfx <= 0) ? "🔇" : "🔊";
+  }
+
+  musicVolumeSliderEl.addEventListener("input", function(){
+    audioSettings.music = musicVolumeSliderEl.value / 100;
+    if(musicGain) musicGain.gain.value = audioSettings.music;
+    updateSoundUI();
+    saveAudioSettings();
+  });
+  sfxVolumeSliderEl.addEventListener("input", function(){
+    audioSettings.sfx = sfxVolumeSliderEl.value / 100;
+    if(sfxGain) sfxGain.gain.value = audioSettings.sfx;
+    updateSoundUI();
+    saveAudioSettings();
+  });
+  sfxVolumeSliderEl.addEventListener("change", function(){ sfxClick(); });
+
+  soundBtnEl.addEventListener("click", function(){
+    soundModalBackdropEl.classList.add("show");
+  });
+  soundModalCloseBtnEl.addEventListener("click", function(){
+    soundModalBackdropEl.classList.remove("show");
+  });
+  soundModalBackdropEl.addEventListener("click", function(e){
+    if(e.target === soundModalBackdropEl) soundModalBackdropEl.classList.remove("show");
+  });
+
+  loadAudioSettings();
+  updateSoundUI();
 
   // ---------- persistence ----------
   function save(){
@@ -1310,6 +1615,7 @@
       updateEventCurrencyDisplays();
       updateEventsStatus();
       showToast(t("toast_unlock_gained", {n: gained}));
+      sfxUnlock();
     }
   }
 
@@ -1318,10 +1624,12 @@
     if(!meta) return;
     if(isEventActive(key)){
       showToast(t("toast_event_already_active"));
+      sfxError();
       return;
     }
     if(state.eventCurrency < 1){
       showToast(t("toast_not_enough_cookies"));
+      sfxError();
       return;
     }
     state.eventCurrency -= 1;
@@ -1331,6 +1639,7 @@
     updateEventsStatus();
     save();
     showToast(t("toast_event_activated", {icon: meta.icon, name: eventName(key)}));
+    sfxUpgrade();
   }
 
   function randomEmptyIndex(){
@@ -1526,12 +1835,14 @@
     }
     updateHeader();
     save();
+    sfxWin();
   }
 
   function spinWheel(){
     if(wheelSpinning) return;
     if(!isWheelReady()){
       showToast(t("wheel_not_ready_toast"));
+      sfxError();
       return;
     }
     var idx = pickWeightedPrize();
@@ -1554,6 +1865,7 @@
     }
     save();
     updateWheelStatus();
+    sfxSpin();
 
     wheelSpinEl.style.transform = "rotate(" + wheelRotation + "deg)";
     setTimeout(function(){
@@ -1598,15 +1910,18 @@
     var code = (promoInputEl.value||"").trim().toUpperCase();
     if(!code){
       promoStatusEl.textContent = t("promo_empty");
+      sfxError();
       return;
     }
     if(state.redeemedCodes[code]){
       promoStatusEl.textContent = t("promo_used");
+      sfxError();
       return;
     }
     var def = PROMO_CODES[code];
     if(!def){
       promoStatusEl.textContent = t("promo_not_found");
+      sfxError();
       return;
     }
     state.redeemedCodes[code] = true;
@@ -1623,6 +1938,7 @@
     }
     promoInputEl.value = "";
     save();
+    sfxWin();
   }
 
   promoBtnEl.addEventListener("click", redeemPromo);
@@ -1640,6 +1956,7 @@
     var cost = nextIncomeUpgradeCost();
     if(state.eventCurrency < cost){
       showToast(t("toast_not_enough_cookies"));
+      sfxError();
       return;
     }
     state.eventCurrency -= cost;
@@ -1648,15 +1965,18 @@
     updateHeader();
     save();
     showToast(t("toast_income_upgraded"));
+    sfxUpgrade();
   }
 
   function buyOfflineUpgrade(){
     if(offlineCapSeconds() >= OFFLINE_MAX_SECONDS){
       showToast(t("toast_offline_maxed"));
+      sfxError();
       return;
     }
     if(state.eventCurrency < 1){
       showToast(t("toast_not_enough_cookies"));
+      sfxError();
       return;
     }
     state.eventCurrency -= 1;
@@ -1664,6 +1984,7 @@
     updateEventCurrencyDisplays();
     save();
     showToast(t("toast_offline_upgraded", {label: offlineCapLabel()}));
+    sfxUpgrade();
   }
 
   function updateUpgradesPanel(){
@@ -1686,6 +2007,7 @@
     var cost = nextCellUpgradeCost(level);
     if(state.eventCurrency < cost){
       showToast(t("toast_not_enough_cookies"));
+      sfxError();
       return;
     }
     state.eventCurrency -= cost;
@@ -1695,6 +2017,7 @@
     updateHeader();
     save();
     showToast(t("toast_cell_upgraded", {x: cellMultiplier(level+1).toFixed(1)}));
+    sfxUpgrade();
     refreshCellUpgradeModal();
     updateCellUpgradeGrid();
   }
@@ -2198,6 +2521,7 @@
       state.totalMerges = (state.totalMerges||0) + 1;
       setMaxLevel(newLevel);
       selectedIdx = null;
+      sfxMerge(newLevel);
       renderBoard();
       renderCell(idx, true);
       renderShop();
@@ -2303,6 +2627,7 @@
             state.grid[idx] = null;
             state.totalMerges = (state.totalMerges||0) + 1;
             setMaxLevel(newLevel);
+            sfxMerge(newLevel);
             renderBoard();
             renderCell(tIdx, true);
             renderShop();
@@ -2376,10 +2701,12 @@
     if(!level) return false;
     if(!canDeleteLevel(level)){
       showToast(t("toast_cannot_delete_protected"));
+      sfxError();
       return false;
     }
     state.grid[idx] = null;
     if(selectedIdx === idx) selectedIdx = null;
+    sfxDelete();
     save();
     return true;
   }
@@ -2459,17 +2786,20 @@
     var price = priceFor(level);
     if(state.money < price){
       showToast(t("toast_not_enough_money"));
+      sfxError();
       return;
     }
     var emptyIdx = state.grid.indexOf(null);
     if(emptyIdx === -1){
       showToast(t("toast_board_full"));
+      sfxError();
       return;
     }
     state.money -= price;
     state.grid[emptyIdx] = level;
     setMaxLevel(level);
     bumpPrice(level);
+    sfxBuy();
     renderCell(emptyIdx, true);
     renderShop();
     updateHeader();
@@ -2651,6 +2981,7 @@
     });
     mainEl.classList.toggle("board-hidden", tab !== "shop");
     if(tab === "leaders") refreshLeaderboardsPanel();
+    sfxClick();
   }
 
   Object.keys(TABS).forEach(function(key){
