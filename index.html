@@ -691,6 +691,15 @@
     color:var(--good);
     font-weight:800;
   }
+  .ach-tier{
+    margin-left:auto;
+    font-size:10.5px;
+    font-weight:800;
+    color:var(--cream-dim);
+    background:rgba(0,0,0,.28);
+    border-radius:8px;
+    padding:2px 7px;
+  }
   .ach-progress-bar{
     height:8px;
     border-radius:5px;
@@ -1337,7 +1346,7 @@
       ach_income_label:"Доход: {n}/сек",
       ach_purchases_label:"Покупок в магазине: {n}",
       ach_reward_label:"Награда: {reward} 🍪",
-      ach_reward_claimed:"Получено: {reward} 🍪 ✓",
+      ach_all_done:"Все уровни этой категории пройдены! 🎉",
       toast_achievement_unlocked:"🎖️ Достижение! {name} — +{reward} 🍪",
       toast_achievements_unlocked_multi:"🎖️ Получено достижений: {n}! +{reward} 🍪"
     },
@@ -1483,7 +1492,7 @@
       ach_income_label:"Income: {n}/sec",
       ach_purchases_label:"Shop purchases: {n}",
       ach_reward_label:"Reward: {reward} 🍪",
-      ach_reward_claimed:"Claimed: {reward} 🍪 ✓",
+      ach_all_done:"All tiers in this category are complete! 🎉",
       toast_achievement_unlocked:"🎖️ Achievement! {name} — +{reward} 🍪",
       toast_achievements_unlocked_multi:"🎖️ Achievements unlocked: {n}! +{reward} 🍪"
     }
@@ -1954,6 +1963,10 @@
     return n.toFixed(2);
   }
 
+  function fmtCount(n){
+    return fmt(n).replace(/\.00(?=[BMK]?$)/, "");
+  }
+
   function setMaxLevel(newLevel){
     if(newLevel > state.maxLevel){
       state.maxLevel = newLevel;
@@ -2300,7 +2313,7 @@
       save();
       sfxUnlock();
       if(unlockedNow.length === 1){
-        showToast(t("toast_achievement_unlocked", {name: t(ACH_GROUP_LABEL_KEY[unlockedNow[0].group], {n: fmt(unlockedNow[0].threshold)}), reward: unlockedNow[0].reward}));
+        showToast(t("toast_achievement_unlocked", {name: t(ACH_GROUP_LABEL_KEY[unlockedNow[0].group], {n: fmtCount(unlockedNow[0].threshold)}), reward: unlockedNow[0].reward}));
       }else{
         showToast(t("toast_achievements_unlocked_multi", {n: unlockedNow.length, reward: totalReward}));
       }
@@ -2309,47 +2322,60 @@
 
   var achContainerEl = document.getElementById("achContainer");
 
+  // Each group shows only its next locked tier; claiming it reveals the
+  // next-higher tier of the same type instead of listing every tier at once.
+  function currentAchievementForGroup(group){
+    var items = ACHIEVEMENTS.filter(function(a){ return a.group === group; });
+    for(var i=0;i<items.length;i++){
+      if(!state.achievementsUnlocked[items[i].id]) return { item: items[i], tier: i+1, total: items.length };
+    }
+    return null;
+  }
+
   function renderAchievementsPanel(){
     achContainerEl.innerHTML = "";
     ACH_GROUP_ORDER.forEach(function(group){
-      var items = ACHIEVEMENTS.filter(function(a){ return a.group === group; });
-      if(!items.length) return;
+      var next = currentAchievementForGroup(group);
 
-      var title = document.createElement("div");
-      title.className = "iap-section-title";
-      title.textContent = t(ACH_GROUP_TITLE_KEY[group]);
-      achContainerEl.appendChild(title);
+      var card = document.createElement("div");
+      card.className = "ach-card";
 
-      items.forEach(function(a){
-        var unlocked = !!state.achievementsUnlocked[a.id];
-        var progress = achievementProgress(a);
-        var pct = Math.max(0, Math.min(100, (progress / a.threshold) * 100));
+      var head = document.createElement("div");
+      head.className = "ach-head";
 
-        var card = document.createElement("div");
-        card.className = "ach-card" + (unlocked ? " unlocked" : "");
-
-        var head = document.createElement("div");
-        head.className = "ach-head";
-        head.innerHTML = "<span class=\"ach-icon\">"+ACH_GROUP_ICON[group]+"</span><span>"+t(ACH_GROUP_LABEL_KEY[group], {n: fmt(a.threshold)})+"</span>" + (unlocked ? "<span class=\"ach-check\">✓</span>" : "");
+      if(!next){
+        card.classList.add("unlocked");
+        head.innerHTML = "<span class=\"ach-icon\">"+ACH_GROUP_ICON[group]+"</span><span>"+t(ACH_GROUP_TITLE_KEY[group])+"</span><span class=\"ach-check\">✓</span>";
         card.appendChild(head);
-
-        var bar = document.createElement("div");
-        bar.className = "ach-progress-bar";
-        var fill = document.createElement("div");
-        fill.className = "ach-progress-fill";
-        fill.style.width = pct + "%";
-        bar.appendChild(fill);
-        card.appendChild(bar);
-
-        var meta = document.createElement("div");
-        meta.className = "ach-meta";
-        meta.textContent = unlocked
-          ? t("ach_reward_claimed", {reward: a.reward})
-          : (fmt(progress) + " / " + fmt(a.threshold) + "   ·   " + t("ach_reward_label", {reward: a.reward}));
-        card.appendChild(meta);
-
+        var maxedMeta = document.createElement("div");
+        maxedMeta.className = "ach-meta";
+        maxedMeta.textContent = t("ach_all_done");
+        card.appendChild(maxedMeta);
         achContainerEl.appendChild(card);
-      });
+        return;
+      }
+
+      var a = next.item;
+      var progress = achievementProgress(a);
+      var pct = Math.max(0, Math.min(100, (progress / a.threshold) * 100));
+
+      head.innerHTML = "<span class=\"ach-icon\">"+ACH_GROUP_ICON[group]+"</span><span>"+t(ACH_GROUP_LABEL_KEY[group], {n: fmtCount(a.threshold)})+"</span><span class=\"ach-tier\">"+next.tier+"/"+next.total+"</span>";
+      card.appendChild(head);
+
+      var bar = document.createElement("div");
+      bar.className = "ach-progress-bar";
+      var fill = document.createElement("div");
+      fill.className = "ach-progress-fill";
+      fill.style.width = pct + "%";
+      bar.appendChild(fill);
+      card.appendChild(bar);
+
+      var meta = document.createElement("div");
+      meta.className = "ach-meta";
+      meta.textContent = fmtCount(progress) + " / " + fmtCount(a.threshold) + "   ·   " + t("ach_reward_label", {reward: a.reward});
+      card.appendChild(meta);
+
+      achContainerEl.appendChild(card);
     });
   }
 
