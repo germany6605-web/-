@@ -1734,7 +1734,7 @@
 
   // ---------- economy ----------
   function basePrice(level){
-    var p = 5 * Math.pow(3, level-1);
+    var p = 5 * Math.pow(2, level-1);
     return Math.round(p*100)/100;
   }
 
@@ -1748,7 +1748,7 @@
   function bumpPrice(level){
     if(isEventActive("fixedPrice")) return;
     var x = priceFor(level);
-    state.prices[level] = Math.round((x*0.01 + x)*100)/100;
+    state.prices[level] = Math.round((x*0.07 + x)*100)/100;
   }
 
   function isUnlocked(level){
