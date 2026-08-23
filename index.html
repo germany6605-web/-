@@ -661,6 +661,60 @@
     cursor:default;
   }
 
+  #achContainer{
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+  }
+  .ach-card{
+    background:rgba(0,0,0,.22);
+    border-radius:14px;
+    padding:10px 12px;
+    border:1px solid rgba(255,255,255,.05);
+  }
+  .ach-card.unlocked{
+    border-color:rgba(139,209,124,.5);
+    background:rgba(139,209,124,.08);
+  }
+  .ach-head{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    font-size:13px;
+    font-weight:700;
+    color:var(--cream);
+    margin-bottom:6px;
+  }
+  .ach-icon{font-size:16px;}
+  .ach-check{
+    margin-left:auto;
+    color:var(--good);
+    font-weight:800;
+  }
+  .ach-progress-bar{
+    height:8px;
+    border-radius:5px;
+    background:rgba(255,255,255,.08);
+    overflow:hidden;
+    margin-bottom:6px;
+  }
+  .ach-progress-fill{
+    height:100%;
+    border-radius:5px;
+    background:linear-gradient(90deg,var(--accent),var(--accent-2));
+  }
+  .ach-card.unlocked .ach-progress-fill{
+    background:linear-gradient(90deg,var(--good),#6fc95a);
+  }
+  .ach-meta{
+    font-size:11.5px;
+    color:var(--cream-dim);
+  }
+  .ach-card.unlocked .ach-meta{
+    color:var(--good);
+    font-weight:600;
+  }
+
   .toast{
     position:fixed;
     left:50%;
@@ -920,14 +974,12 @@
   }
 
   @media (min-width:820px){
-    #app{height:auto;min-height:100%;}
-    main{flex-direction:row;flex:none;}
-    .board-wrap{flex:0 0 auto;width:520px;align-self:flex-start;}
+    main{flex-direction:row;}
+    .board-wrap{flex:0 0 auto;width:520px;align-self:flex-start;max-height:100%;overflow-y:auto;}
     main.board-hidden .board-wrap{display:block;}
-    .shop-wrap{flex:1;display:block;min-height:0;overflow:visible;}
+    .shop-wrap{flex:1;}
     .tabs{flex-wrap:nowrap;}
     .tab-btn{flex:1 1 0;}
-    .tab-panel.active{display:block;flex:none;overflow-y:visible;}
     #shop{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));overflow:visible;padding:2px;margin:0;}
     .shop-card{flex:none;}
   }
@@ -961,6 +1013,7 @@
         <button class="tab-btn" id="tabBtnUpgrades" data-tab="upgrades">⚡ Улучш.</button>
         <button class="tab-btn" id="tabBtnLeaders" data-tab="leaders">🏆 Топы</button>
         <button class="tab-btn" id="tabBtnBonus" data-tab="bonus">🎁 Бонусы</button>
+        <button class="tab-btn" id="tabBtnAch" data-tab="achievements">🎖️ Достижения</button>
       </div>
       <div class="tab-panel active" id="shopPanel">
         <div class="shop-title" id="shopTitleEl">Магазин печенья</div>
@@ -1035,6 +1088,11 @@
         <div class="hint" id="bonusHintEl">Смотрите рекламу или покупайте бонусы за реальные деньги — печеньки, доход, спины колеса и постоянные усиления.</div>
         <div id="iapContainer"></div>
       </div>
+      <div class="tab-panel" id="achievementsPanel">
+        <div class="shop-title" id="achTitleEl">Достижения</div>
+        <div class="hint" id="achHintEl">Выполняйте цели и получайте печеньки в награду.</div>
+        <div id="achContainer"></div>
+      </div>
     </div>
   </main>
 </div>
@@ -1102,7 +1160,7 @@
   var CELLS = GRID_SIZE*GRID_SIZE;
   var SAVE_KEY = "cookieMergeSave_v1";
   var TICK_MS = 200;
-  var MONEY_BAG_INTERVAL = 3*60*60*1000;
+  var MONEY_BAG_INTERVAL = 15*60*1000;
   var MONEY_BAG_INCOME_SECONDS = 5*60;
   var WHEEL_SPIN_COOLDOWN = 15*60*1000;
   var WHEEL_AD_SPIN_DAILY_LIMIT = 5;
@@ -1126,7 +1184,10 @@
     totalMerges: 0,
     permanentX2: false,
     moneyBag: null,
-    moneyBagNextAt: Date.now() + MONEY_BAG_INTERVAL
+    moneyBagNextAt: Date.now() + MONEY_BAG_INTERVAL,
+    totalPurchases: 0,
+    maxIncomeRate: 0,
+    achievementsUnlocked: {}
   };
 
   var selectedIdx = null;
@@ -1137,7 +1198,7 @@
     ru:{
       trash_hint:"Корзина — перетащите печенье или выберите его и нажмите. Топ-3 уровня защищены.",
       currency_badge_title:"Печеньки — валюта для событий, откройте вкладку События",
-      tab_shop:"🛒 Магазин", tab_events:"🎉 События", tab_wheel:"🎡 Колесо", tab_upgrades:"⚡ Улучш.", tab_leaders:"🏆 Топы", tab_bonus:"🎁 Бонусы",
+      tab_shop:"🛒 Магазин", tab_events:"🎉 События", tab_wheel:"🎡 Колесо", tab_upgrades:"⚡ Улучш.", tab_leaders:"🏆 Топы", tab_bonus:"🎁 Бонусы", tab_achievements:"🎖️ Дост.",
       shop_title:"Магазин печенья",
       shop_hint:"Перетащите печенье на такое же — чтобы объединить, на пустую клетку — чтобы переставить. Короткое нажатие тоже работает.",
       buy_btn:"Купить",
@@ -1266,12 +1327,24 @@
       iap_spins10_title:"10 спинов колеса",
       iap_x2_title:"x2 деньги навсегда (стакуется с улучшениями и событиями)",
       iap_ad_btn:"🎬 Реклама",
-      iap_owned_btn:"Куплено ✓"
+      iap_owned_btn:"Куплено ✓",
+      ach_title:"Достижения",
+      ach_hint:"Выполняйте цели и получайте печеньки в награду.",
+      ach_group_merges:"Объединения",
+      ach_group_income:"Доход в секунду (без учёта событий)",
+      ach_group_purchases:"Покупки в магазине",
+      ach_merges_label:"Объединения: {n}",
+      ach_income_label:"Доход: {n}/сек",
+      ach_purchases_label:"Покупок в магазине: {n}",
+      ach_reward_label:"Награда: {reward} 🍪",
+      ach_reward_claimed:"Получено: {reward} 🍪 ✓",
+      toast_achievement_unlocked:"🎖️ Достижение! {name} — +{reward} 🍪",
+      toast_achievements_unlocked_multi:"🎖️ Получено достижений: {n}! +{reward} 🍪"
     },
     en:{
       trash_hint:"Trash — drag a cookie here, or select it and tap. The top 3 levels are protected.",
       currency_badge_title:"Cookie Points — currency for events, open the Events tab",
-      tab_shop:"🛒 Shop", tab_events:"🎉 Events", tab_wheel:"🎡 Wheel", tab_upgrades:"⚡ Upgr.", tab_leaders:"🏆 Ranks", tab_bonus:"🎁 Bonuses",
+      tab_shop:"🛒 Shop", tab_events:"🎉 Events", tab_wheel:"🎡 Wheel", tab_upgrades:"⚡ Upgr.", tab_leaders:"🏆 Ranks", tab_bonus:"🎁 Bonuses", tab_achievements:"🎖️ Ach.",
       shop_title:"Cookie Shop",
       shop_hint:"Drag a cookie onto a matching one to merge, or onto an empty cell to move it. A short tap works too.",
       buy_btn:"Buy",
@@ -1400,7 +1473,19 @@
       iap_spins10_title:"10 wheel spins",
       iap_x2_title:"x2 money forever (stacks with upgrades and events)",
       iap_ad_btn:"🎬 Ad",
-      iap_owned_btn:"Owned ✓"
+      iap_owned_btn:"Owned ✓",
+      ach_title:"Achievements",
+      ach_hint:"Complete goals to earn cookie points as a reward.",
+      ach_group_merges:"Merges",
+      ach_group_income:"Income per second (excluding events)",
+      ach_group_purchases:"Shop purchases",
+      ach_merges_label:"Merges: {n}",
+      ach_income_label:"Income: {n}/sec",
+      ach_purchases_label:"Shop purchases: {n}",
+      ach_reward_label:"Reward: {reward} 🍪",
+      ach_reward_claimed:"Claimed: {reward} 🍪 ✓",
+      toast_achievement_unlocked:"🎖️ Achievement! {name} — +{reward} 🍪",
+      toast_achievements_unlocked_multi:"🎖️ Achievements unlocked: {n}! +{reward} 🍪"
     }
   };
 
@@ -1452,6 +1537,7 @@
       musicVolumeLabelEl: "music_volume_label", sfxVolumeLabelEl: "sfx_volume_label",
       soundModalCloseBtn: "sound_close_btn",
       tabBtnBonus: "tab_bonus", bonusTitleEl: "bonus_title", bonusHintEl: "bonus_hint",
+      tabBtnAch: "tab_achievements", achTitleEl: "ach_title", achHintEl: "ach_hint",
       bagModalTitleEl: "bag_modal_title", bagModalDescEl: "bag_modal_desc",
       bagModalAdBtn: "bag_modal_ad_btn", bagModalCloseBtn: "bag_modal_close_btn"
     };
@@ -1482,6 +1568,7 @@
     updateHeader();
     updateWheelStatus();
     if(typeof renderIapPanel === "function") renderIapPanel();
+    if(typeof renderAchievementsPanel === "function") renderAchievementsPanel();
   }
 
   // ---------- audio (procedurally generated, no external files / no copyright) ----------
@@ -1729,6 +1816,9 @@
     state.permanentX2 = false;
     state.moneyBag = null;
     state.moneyBagNextAt = Date.now() + MONEY_BAG_INTERVAL;
+    state.totalPurchases = 0;
+    state.maxIncomeRate = 0;
+    state.achievementsUnlocked = {};
     selectedIdx = null;
     // Write the fresh state ourselves so the beforeunload handler that fires
     // during reload has nothing stale left to re-save over it.
@@ -1763,6 +1853,9 @@
       state.permanentX2 = !!data.permanentX2;
       state.moneyBag = (data.moneyBag && typeof data.moneyBag === "object" && state.grid[data.moneyBag.idx] === null) ? data.moneyBag : null;
       state.moneyBagNextAt = typeof data.moneyBagNextAt === "number" ? data.moneyBagNextAt : (Date.now() + MONEY_BAG_INTERVAL);
+      state.totalPurchases = typeof data.totalPurchases === "number" ? data.totalPurchases : 0;
+      state.maxIncomeRate = typeof data.maxIncomeRate === "number" ? data.maxIncomeRate : 0;
+      state.achievementsUnlocked = (data.achievementsUnlocked && typeof data.achievementsUnlocked === "object") ? data.achievementsUnlocked : {};
       var elapsed = (Date.now() - (data.lastSeen || Date.now())) / 1000;
       elapsed = Math.max(0, Math.min(elapsed, offlineCapSeconds()));
       if(elapsed > 5){
@@ -2148,6 +2241,116 @@
     if(h) h.textContent = v;
     if(p) p.textContent = v;
     updateUpgradesPanel();
+  }
+
+  // ---------- achievements ----------
+  var ACHIEVEMENTS = [
+    { id:"merge_100",       group:"merges",    threshold:100,       reward:1 },
+    { id:"merge_1000",      group:"merges",    threshold:1000,      reward:5 },
+    { id:"merge_5000",      group:"merges",    threshold:5000,      reward:50 },
+    { id:"merge_10000",     group:"merges",    threshold:10000,     reward:100 },
+    { id:"merge_100000",    group:"merges",    threshold:100000,    reward:1000 },
+    { id:"merge_1000000",   group:"merges",    threshold:1000000,   reward:10000 },
+
+    { id:"income_100",         group:"income", threshold:100,         reward:1 },
+    { id:"income_1000",        group:"income", threshold:1000,        reward:2 },
+    { id:"income_10000",       group:"income", threshold:10000,       reward:3 },
+    { id:"income_100000",      group:"income", threshold:100000,      reward:5 },
+    { id:"income_1000000",     group:"income", threshold:1000000,     reward:10 },
+    { id:"income_10000000",    group:"income", threshold:10000000,    reward:20 },
+    { id:"income_100000000",   group:"income", threshold:100000000,   reward:100 },
+    { id:"income_1000000000",  group:"income", threshold:1000000000,  reward:500 },
+    { id:"income_10000000000", group:"income", threshold:10000000000, reward:1000 },
+
+    { id:"buy_10",      group:"purchases", threshold:10,      reward:1 },
+    { id:"buy_100",     group:"purchases", threshold:100,     reward:2 },
+    { id:"buy_1000",    group:"purchases", threshold:1000,    reward:5 },
+    { id:"buy_10000",   group:"purchases", threshold:10000,   reward:10 },
+    { id:"buy_100000",  group:"purchases", threshold:100000,  reward:50 },
+    { id:"buy_1000000", group:"purchases", threshold:1000000, reward:100 }
+  ];
+
+  var ACH_GROUP_ORDER = ["merges","income","purchases"];
+  var ACH_GROUP_ICON = { merges:"🔀", income:"⚡", purchases:"🛒" };
+  var ACH_GROUP_TITLE_KEY = { merges:"ach_group_merges", income:"ach_group_income", purchases:"ach_group_purchases" };
+  var ACH_GROUP_LABEL_KEY = { merges:"ach_merges_label", income:"ach_income_label", purchases:"ach_purchases_label" };
+
+  function achievementProgress(a){
+    if(a.group === "merges") return state.totalMerges||0;
+    if(a.group === "income") return state.maxIncomeRate||0;
+    if(a.group === "purchases") return state.totalPurchases||0;
+    return 0;
+  }
+
+  function checkAchievements(){
+    var unlockedNow = [];
+    var totalReward = 0;
+    ACHIEVEMENTS.forEach(function(a){
+      if(state.achievementsUnlocked[a.id]) return;
+      if(achievementProgress(a) >= a.threshold){
+        state.achievementsUnlocked[a.id] = true;
+        state.eventCurrency += a.reward;
+        totalReward += a.reward;
+        unlockedNow.push(a);
+      }
+    });
+    if(unlockedNow.length){
+      updateEventCurrencyDisplays();
+      renderAchievementsPanel();
+      save();
+      sfxUnlock();
+      if(unlockedNow.length === 1){
+        showToast(t("toast_achievement_unlocked", {name: t(ACH_GROUP_LABEL_KEY[unlockedNow[0].group], {n: fmt(unlockedNow[0].threshold)}), reward: unlockedNow[0].reward}));
+      }else{
+        showToast(t("toast_achievements_unlocked_multi", {n: unlockedNow.length, reward: totalReward}));
+      }
+    }
+  }
+
+  var achContainerEl = document.getElementById("achContainer");
+
+  function renderAchievementsPanel(){
+    achContainerEl.innerHTML = "";
+    ACH_GROUP_ORDER.forEach(function(group){
+      var items = ACHIEVEMENTS.filter(function(a){ return a.group === group; });
+      if(!items.length) return;
+
+      var title = document.createElement("div");
+      title.className = "iap-section-title";
+      title.textContent = t(ACH_GROUP_TITLE_KEY[group]);
+      achContainerEl.appendChild(title);
+
+      items.forEach(function(a){
+        var unlocked = !!state.achievementsUnlocked[a.id];
+        var progress = achievementProgress(a);
+        var pct = Math.max(0, Math.min(100, (progress / a.threshold) * 100));
+
+        var card = document.createElement("div");
+        card.className = "ach-card" + (unlocked ? " unlocked" : "");
+
+        var head = document.createElement("div");
+        head.className = "ach-head";
+        head.innerHTML = "<span class=\"ach-icon\">"+ACH_GROUP_ICON[group]+"</span><span>"+t(ACH_GROUP_LABEL_KEY[group], {n: fmt(a.threshold)})+"</span>" + (unlocked ? "<span class=\"ach-check\">✓</span>" : "");
+        card.appendChild(head);
+
+        var bar = document.createElement("div");
+        bar.className = "ach-progress-bar";
+        var fill = document.createElement("div");
+        fill.className = "ach-progress-fill";
+        fill.style.width = pct + "%";
+        bar.appendChild(fill);
+        card.appendChild(bar);
+
+        var meta = document.createElement("div");
+        meta.className = "ach-meta";
+        meta.textContent = unlocked
+          ? t("ach_reward_claimed", {reward: a.reward})
+          : (fmt(progress) + " / " + fmt(a.threshold) + "   ·   " + t("ach_reward_label", {reward: a.reward}));
+        card.appendChild(meta);
+
+        achContainerEl.appendChild(card);
+      });
+    });
   }
 
   // ---------- wheel of fortune ----------
@@ -3541,6 +3744,7 @@
     }
     state.money -= price;
     state.grid[emptyIdx] = level;
+    state.totalPurchases = (state.totalPurchases||0) + 1;
     setMaxLevel(level);
     bumpPrice(level);
     sfxBuy();
@@ -3578,10 +3782,13 @@
     var dt = (now - lastTick) / 1000;
     lastTick = now;
     var mult = moneyMultiplier();
-    state.money += incomeRate() * mult * dt;
+    var rate = incomeRate();
+    state.money += rate * mult * dt;
+    state.maxIncomeRate = Math.max(state.maxIncomeRate||0, rate);
     rainTick(now);
     moneyBagTick(now);
     wheelFreeSpinTick(now);
+    checkAchievements();
     updateHeader();
     renderShopAffordability();
     updateEventsStatus();
@@ -3728,7 +3935,8 @@
     wheel:  { btn: document.getElementById("tabBtnWheel"),  panel: document.getElementById("wheelPanel") },
     upgrades: { btn: document.getElementById("tabBtnUpgrades"), panel: document.getElementById("upgradesPanel") },
     leaders: { btn: document.getElementById("tabBtnLeaders"), panel: document.getElementById("leadersPanel") },
-    bonus: { btn: document.getElementById("tabBtnBonus"), panel: document.getElementById("bonusPanel") }
+    bonus: { btn: document.getElementById("tabBtnBonus"), panel: document.getElementById("bonusPanel") },
+    achievements: { btn: document.getElementById("tabBtnAch"), panel: document.getElementById("achievementsPanel") }
   };
 
   var mainEl = document.getElementById("main");
@@ -3758,6 +3966,8 @@
   applyStaticI18n();
   load();
   awardUnlockCurrency();
+  state.maxIncomeRate = Math.max(state.maxIncomeRate||0, incomeRate());
+  checkAchievements();
   buildBoard();
   renderBoard();
   renderShop();
@@ -3768,6 +3978,7 @@
   updateEventCurrencyDisplays();
   updateWheelStatus();
   renderIapPanel();
+  renderAchievementsPanel();
   loadYandexSDKScript();
 })();
 </script>
