@@ -1175,6 +1175,7 @@
       promo_activated_cookies_toast:"🎁 Промокод активирован: +{n} 🍪!",
       promo_got_spins:"🎁 Получено {n} бонусных спинов!",
       promo_activated_spins_toast:"🎁 Промокод активирован: +{n} спинов колеса!",
+      promo_reset_confirm:"⚠️ Это удалит ВЕСЬ прогресс безвозвратно: печенья, деньги, улучшения, уровни. Продолжить?",
       upgrades_title:"Улучшения",
       income_upg_title:"Улучшение дохода",
       income_upg_desc:"Каждое улучшение прибавляет +0.1 к доходу в секунду навсегда. Цена первого — 1 🍪, каждое следующее вдвое дороже.",
@@ -1303,6 +1304,7 @@
       promo_activated_cookies_toast:"🎁 Promo code activated: +{n} 🍪!",
       promo_got_spins:"🎁 Got {n} bonus spins!",
       promo_activated_spins_toast:"🎁 Promo code activated: +{n} wheel spins!",
+      promo_reset_confirm:"⚠️ This will permanently delete ALL progress: cookies, money, upgrades, levels. Continue?",
       upgrades_title:"Upgrades",
       income_upg_title:"Income Upgrade",
       income_upg_desc:"Each upgrade adds +0.1 to income per second, forever. The first one costs 1 🍪, each next one costs double.",
@@ -1696,6 +1698,30 @@
     pushLeaderboardScores();
   }
 
+  function resetAllProgress(){
+    state.grid = new Array(CELLS).fill(null);
+    state.money = 20;
+    state.maxLevel = 1;
+    state.prices = {};
+    state.eventCurrency = 0;
+    state.unlockAwarded = 0;
+    state.events = {};
+    state.wheel = { nextSpinAt: Date.now(), bonusSpins: 0 };
+    state.cellUpgrades = new Array(CELLS).fill(0);
+    state.incomeUpgradeLevel = 0;
+    state.offlineCapLevel = 0;
+    state.redeemedCodes = {};
+    state.totalMerges = 0;
+    state.permanentX2 = false;
+    state.moneyBag = null;
+    state.moneyBagNextAt = Date.now() + MONEY_BAG_INTERVAL;
+    selectedIdx = null;
+    // Write the fresh state ourselves so the beforeunload handler that fires
+    // during reload has nothing stale left to re-save over it.
+    save();
+    location.reload();
+  }
+
   function load(){
     try{
       var raw = localStorage.getItem(SAVE_KEY);
@@ -1734,8 +1760,12 @@
 
   // ---------- economy ----------
   function basePrice(level){
-    var p = 5 * Math.pow(2, level-1);
+    var p = 5 * Math.pow(3, level-1);
     return Math.round(p*100)/100;
+  }
+
+  function levelIncome(level){
+    return Math.pow(2, level-1);
   }
 
   function priceFor(level){
@@ -1790,7 +1820,7 @@
   function incomeRate(){
     var sum = 0;
     for(var i=0;i<state.grid.length;i++){
-      if(state.grid[i]) sum += state.grid[i] * cellMultiplier(state.cellUpgrades[i]);
+      if(state.grid[i]) sum += levelIncome(state.grid[i]) * cellMultiplier(state.cellUpgrades[i]);
     }
     sum += incomeUpgradeBonus();
     if(state.permanentX2) sum *= 2;
@@ -2261,7 +2291,8 @@
 
   // ---------- promo codes ----------
   var PROMO_CODES = {
-    "OLD": { type:"spins", amount:5 }
+    "OLD": { type:"spins", amount:5 },
+    "RESET": { type:"reset" }
   };
 
   var promoInputEl = document.getElementById("promoInput");
@@ -2284,6 +2315,11 @@
     if(!def){
       promoStatusEl.textContent = t("promo_not_found");
       sfxError();
+      return;
+    }
+    if(def.type === "reset"){
+      if(!window.confirm(t("promo_reset_confirm"))) return;
+      resetAllProgress();
       return;
     }
     state.redeemedCodes[code] = true;
