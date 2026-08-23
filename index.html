@@ -1102,8 +1102,11 @@
   var CELLS = GRID_SIZE*GRID_SIZE;
   var SAVE_KEY = "cookieMergeSave_v1";
   var TICK_MS = 200;
-  var MONEY_BAG_INTERVAL = 15*60*1000;
+  var MONEY_BAG_INTERVAL = 3*60*60*1000;
   var MONEY_BAG_INCOME_SECONDS = 5*60;
+  var WHEEL_SPIN_COOLDOWN = 15*60*1000;
+  var WHEEL_AD_SPIN_DAILY_LIMIT = 5;
+  var WHEEL_AD_SPIN_RESET_INTERVAL = 24*60*60*1000;
 
   var state = {
     grid: new Array(CELLS).fill(null),
@@ -1114,7 +1117,8 @@
     eventCurrency: 0,
     unlockAwarded: 0,
     events: {},
-    wheel: { nextSpinAt: Date.now(), bonusSpins: 0 },
+    eventAdCooldowns: {},
+    wheel: { nextSpinAt: Date.now(), bonusSpins: 0, adSpinsUsed: 0, adSpinsResetAt: Date.now() + WHEEL_AD_SPIN_RESET_INTERVAL },
     cellUpgrades: new Array(CELLS).fill(0),
     incomeUpgradeLevel: 0,
     offlineCapLevel: 0,
@@ -1155,11 +1159,14 @@
       wheel_title:"Колесо фортуны",
       wheel_spin_btn_spinning:"Крутится...",
       wheel_spin_btn_ready:"Крутить! 🎡",
-      wheel_bonus_spins_prefix:"Бонусные спины: ",
+      wheel_bonus_spins_prefix:"Спины: ",
       wheel_ready_status:"Спин готов!",
-      wheel_next_spin_prefix:"Следующий спин через ",
-      wheel_hint:"Один бесплатный спин каждые 15 минут. Приз — деньги, печеньки или бесплатное событие.",
+      wheel_next_spin_prefix:"Следующий бесплатный спин через ",
+      wheel_next_free_prefix:"следующий бесплатный: ",
+      wheel_hint:"Бесплатный спин копится каждые 15 минут, пока вы в игре (не уходит при выходе из игры). Плюс до 5 спинов в день за рекламу. Приз — деньги, печеньки или бесплатное событие.",
       wheel_not_ready_toast:"Спин ещё не готов 🎡",
+      wheel_ad_spin_limit_toast:"Дневной лимит спинов за рекламу исчерпан (5 в сутки) 🎬",
+      wheel_ad_spin_limit_btn:"🎬 Лимит на сегодня исчерпан",
       wheel_prize_income:"🎉 Приз: доход за {dur}! +💰{amount}",
       wheel_prize_currency:"🎉 Приз: {amount} 🍪!",
       wheel_prize_event:"🎉 Приз: бесплатное событие — {icon} {name}!",
@@ -1227,7 +1234,9 @@
       toast_ad_fallback:"🎬 Показ рекламы (демо-режим вне Яндекс Игр)...",
       dev_purchase_confirm:"Демо-покупка вне Яндекс Игр: подтвердить \"оплату\" и получить бонус?",
       event_ad_btn:"🎬 За рекламу",
-      wheel_ad_spin_btn:"🎬 Крутить за рекламу",
+      event_ad_cooldown_btn:"🎬 через {time}",
+      toast_event_ad_cooldown:"За рекламу это событие можно активировать позже ⏳",
+      wheel_ad_spin_btn:"🎬 Крутить за рекламу ({n}/5)",
       toast_bag_claimed:"💰 Забрано {amount} монет!",
       toast_bag_granted:"🎁 На поле появилось печенек: {n}",
       toast_income_boost:"💰 Начислено {amount} дохода!",
@@ -1284,11 +1293,14 @@
       wheel_title:"Wheel of Fortune",
       wheel_spin_btn_spinning:"Spinning...",
       wheel_spin_btn_ready:"Spin! 🎡",
-      wheel_bonus_spins_prefix:"Bonus spins: ",
+      wheel_bonus_spins_prefix:"Spins: ",
       wheel_ready_status:"Spin ready!",
-      wheel_next_spin_prefix:"Next spin in ",
-      wheel_hint:"One free spin every 15 minutes. Prizes: money, cookie points, or a free event.",
+      wheel_next_spin_prefix:"Next free spin in ",
+      wheel_next_free_prefix:"next free: ",
+      wheel_hint:"A free spin builds up every 15 minutes while you're in the game (it doesn't accrue while you're away). Plus up to 5 spins a day by watching ads. Prizes: money, cookie points, or a free event.",
       wheel_not_ready_toast:"The spin isn't ready yet 🎡",
+      wheel_ad_spin_limit_toast:"Daily ad-spin limit reached (5 per day) 🎬",
+      wheel_ad_spin_limit_btn:"🎬 Daily limit reached",
       wheel_prize_income:"🎉 Prize: income worth {dur}! +💰{amount}",
       wheel_prize_currency:"🎉 Prize: {amount} 🍪!",
       wheel_prize_event:"🎉 Prize: a free event — {icon} {name}!",
@@ -1356,7 +1368,9 @@
       toast_ad_fallback:"🎬 Showing ad (demo mode outside Yandex Games)...",
       dev_purchase_confirm:"Demo purchase outside Yandex Games: confirm \"payment\" and receive the bonus?",
       event_ad_btn:"🎬 Watch ad",
-      wheel_ad_spin_btn:"🎬 Spin for an ad",
+      event_ad_cooldown_btn:"🎬 in {time}",
+      toast_event_ad_cooldown:"This event's ad bonus isn't ready yet ⏳",
+      wheel_ad_spin_btn:"🎬 Spin for an ad ({n}/5)",
       toast_bag_claimed:"💰 Claimed {amount} coins!",
       toast_bag_granted:"🎁 {n} cookies appeared on the board!",
       toast_income_boost:"💰 Received {amount} income!",
@@ -1438,7 +1452,6 @@
       musicVolumeLabelEl: "music_volume_label", sfxVolumeLabelEl: "sfx_volume_label",
       soundModalCloseBtn: "sound_close_btn",
       tabBtnBonus: "tab_bonus", bonusTitleEl: "bonus_title", bonusHintEl: "bonus_hint",
-      wheelAdSpinBtn: "wheel_ad_spin_btn",
       bagModalTitleEl: "bag_modal_title", bagModalDescEl: "bag_modal_desc",
       bagModalAdBtn: "bag_modal_ad_btn", bagModalCloseBtn: "bag_modal_close_btn"
     };
@@ -1706,7 +1719,8 @@
     state.eventCurrency = 0;
     state.unlockAwarded = 0;
     state.events = {};
-    state.wheel = { nextSpinAt: Date.now(), bonusSpins: 0 };
+    state.eventAdCooldowns = {};
+    state.wheel = { nextSpinAt: Date.now(), bonusSpins: 0, adSpinsUsed: 0, adSpinsResetAt: Date.now() + WHEEL_AD_SPIN_RESET_INTERVAL };
     state.cellUpgrades = new Array(CELLS).fill(0);
     state.incomeUpgradeLevel = 0;
     state.offlineCapLevel = 0;
@@ -1735,8 +1749,12 @@
       state.eventCurrency = typeof data.eventCurrency === "number" ? data.eventCurrency : 0;
       state.unlockAwarded = typeof data.unlockAwarded === "number" ? data.unlockAwarded : 0;
       state.events = (data.events && typeof data.events === "object") ? data.events : {};
-      state.wheel = (data.wheel && typeof data.wheel === "object") ? data.wheel : { nextSpinAt: Date.now(), bonusSpins: 0 };
+      state.eventAdCooldowns = (data.eventAdCooldowns && typeof data.eventAdCooldowns === "object") ? data.eventAdCooldowns : {};
+      state.wheel = (data.wheel && typeof data.wheel === "object") ? data.wheel : { nextSpinAt: Date.now(), bonusSpins: 0, adSpinsUsed: 0, adSpinsResetAt: Date.now() + WHEEL_AD_SPIN_RESET_INTERVAL };
       if(typeof state.wheel.bonusSpins !== "number") state.wheel.bonusSpins = 0;
+      if(typeof state.wheel.nextSpinAt !== "number") state.wheel.nextSpinAt = Date.now();
+      if(typeof state.wheel.adSpinsUsed !== "number") state.wheel.adSpinsUsed = 0;
+      if(typeof state.wheel.adSpinsResetAt !== "number") state.wheel.adSpinsResetAt = Date.now() + WHEEL_AD_SPIN_RESET_INTERVAL;
       state.cellUpgrades = (Array.isArray(data.cellUpgrades) && data.cellUpgrades.length === CELLS) ? data.cellUpgrades : new Array(CELLS).fill(0);
       state.incomeUpgradeLevel = typeof data.incomeUpgradeLevel === "number" ? data.incomeUpgradeLevel : 0;
       state.offlineCapLevel = typeof data.offlineCapLevel === "number" ? data.offlineCapLevel : 0;
@@ -1918,9 +1936,9 @@
 
   // ---------- events ----------
   var EVENT_META = {
-    rain: { icon:"🌧️", nameKey:"ev_rain_name", descKey:"ev_rain_desc", durKey:"ev_rain_dur", duration:60*1000 },
-    x2: { icon:"💰", nameKey:"ev_x2_name", descKey:"ev_x2_desc", durKey:"ev_x2_dur", duration:3*60*60*1000 },
-    fixedPrice: { icon:"🧊", nameKey:"ev_fixedPrice_name", descKey:"ev_fixedPrice_desc", durKey:"ev_fixedPrice_dur", duration:5*60*1000 }
+    rain: { icon:"🌧️", nameKey:"ev_rain_name", descKey:"ev_rain_desc", durKey:"ev_rain_dur", duration:60*1000, adCooldown:3*60*60*1000 },
+    x2: { icon:"💰", nameKey:"ev_x2_name", descKey:"ev_x2_desc", durKey:"ev_x2_dur", duration:3*60*60*1000, adCooldown:6*60*60*1000 },
+    fixedPrice: { icon:"🧊", nameKey:"ev_fixedPrice_name", descKey:"ev_fixedPrice_desc", durKey:"ev_fixedPrice_dur", duration:5*60*1000, adCooldown:3*60*60*1000 }
   };
   var RAIN_DROP_INTERVAL = 2500;
 
@@ -1980,10 +1998,17 @@
       sfxError();
       return;
     }
+    var now = Date.now();
+    if(now < ((state.eventAdCooldowns && state.eventAdCooldowns[key]) || 0)){
+      showToast(t("toast_event_ad_cooldown"));
+      sfxError();
+      return;
+    }
     if(adRewardPending) return;
     showRewardedAd(function(){
       state.events[key] = Date.now() + meta.duration;
       if(key === "rain") state.events.rainNextDrop = Date.now() + 700;
+      state.eventAdCooldowns[key] = Date.now() + meta.adCooldown;
       updateEventsStatus();
       save();
       showToast(t("toast_event_activated", {icon: meta.icon, name: eventName(key)}));
@@ -2096,18 +2121,21 @@
       if(!refs) return;
       var until = (state.events && state.events[key]) || 0;
       var active = until > now;
+      var adCooldownUntil = (state.eventAdCooldowns && state.eventAdCooldowns[key]) || 0;
+      var adReady = now >= adCooldownUntil;
       refs.card.classList.toggle("active", active);
-      refs.adBtn.textContent = t("event_ad_btn");
       if(active){
         refs.btn.disabled = true;
         refs.btn.textContent = t("event_active_btn");
         refs.adBtn.disabled = true;
+        refs.adBtn.textContent = t("event_ad_btn");
         refs.status.textContent = t("event_time_left_prefix") + formatCountdown(until-now);
       }else{
         var afford = state.eventCurrency >= 1;
         refs.btn.disabled = !afford;
         refs.btn.textContent = t("event_activate_btn");
-        refs.adBtn.disabled = adRewardPending;
+        refs.adBtn.disabled = !adReady || adRewardPending;
+        refs.adBtn.textContent = adReady ? t("event_ad_btn") : t("event_ad_cooldown_btn", {time: formatCountdown(adCooldownUntil-now)});
         refs.status.textContent = afford ? "" : t("event_not_enough");
       }
     });
@@ -2123,7 +2151,6 @@
   }
 
   // ---------- wheel of fortune ----------
-  var WHEEL_SPIN_COOLDOWN = 15*60*1000;
   var WHEEL_PRIZES = [
     { id:"inc5",   icon:"💰", labelKey:"wp_inc5",   weight:25, color:"#ffdca0", type:"income",  seconds:300,   durKey:"dur_5m" },
     { id:"inc10",  icon:"💰", labelKey:"wp_inc10",  weight:20, color:"#ffc873", type:"income",  seconds:600,   durKey:"dur_10m" },
@@ -2182,7 +2209,26 @@
   }
 
   function isWheelReady(){
-    return (state.wheel.bonusSpins||0) > 0 || Date.now() >= (state.wheel.nextSpinAt || 0);
+    return (state.wheel.bonusSpins||0) > 0;
+  }
+
+  // Grants a free spin every WHEEL_SPIN_COOLDOWN while the game is actually
+  // open (driven by tick(), which only runs on an active page) - unlike
+  // offline income, free spins do NOT catch up for time spent away.
+  function wheelFreeSpinTick(now){
+    if(now < (state.wheel.nextSpinAt || 0)) return;
+    state.wheel.bonusSpins = (state.wheel.bonusSpins||0) + 1;
+    state.wheel.nextSpinAt = now + WHEEL_SPIN_COOLDOWN;
+    save();
+    updateWheelStatus();
+  }
+
+  function canUseAdSpin(now){
+    if(now >= (state.wheel.adSpinsResetAt || 0)){
+      state.wheel.adSpinsUsed = 0;
+      state.wheel.adSpinsResetAt = now + WHEEL_AD_SPIN_RESET_INTERVAL;
+    }
+    return (state.wheel.adSpinsUsed||0) < WHEEL_AD_SPIN_DAILY_LIMIT;
   }
 
   function applyWheelPrize(prize){
@@ -2227,11 +2273,7 @@
 
     wheelSpinning = true;
     if(consumeCooldown){
-      if((state.wheel.bonusSpins||0) > 0){
-        state.wheel.bonusSpins -= 1;
-      }else{
-        state.wheel.nextSpinAt = Date.now() + WHEEL_SPIN_COOLDOWN;
-      }
+      state.wheel.bonusSpins = Math.max(0, (state.wheel.bonusSpins||0) - 1);
     }
     save();
     updateWheelStatus();
@@ -2257,7 +2299,16 @@
 
   function spinWheelViaAd(){
     if(wheelSpinning || adRewardPending) return;
+    var now = Date.now();
+    if(!canUseAdSpin(now)){
+      showToast(t("wheel_ad_spin_limit_toast"));
+      sfxError();
+      updateWheelStatus();
+      return;
+    }
     showRewardedAd(function(){
+      state.wheel.adSpinsUsed = (state.wheel.adSpinsUsed||0) + 1;
+      save();
       performSpin(false);
     }, function(){
       sfxError();
@@ -2268,20 +2319,21 @@
     var now = Date.now();
     var bonus = state.wheel.bonusSpins||0;
     var ready = isWheelReady();
+    var adReady = canUseAdSpin(now);
+    var adLeft = Math.max(0, WHEEL_AD_SPIN_DAILY_LIMIT - (state.wheel.adSpinsUsed||0));
     wheelSpinBtn.disabled = wheelSpinning || !ready;
-    wheelAdSpinBtnEl.disabled = wheelSpinning || adRewardPending;
+    wheelAdSpinBtnEl.disabled = wheelSpinning || adRewardPending || !adReady;
+    wheelAdSpinBtnEl.textContent = adReady ? t("wheel_ad_spin_btn", {n: adLeft}) : t("wheel_ad_spin_limit_btn");
+    var freeCountdown = formatCountdown((state.wheel.nextSpinAt||0) - now);
     if(wheelSpinning){
       wheelSpinBtn.textContent = t("wheel_spin_btn_spinning");
       wheelStatusEl.textContent = "";
     }else if(bonus > 0){
       wheelSpinBtn.textContent = t("wheel_spin_btn_ready");
-      wheelStatusEl.textContent = t("wheel_bonus_spins_prefix") + bonus;
-    }else if(ready){
-      wheelSpinBtn.textContent = t("wheel_spin_btn_ready");
-      wheelStatusEl.textContent = t("wheel_ready_status");
+      wheelStatusEl.textContent = t("wheel_bonus_spins_prefix") + bonus + "   ·   " + t("wheel_next_free_prefix") + freeCountdown;
     }else{
       wheelSpinBtn.textContent = t("wheel_spin_btn_ready");
-      wheelStatusEl.textContent = t("wheel_next_spin_prefix") + formatCountdown(state.wheel.nextSpinAt - now);
+      wheelStatusEl.textContent = t("wheel_next_spin_prefix") + freeCountdown;
     }
   }
 
@@ -2504,6 +2556,12 @@
 
   function closeMoneyBagModal(){
     bagModalBackdropEl.classList.remove("show");
+    if(state.moneyBag){
+      var idx = state.moneyBag.idx;
+      state.moneyBag = null;
+      renderCell(idx, false);
+      save();
+    }
   }
 
   function claimMoneyBag(){
@@ -3523,6 +3581,7 @@
     state.money += incomeRate() * mult * dt;
     rainTick(now);
     moneyBagTick(now);
+    wheelFreeSpinTick(now);
     updateHeader();
     renderShopAffordability();
     updateEventsStatus();
