@@ -1271,6 +1271,8 @@
       promo_activated_cookies_toast:"🎁 Промокод активирован: +{n} 🍪!",
       promo_got_spins:"🎁 Получено {n} бонусных спинов!",
       promo_activated_spins_toast:"🎁 Промокод активирован: +{n} спинов колеса!",
+      promo_got_unlockall:"🎁 Все печеньки разблокированы!",
+      promo_activated_unlockall_toast:"🎁 Промокод активирован: все печеньки разблокированы!",
       promo_reset_confirm:"⚠️ Это удалит ВЕСЬ прогресс безвозвратно: печенья, деньги, улучшения, уровни. Продолжить?",
       upgrades_title:"Улучшения",
       income_upg_title:"Улучшение дохода",
@@ -1419,6 +1421,8 @@
       promo_activated_cookies_toast:"🎁 Promo code activated: +{n} 🍪!",
       promo_got_spins:"🎁 Got {n} bonus spins!",
       promo_activated_spins_toast:"🎁 Promo code activated: +{n} wheel spins!",
+      promo_got_unlockall:"🎁 All cookies unlocked!",
+      promo_activated_unlockall_toast:"🎁 Promo code activated: all cookies unlocked!",
       promo_reset_confirm:"⚠️ This will permanently delete ALL progress: cookies, money, upgrades, levels. Continue?",
       upgrades_title:"Upgrades",
       income_upg_title:"Income Upgrade",
@@ -1980,16 +1984,35 @@
     return incomeRate() * moneyMultiplier();
   }
 
+  // Scale suffixes beyond K/M/B/T roll over into letter pairs the same way
+  // spreadsheet columns do: tier 0 (1e15) is "aa", tier 1 (1e18) is "ab",
+  // ..., tier 25 (1e90) wraps to "az", tier 26 (1e93) is "ba", and so on
+  // indefinitely, growing to 3+ letters if a tier ever needs it.
+  function letterTier(n){
+    var digits = [];
+    do{
+      digits.unshift(n % 26);
+      n = Math.floor(n/26);
+    }while(n > 0);
+    while(digits.length < 2) digits.unshift(0);
+    return digits.map(function(d){ return String.fromCharCode(97+d); }).join("");
+  }
+
+  var FIXED_SCALE_SUFFIXES = ["", "K", "M", "B", "T"];
+
   function fmt(n){
     n = Math.max(0, n);
-    if(n >= 1e9) return (n/1e9).toFixed(2)+"B";
-    if(n >= 1e6) return (n/1e6).toFixed(2)+"M";
-    if(n >= 1e3) return (n/1e3).toFixed(2)+"K";
-    return n.toFixed(2);
+    var tier = 0, v = n;
+    while(v >= 1000 && tier < 100){
+      v /= 1000;
+      tier++;
+    }
+    var suffix = tier < FIXED_SCALE_SUFFIXES.length ? FIXED_SCALE_SUFFIXES[tier] : letterTier(tier - FIXED_SCALE_SUFFIXES.length);
+    return v.toFixed(2)+suffix;
   }
 
   function fmtCount(n){
-    return fmt(n).replace(/\.00(?=[BMK]?$)/, "");
+    return fmt(n).replace(/\.00(?=[A-Za-z]*$)/, "");
   }
 
   function setMaxLevel(newLevel){
@@ -2622,8 +2645,11 @@
   // ---------- promo codes ----------
   var PROMO_CODES = {
     "OLD": { type:"spins", amount:5 },
-    "RESET": { type:"reset" }
+    "RESET": { type:"reset" },
+    "ALLCOOKIES": { type:"unlockall" }
   };
+
+  var UNLOCK_ALL_LEVEL = 9999;
 
   var promoInputEl = document.getElementById("promoInput");
   var promoBtnEl = document.getElementById("promoBtn");
@@ -2663,6 +2689,13 @@
       updateWheelStatus();
       promoStatusEl.textContent = t("promo_got_spins", {n: def.amount});
       showToast(t("promo_activated_spins_toast", {n: def.amount}));
+    }else if(def.type === "unlockall"){
+      setMaxLevel(UNLOCK_ALL_LEVEL);
+      renderBoard();
+      renderShop();
+      updateHeader();
+      promoStatusEl.textContent = t("promo_got_unlockall");
+      showToast(t("promo_activated_unlockall_toast"));
     }
     promoInputEl.value = "";
     save();
@@ -3116,6 +3149,63 @@
     cookieTextureImgs[i] = img;
   });
 
+  // Beyond level 50 there's no more unique supplied photo, so the level-1
+  // cookie photo is reused as a template: the baked-in "1" is covered with
+  // a soft patch sampled from its own tan color, then the real level
+  // number is drawn fresh on top in a matching chocolate-icing style.
+  function coverTemplateNumber(ctx){
+    ctx.save();
+    var cx = 50, cy = 52;
+    var grad = ctx.createRadialGradient(cx,cy,4,cx,cy,42);
+    grad.addColorStop(0, "rgba(233,187,119,1)");
+    grad.addColorStop(0.75, "rgba(233,187,119,1)");
+    grad.addColorStop(1, "rgba(233,187,119,0)");
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.ellipse(cx,cy,42,36,0,0,Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function drawIcingNumber(ctx, level, cx, cy, maxWidth){
+    var text = String(level);
+    var fontSize = 58;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    do{
+      ctx.font = "900 " + fontSize + "px Arial, sans-serif";
+      if(ctx.measureText(text).width <= maxWidth || fontSize <= 18) break;
+      fontSize -= 4;
+    }while(true);
+
+    ctx.save();
+    ctx.lineJoin = "round";
+    ctx.lineCap = "round";
+
+    ctx.fillStyle = "rgba(40,20,8,0.35)";
+    ctx.fillText(text, cx+2, cy+3);
+
+    ctx.lineWidth = Math.max(4, fontSize*0.13);
+    ctx.strokeStyle = hsl(22,55,18);
+    ctx.strokeText(text, cx, cy);
+
+    var grad = ctx.createLinearGradient(cx, cy-fontSize*0.42, cx, cy+fontSize*0.42);
+    grad.addColorStop(0, hsl(24,60,42));
+    grad.addColorStop(1, hsl(20,58,26));
+    ctx.fillStyle = grad;
+    ctx.fillText(text, cx, cy);
+
+    ctx.save();
+    ctx.globalAlpha = 0.55;
+    ctx.fillStyle = "#fff";
+    ctx.beginPath();
+    ctx.ellipse(cx - fontSize*0.16, cy - fontSize*0.28, fontSize*0.10, fontSize*0.05, -0.4, 0, Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+
+    ctx.restore();
+  }
+
   function drawCookie(canvas, level){
     var dpr = Math.min(window.devicePixelRatio || 1, 2.5);
     var size = 100;
@@ -3128,8 +3218,9 @@
     ctx.clearRect(0,0,size,size);
 
     var tier = Math.floor((level-1)/THEME_COUNT);
-    var sub = (level-1) % THEME_COUNT;
     var tierClamped = Math.min(tier,5);
+    var useGeneratedNumber = level > 50;
+    var texIndex = useGeneratedNumber ? 0 : (level-1);
 
     ctx.save();
 
@@ -3137,10 +3228,15 @@
     if("filter" in ctx && tier > 0){
       ctx.filter = "hue-rotate(" + (tier*47 % 360) + "deg) saturate(" + (1+tierClamped*0.14) + ") brightness(" + (1+tierClamped*0.03) + ")";
     }
-    if(cookieTextureReady[sub]){
-      ctx.drawImage(cookieTextureImgs[sub], 0, 0, size, size);
+    if(cookieTextureReady[texIndex]){
+      ctx.drawImage(cookieTextureImgs[texIndex], 0, 0, size, size);
     }
     ctx.restore();
+
+    if(useGeneratedNumber && cookieTextureReady[texIndex]){
+      coverTemplateNumber(ctx);
+      drawIcingNumber(ctx, level, 50, 52, 60);
+    }
 
     if(tier >= 2){
       ctx.fillStyle = hsl(46,90,60);
