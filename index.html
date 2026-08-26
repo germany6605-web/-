@@ -1272,8 +1272,6 @@
       promo_activated_cookies_toast:"🎁 Промокод активирован: +{n} 🍪!",
       promo_got_spins:"🎁 Получено {n} бонусных спинов!",
       promo_activated_spins_toast:"🎁 Промокод активирован: +{n} спинов колеса!",
-      promo_got_unlockall:"🎁 Все печеньки разблокированы!",
-      promo_activated_unlockall_toast:"🎁 Промокод активирован: все печеньки разблокированы!",
       promo_got_infmoney:"🎁 Бесконечные деньги активированы!",
       promo_activated_infmoney_toast:"🎁 Промокод активирован: бесконечные деньги!",
       promo_reset_confirm:"⚠️ Это удалит ВЕСЬ прогресс безвозвратно: печенья, деньги, улучшения, уровни. Продолжить?",
@@ -1424,8 +1422,6 @@
       promo_activated_cookies_toast:"🎁 Promo code activated: +{n} 🍪!",
       promo_got_spins:"🎁 Got {n} bonus spins!",
       promo_activated_spins_toast:"🎁 Promo code activated: +{n} wheel spins!",
-      promo_got_unlockall:"🎁 All cookies unlocked!",
-      promo_activated_unlockall_toast:"🎁 Promo code activated: all cookies unlocked!",
       promo_got_infmoney:"🎁 Infinite money activated!",
       promo_activated_infmoney_toast:"🎁 Promo code activated: infinite money!",
       promo_reset_confirm:"⚠️ This will permanently delete ALL progress: cookies, money, upgrades, levels. Continue?",
@@ -2653,11 +2649,8 @@
   var PROMO_CODES = {
     "OLD": { type:"spins", amount:5 },
     "RESET": { type:"reset" },
-    "ALLCOOKIES": { type:"unlockall" },
     "INFMONEY": { type:"infmoney" }
   };
-
-  var UNLOCK_ALL_LEVEL = 9999;
 
   var promoInputEl = document.getElementById("promoInput");
   var promoBtnEl = document.getElementById("promoBtn");
@@ -2697,13 +2690,6 @@
       updateWheelStatus();
       promoStatusEl.textContent = t("promo_got_spins", {n: def.amount});
       showToast(t("promo_activated_spins_toast", {n: def.amount}));
-    }else if(def.type === "unlockall"){
-      setMaxLevel(UNLOCK_ALL_LEVEL);
-      renderBoard();
-      renderShop();
-      updateHeader();
-      promoStatusEl.textContent = t("promo_got_unlockall");
-      showToast(t("promo_activated_unlockall_toast"));
     }else if(def.type === "infmoney"){
       state.infiniteMoney = true;
       updateHeader();
@@ -3693,7 +3679,6 @@
     while(isUnlocked(n)){
       levels.push(n);
       n++;
-      if(levels.length > 40) break;
     }
     levels.push(n); // next locked preview
     return levels;
