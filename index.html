@@ -354,6 +354,27 @@
     box-shadow:0 2px 6px rgba(0,0,0,.5);
     cursor:pointer;
   }
+  .lang-switch{
+    display:flex;
+    gap:8px;
+  }
+  .lang-opt{
+    flex:1;
+    border:1px solid rgba(255,255,255,.14);
+    border-radius:9px;
+    padding:9px 4px;
+    font-size:12.5px;
+    font-weight:700;
+    background:rgba(255,255,255,.06);
+    color:var(--cream-dim);
+    cursor:pointer;
+  }
+  .lang-opt.active{
+    background:linear-gradient(180deg,var(--accent),var(--accent-2));
+    border-color:transparent;
+    color:#2a1608;
+  }
+  .lang-opt:active{transform:scale(.96);}
   @keyframes pop{
     0%{transform:scale(.55);}
     60%{transform:scale(1.12);}
@@ -1141,7 +1162,14 @@
 
 <div class="modal-backdrop" id="soundModalBackdrop">
   <div class="modal-card" id="soundModalCard">
-    <div class="modal-title" id="soundModalTitleEl">🔊 Звук</div>
+    <div class="modal-title" id="soundModalTitleEl">⚙️ Настройки</div>
+    <div class="sound-row">
+      <div class="sound-row-head"><span id="langLabelEl">Язык</span></div>
+      <div class="lang-switch">
+        <button class="lang-opt" id="langBtnRu" data-lang="ru">Русский</button>
+        <button class="lang-opt" id="langBtnEn" data-lang="en">English</button>
+      </div>
+    </div>
     <div class="sound-row">
       <div class="sound-row-head"><span id="musicVolumeLabelEl">Музыка</span><b id="musicVolumeValEl">50%</b></div>
       <input type="range" id="musicVolumeSlider" min="0" max="100" step="1" value="35">
@@ -1318,10 +1346,11 @@
       toast_income_upgraded:"⚡ Доход улучшен! +0.1/сек навсегда",
       toast_offline_maxed:"Оффлайн-доход уже максимален — 8 часов",
       toast_offline_upgraded:"🌙 Оффлайн-доход теперь: {label}",
-      sound_btn_title:"Звук",
-      sound_modal_title:"🔊 Звук",
+      sound_btn_title:"Настройки",
+      sound_modal_title:"⚙️ Настройки",
       music_volume_label:"Музыка",
       sfx_volume_label:"Звуковые эффекты",
+      lang_label:"Язык",
       sound_close_btn:"Закрыть",
       toast_ad_fallback:"🎬 Показ рекламы (демо-режим вне Яндекс Игр)...",
       dev_purchase_confirm:"Демо-покупка вне Яндекс Игр: подтвердить \"оплату\" и получить бонус?",
@@ -1468,10 +1497,11 @@
       toast_income_upgraded:"⚡ Income upgraded! +0.1/sec forever",
       toast_offline_maxed:"Offline income is already at the maximum — 8 hours",
       toast_offline_upgraded:"🌙 Offline income is now: {label}",
-      sound_btn_title:"Sound",
-      sound_modal_title:"🔊 Sound",
+      sound_btn_title:"Settings",
+      sound_modal_title:"⚙️ Settings",
       music_volume_label:"Music",
       sfx_volume_label:"Sound effects",
+      lang_label:"Language",
       sound_close_btn:"Close",
       toast_ad_fallback:"🎬 Showing ad (demo mode outside Yandex Games)...",
       dev_purchase_confirm:"Demo purchase outside Yandex Games: confirm \"payment\" and receive the bonus?",
@@ -1526,7 +1556,23 @@
     }
   };
 
+  var LANG_SAVE_KEY = "cookieMergeLang_v1";
+
+  function loadSavedLang(){
+    try{
+      var saved = localStorage.getItem(LANG_SAVE_KEY);
+      if(saved && SUPPORTED_LANGS[saved]) return saved;
+    }catch(e){}
+    return null;
+  }
+
+  function saveLang(newLang){
+    try{ localStorage.setItem(LANG_SAVE_KEY, newLang); }catch(e){}
+  }
+
   function detectInitialLang(){
+    var saved = loadSavedLang();
+    if(saved) return saved;
     try{
       var nav = (navigator.language || (navigator.languages && navigator.languages[0]) || "ru").toLowerCase();
       if(nav.indexOf("en") === 0) return "en";
@@ -1535,6 +1581,7 @@
   }
 
   var lang = detectInitialLang();
+  document.documentElement.lang = lang;
 
   function t(key, vars){
     var dict = LANG_STRINGS[lang] || LANG_STRINGS.ru;
@@ -1571,6 +1618,7 @@
       cellUpgModalBuyBtn: "cell_modal_buy_btn",
       eventsCurrencyPrefixEl: "events_currency_prefix", eventsCurrencySuffixEl: "events_currency_suffix",
       soundBtn: "sound_btn_title:title", soundModalTitleEl: "sound_modal_title",
+      langLabelEl: "lang_label",
       musicVolumeLabelEl: "music_volume_label", sfxVolumeLabelEl: "sfx_volume_label",
       soundModalCloseBtn: "sound_close_btn",
       tabBtnBonus: "tab_bonus", bonusTitleEl: "bonus_title", bonusHintEl: "bonus_hint",
@@ -1790,6 +1838,25 @@
   var sfxVolumeSliderEl = document.getElementById("sfxVolumeSlider");
   var musicVolumeValEl = document.getElementById("musicVolumeValEl");
   var sfxVolumeValEl = document.getElementById("sfxVolumeValEl");
+  var langBtnRuEl = document.getElementById("langBtnRu");
+  var langBtnEnEl = document.getElementById("langBtnEn");
+
+  function updateLangUI(){
+    langBtnRuEl.classList.toggle("active", lang === "ru");
+    langBtnEnEl.classList.toggle("active", lang === "en");
+  }
+
+  function setLang(newLang){
+    if(!SUPPORTED_LANGS[newLang] || newLang === lang) return;
+    lang = newLang;
+    saveLang(newLang);
+    document.documentElement.lang = newLang;
+    applyLanguage();
+    updateLangUI();
+  }
+
+  langBtnRuEl.addEventListener("click", function(){ setLang("ru"); });
+  langBtnEnEl.addEventListener("click", function(){ setLang("en"); });
 
   function updateSoundUI(){
     musicVolumeSliderEl.value = Math.round(audioSettings.music*100);
@@ -1825,6 +1892,7 @@
 
   loadAudioSettings();
   updateSoundUI();
+  updateLangUI();
 
   // ---------- persistence ----------
   function save(){
@@ -3860,9 +3928,11 @@
         try{
           var sdkLang = sdk.environment && sdk.environment.i18n && sdk.environment.i18n.lang;
           var resolvedLang = SUPPORTED_LANGS[sdkLang] ? sdkLang : "ru";
-          if(resolvedLang !== lang){
+          if(resolvedLang !== lang && !loadSavedLang()){
             lang = resolvedLang;
+            document.documentElement.lang = lang;
             applyLanguage();
+            updateLangUI();
           }
         }catch(e){}
         try{ sdk.features && sdk.features.LoadingAPI && sdk.features.LoadingAPI.ready(); }catch(e){}
