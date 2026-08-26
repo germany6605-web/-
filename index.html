@@ -1215,7 +1215,8 @@
     totalPurchases: 0,
     maxIncomeRate: 0,
     achievementsUnlocked: {},
-    achievementsNotified: {}
+    achievementsNotified: {},
+    infiniteMoney: false
   };
 
   var selectedIdx = null;
@@ -1273,6 +1274,8 @@
       promo_activated_spins_toast:"🎁 Промокод активирован: +{n} спинов колеса!",
       promo_got_unlockall:"🎁 Все печеньки разблокированы!",
       promo_activated_unlockall_toast:"🎁 Промокод активирован: все печеньки разблокированы!",
+      promo_got_infmoney:"🎁 Бесконечные деньги активированы!",
+      promo_activated_infmoney_toast:"🎁 Промокод активирован: бесконечные деньги!",
       promo_reset_confirm:"⚠️ Это удалит ВЕСЬ прогресс безвозвратно: печенья, деньги, улучшения, уровни. Продолжить?",
       upgrades_title:"Улучшения",
       income_upg_title:"Улучшение дохода",
@@ -1423,6 +1426,8 @@
       promo_activated_spins_toast:"🎁 Promo code activated: +{n} wheel spins!",
       promo_got_unlockall:"🎁 All cookies unlocked!",
       promo_activated_unlockall_toast:"🎁 Promo code activated: all cookies unlocked!",
+      promo_got_infmoney:"🎁 Infinite money activated!",
+      promo_activated_infmoney_toast:"🎁 Promo code activated: infinite money!",
       promo_reset_confirm:"⚠️ This will permanently delete ALL progress: cookies, money, upgrades, levels. Continue?",
       upgrades_title:"Upgrades",
       income_upg_title:"Income Upgrade",
@@ -1856,6 +1861,7 @@
     state.maxIncomeRate = 0;
     state.achievementsUnlocked = {};
     state.achievementsNotified = {};
+    state.infiniteMoney = false;
     selectedIdx = null;
     // Write the fresh state ourselves so the beforeunload handler that fires
     // during reload has nothing stale left to re-save over it.
@@ -1894,6 +1900,7 @@
       state.maxIncomeRate = typeof data.maxIncomeRate === "number" ? data.maxIncomeRate : 0;
       state.achievementsUnlocked = (data.achievementsUnlocked && typeof data.achievementsUnlocked === "object") ? data.achievementsUnlocked : {};
       state.achievementsNotified = (data.achievementsNotified && typeof data.achievementsNotified === "object") ? data.achievementsNotified : {};
+      state.infiniteMoney = !!data.infiniteMoney;
       var elapsed = (Date.now() - (data.lastSeen || Date.now())) / 1000;
       elapsed = Math.max(0, Math.min(elapsed, offlineCapSeconds()));
       if(elapsed > 5){
@@ -2646,7 +2653,8 @@
   var PROMO_CODES = {
     "OLD": { type:"spins", amount:5 },
     "RESET": { type:"reset" },
-    "ALLCOOKIES": { type:"unlockall" }
+    "ALLCOOKIES": { type:"unlockall" },
+    "INFMONEY": { type:"infmoney" }
   };
 
   var UNLOCK_ALL_LEVEL = 9999;
@@ -2696,6 +2704,12 @@
       updateHeader();
       promoStatusEl.textContent = t("promo_got_unlockall");
       showToast(t("promo_activated_unlockall_toast"));
+    }else if(def.type === "infmoney"){
+      state.infiniteMoney = true;
+      updateHeader();
+      renderShopAffordability();
+      promoStatusEl.textContent = t("promo_got_infmoney");
+      showToast(t("promo_activated_infmoney_toast"));
     }
     promoInputEl.value = "";
     save();
@@ -3707,7 +3721,7 @@
         var btn = document.createElement("button");
         btn.className = "buy-btn";
         btn.textContent = t("buy_btn");
-        var canAfford = state.money >= price;
+        var canAfford = state.infiniteMoney || state.money >= price;
         btn.disabled = !canAfford;
         btn.addEventListener("click", function(lv){
           return function(){ buyCookie(lv); };
@@ -3727,7 +3741,7 @@
   function buyCookie(level){
     if(!isUnlocked(level)) return;
     var price = priceFor(level);
-    if(state.money < price){
+    if(!state.infiniteMoney && state.money < price){
       showToast(t("toast_not_enough_money"));
       sfxError();
       return;
@@ -3741,7 +3755,7 @@
       sfxError();
       return;
     }
-    state.money -= price;
+    if(!state.infiniteMoney) state.money -= price;
     state.grid[emptyIdx] = level;
     state.totalPurchases = (state.totalPurchases||0) + 1;
     setMaxLevel(level);
@@ -3760,7 +3774,7 @@
   var toastTimer = null;
 
   function updateHeader(){
-    moneyValEl.textContent = fmt(state.money);
+    moneyValEl.textContent = state.infiniteMoney ? "∞" : fmt(state.money);
     var mult = moneyMultiplier();
     incomeValEl.textContent = "+" + fmt(incomeRate()*mult) + t("per_sec") + (mult>1 ? t("income_x2_suffix") : "");
   }
@@ -3800,7 +3814,7 @@
     btns.forEach(function(btn, i){
       var level = levels[i];
       if(level === undefined) return;
-      btn.disabled = state.money < priceFor(level);
+      btn.disabled = !state.infiniteMoney && state.money < priceFor(level);
     });
   }
 
