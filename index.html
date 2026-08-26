@@ -476,9 +476,10 @@
     min-width:0;
     border:none;
     border-radius:11px;
-    padding:9px 4px;
-    font-size:11.5px;
-    font-weight:700;
+    padding:10px 4px;
+    font-size:19px;
+    line-height:1;
+    text-align:center;
     background:rgba(0,0,0,.2);
     color:var(--cream-dim);
     cursor:pointer;
@@ -1042,7 +1043,7 @@
       <div class="income" id="incomeVal">+0.0/сек</div>
     </div>
     <div class="currency-badge" id="currencyBadge">🍪 <span id="eventCurrencyHeader">0</span></div>
-    <button class="sound-btn" id="soundBtn" title="Звук">🔊</button>
+    <button class="sound-btn" id="soundBtn" title="Настройки">⚙️</button>
   </header>
 
   <main id="main">
@@ -1055,13 +1056,13 @@
     </div>
     <div class="shop-wrap">
       <div class="tabs">
-        <button class="tab-btn active" id="tabBtnShop" data-tab="shop">🛒 Магазин</button>
-        <button class="tab-btn" id="tabBtnEvents" data-tab="events">🎉 События</button>
-        <button class="tab-btn" id="tabBtnWheel" data-tab="wheel">🎡 Колесо</button>
-        <button class="tab-btn" id="tabBtnUpgrades" data-tab="upgrades">⚡ Улучш.</button>
-        <button class="tab-btn" id="tabBtnLeaders" data-tab="leaders">🏆 Топы</button>
-        <button class="tab-btn" id="tabBtnBonus" data-tab="bonus">🎁 Бонусы</button>
-        <button class="tab-btn" id="tabBtnAch" data-tab="achievements">🎖️ Достижения</button>
+        <button class="tab-btn active" id="tabBtnShop" data-tab="shop" title="Магазин">🛒</button>
+        <button class="tab-btn" id="tabBtnEvents" data-tab="events" title="События">🎉</button>
+        <button class="tab-btn" id="tabBtnWheel" data-tab="wheel" title="Колесо">🎡</button>
+        <button class="tab-btn" id="tabBtnUpgrades" data-tab="upgrades" title="Улучшения">⚡</button>
+        <button class="tab-btn" id="tabBtnLeaders" data-tab="leaders" title="Топы">🏆</button>
+        <button class="tab-btn" id="tabBtnBonus" data-tab="bonus" title="Бонусы">🎁</button>
+        <button class="tab-btn" id="tabBtnAch" data-tab="achievements" title="Достижения">🎖️</button>
       </div>
       <div class="tab-panel active" id="shopPanel">
         <div class="shop-title" id="shopTitleEl">Магазин печенья</div>
@@ -1255,7 +1256,7 @@
     ru:{
       trash_hint:"Корзина — перетащите печенье или выберите его и нажмите. Топ-3 уровня защищены.",
       currency_badge_title:"Печеньки — валюта для событий, откройте вкладку События",
-      tab_shop:"🛒 Магазин", tab_events:"🎉 События", tab_wheel:"🎡 Колесо", tab_upgrades:"⚡ Улучш.", tab_leaders:"🏆 Топы", tab_bonus:"🎁 Бонусы", tab_achievements:"🎖️ Дост.",
+      tab_shop:"Магазин", tab_events:"События", tab_wheel:"Колесо", tab_upgrades:"Улучшения", tab_leaders:"Топы", tab_bonus:"Бонусы", tab_achievements:"Достижения",
       shop_title:"Магазин печенья",
       shop_hint:"Перетащите печенье на такое же — чтобы объединить, на пустую клетку — чтобы переставить. Короткое нажатие тоже работает.",
       buy_btn:"Купить",
@@ -1406,7 +1407,7 @@
     en:{
       trash_hint:"Trash — drag a cookie here, or select it and tap. The top 3 levels are protected.",
       currency_badge_title:"Cookie Points — currency for events, open the Events tab",
-      tab_shop:"🛒 Shop", tab_events:"🎉 Events", tab_wheel:"🎡 Wheel", tab_upgrades:"⚡ Upgr.", tab_leaders:"🏆 Ranks", tab_bonus:"🎁 Bonuses", tab_achievements:"🎖️ Ach.",
+      tab_shop:"Shop", tab_events:"Events", tab_wheel:"Wheel", tab_upgrades:"Upgrades", tab_leaders:"Ranks", tab_bonus:"Bonuses", tab_achievements:"Achievements",
       shop_title:"Cookie Shop",
       shop_hint:"Drag a cookie onto a matching one to merge, or onto an empty cell to move it. A short tap works too.",
       buy_btn:"Buy",
@@ -1600,8 +1601,8 @@
     var map = {
       trashHintText: "trash_hint",
       currencyBadge: "currency_badge_title:title",
-      tabBtnShop: "tab_shop", tabBtnEvents: "tab_events", tabBtnWheel: "tab_wheel",
-      tabBtnUpgrades: "tab_upgrades", tabBtnLeaders: "tab_leaders",
+      tabBtnShop: "tab_shop:title", tabBtnEvents: "tab_events:title", tabBtnWheel: "tab_wheel:title",
+      tabBtnUpgrades: "tab_upgrades:title", tabBtnLeaders: "tab_leaders:title",
       shopTitleEl: "shop_title", shopHintEl: "shop_hint",
       wheelTitleEl: "wheel_title", wheelHintEl: "wheel_hint",
       promoInput: "promo_placeholder:placeholder", promoBtn: "promo_apply_btn",
@@ -1621,8 +1622,8 @@
       langLabelEl: "lang_label",
       musicVolumeLabelEl: "music_volume_label", sfxVolumeLabelEl: "sfx_volume_label",
       soundModalCloseBtn: "sound_close_btn",
-      tabBtnBonus: "tab_bonus", bonusTitleEl: "bonus_title", bonusHintEl: "bonus_hint",
-      tabBtnAch: "tab_achievements", achTitleEl: "ach_title", achHintEl: "ach_hint",
+      tabBtnBonus: "tab_bonus:title", bonusTitleEl: "bonus_title", bonusHintEl: "bonus_hint",
+      tabBtnAch: "tab_achievements:title", achTitleEl: "ach_title", achHintEl: "ach_hint",
       bagModalTitleEl: "bag_modal_title", bagModalDescEl: "bag_modal_desc",
       bagModalAdBtn: "bag_modal_ad_btn", bagModalCloseBtn: "bag_modal_close_btn"
     };
@@ -1863,7 +1864,6 @@
     sfxVolumeSliderEl.value = Math.round(audioSettings.sfx*100);
     musicVolumeValEl.textContent = Math.round(audioSettings.music*100) + "%";
     sfxVolumeValEl.textContent = Math.round(audioSettings.sfx*100) + "%";
-    soundBtnEl.textContent = (audioSettings.music <= 0 && audioSettings.sfx <= 0) ? "🔇" : "🔊";
   }
 
   musicVolumeSliderEl.addEventListener("input", function(){
@@ -2392,15 +2392,15 @@
     { id:"merge_100000",    group:"merges",    threshold:100000,    reward:1000 },
     { id:"merge_1000000",   group:"merges",    threshold:1000000,   reward:10000 },
 
-    { id:"income_100",         group:"income", threshold:100,         reward:1 },
-    { id:"income_1000",        group:"income", threshold:1000,        reward:2 },
-    { id:"income_10000",       group:"income", threshold:10000,       reward:3 },
-    { id:"income_100000",      group:"income", threshold:100000,      reward:5 },
-    { id:"income_1000000",     group:"income", threshold:1000000,     reward:10 },
-    { id:"income_10000000",    group:"income", threshold:10000000,    reward:20 },
-    { id:"income_100000000",   group:"income", threshold:100000000,   reward:100 },
-    { id:"income_1000000000",  group:"income", threshold:1000000000,  reward:500 },
-    { id:"income_10000000000", group:"income", threshold:10000000000, reward:1000 },
+    { id:"income_10000000",            group:"income", threshold:10000000,            reward:1 },
+    { id:"income_100000000",           group:"income", threshold:100000000,           reward:2 },
+    { id:"income_1000000000",          group:"income", threshold:1000000000,          reward:3 },
+    { id:"income_10000000000",         group:"income", threshold:10000000000,         reward:5 },
+    { id:"income_100000000000",        group:"income", threshold:100000000000,        reward:10 },
+    { id:"income_1000000000000",       group:"income", threshold:1000000000000,       reward:20 },
+    { id:"income_10000000000000",      group:"income", threshold:10000000000000,      reward:100 },
+    { id:"income_100000000000000",     group:"income", threshold:100000000000000,     reward:500 },
+    { id:"income_1000000000000000",    group:"income", threshold:1000000000000000,    reward:1000 },
 
     { id:"buy_10",      group:"purchases", threshold:10,      reward:1 },
     { id:"buy_100",     group:"purchases", threshold:100,     reward:2 },
@@ -3005,7 +3005,7 @@
       renderCell(idx, true, "fall");
       placed++;
     }
-    renderShop();
+    growShop();
     showToast(t("toast_bag_granted", {n: placed}));
   }
 
@@ -3556,7 +3556,7 @@
       sfxMerge(newLevel);
       renderBoard();
       renderCell(idx, true);
-      renderShop();
+      growShop();
       save();
       return;
     }
@@ -3668,7 +3668,7 @@
             sfxMerge(newLevel);
             renderBoard();
             renderCell(tIdx, true);
-            renderShop();
+            growShop();
             save();
           }
         }
@@ -3779,41 +3779,50 @@
     return levels;
   }
 
-  // Cards for currently-rendered, unlocked shop levels: {level, btn, price}.
-  // renderShopAffordability() (runs every tick) walks this instead of
-  // re-querying the DOM and recomputing shopLevelsToShow() 5x/sec.
+  // Cards for currently-rendered, unlocked shop levels, index i -> level
+  // i+1 (level 1 always exists at index 0, etc - shopLevelsToShow() lists
+  // levels contiguously from 1). renderShopAffordability() (every tick)
+  // and buyCookie() (price refresh) walk this instead of re-querying the
+  // DOM or recomputing shopLevelsToShow().
   var shopCardRefs = [];
+  var shopLockedCardEl = null;
+  var shopLockedLevel = null;
 
   function buildShopCard(level){
-    var unlocked = isUnlocked(level);
     var card = document.createElement("div");
-    card.className = "shop-card" + (unlocked ? "" : " locked");
+    card.className = "shop-card";
 
     var canvas = document.createElement("canvas");
     drawCookie(canvas, level);
     card.appendChild(canvas);
 
-    if(unlocked){
-      var price = priceFor(level);
-      var priceEl = document.createElement("div");
-      priceEl.className = "shop-price";
-      priceEl.textContent = "💰 " + fmt(price);
-      card.appendChild(priceEl);
+    var price = priceFor(level);
+    var priceEl = document.createElement("div");
+    priceEl.className = "shop-price";
+    priceEl.textContent = "💰 " + fmt(price);
+    card.appendChild(priceEl);
 
-      var btn = document.createElement("button");
-      btn.className = "buy-btn";
-      btn.textContent = t("buy_btn");
-      btn.disabled = !(state.infiniteMoney || state.money >= price);
-      btn.addEventListener("click", function(){ buyCookie(level); });
-      card.appendChild(btn);
-      shopCardRefs.push({ level: level, btn: btn, price: price });
-    }else{
-      var note = document.createElement("div");
-      note.className = "lock-note";
-      note.textContent = t("locked_note_prefix") + (level+2);
-      card.appendChild(note);
-    }
+    var btn = document.createElement("button");
+    btn.className = "buy-btn";
+    btn.textContent = t("buy_btn");
+    btn.disabled = !(state.infiniteMoney || state.money >= price);
+    btn.addEventListener("click", function(){ buyCookie(level); });
+    card.appendChild(btn);
+    shopCardRefs.push({ level: level, btn: btn, price: price, priceEl: priceEl });
 
+    return card;
+  }
+
+  function buildLockedShopCard(level){
+    var card = document.createElement("div");
+    card.className = "shop-card locked";
+    var canvas = document.createElement("canvas");
+    drawCookie(canvas, level);
+    card.appendChild(canvas);
+    var note = document.createElement("div");
+    note.className = "lock-note";
+    note.textContent = t("locked_note_prefix") + (level+2);
+    card.appendChild(note);
     return card;
   }
 
@@ -3825,28 +3834,52 @@
   var SHOP_RENDER_BATCH = 8;
   var shopRenderGen = 0;
 
-  // Building every card (each drawing its own canvas) in one go can take
-  // several real seconds once hundreds of levels are unlocked, freezing the
-  // tab. Render the first batch immediately, then continue in small chunks
-  // so the page stays responsive and paints progressively instead.
-  function renderShop(){
+  // Appends any newly-unlocked cards (from merging past a threshold) and
+  // keeps the trailing "next locked level" card in sync, without touching
+  // any card already in the DOM - so it never resets the shop's scroll
+  // position. A no-op if nothing has changed since the last call. Building
+  // every card in one go can also take several real seconds once hundreds
+  // of levels are unlocked, so new cards are appended in small chunks
+  // instead of blocking the tab.
+  function growShop(){
     var levels = shopLevelsToShow();
-    shopEl.innerHTML = "";
-    shopCardRefs = [];
+    var unlockedCount = levels.length - 1;
+    var nextLockedLevel = levels[levels.length-1];
     var gen = ++shopRenderGen;
-    var idx = 0;
+    var idx = shopCardRefs.length;
+
+    if(idx < unlockedCount && shopLockedCardEl){
+      shopLockedCardEl.remove();
+      shopLockedCardEl = null;
+    }
 
     function renderChunk(){
-      if(gen !== shopRenderGen) return; // superseded by a newer renderShop()
+      if(gen !== shopRenderGen) return; // superseded by a newer call
       var fragment = document.createDocumentFragment();
-      var end = Math.min(idx + SHOP_RENDER_BATCH, levels.length);
+      var end = Math.min(idx + SHOP_RENDER_BATCH, unlockedCount);
       for(; idx < end; idx++){
-        fragment.appendChild(buildShopCard(levels[idx]));
+        fragment.appendChild(buildShopCard(idx+1));
       }
       shopEl.appendChild(fragment);
-      if(idx < levels.length) scheduleShopChunk(renderChunk);
+      if(idx < unlockedCount){
+        scheduleShopChunk(renderChunk);
+      }else if(shopLockedLevel !== nextLockedLevel){
+        shopLockedCardEl = buildLockedShopCard(nextLockedLevel);
+        shopEl.appendChild(shopLockedCardEl);
+        shopLockedLevel = nextLockedLevel;
+      }
     }
     renderChunk();
+  }
+
+  // Full rebuild: only needed when every existing card's text must change
+  // (language switch) or the shop is being built from nothing.
+  function renderShop(){
+    shopEl.innerHTML = "";
+    shopCardRefs = [];
+    shopLockedCardEl = null;
+    shopLockedLevel = null;
+    growShop();
   }
 
   function buyCookie(level){
@@ -3873,7 +3906,15 @@
     bumpPrice(level);
     sfxBuy();
     renderCell(emptyIdx, true);
-    renderShop();
+    // Buying a level never unlocks a new one (it requires being unlocked
+    // already), so just refresh this card's price in place instead of
+    // rebuilding the whole shop - that would reset its scroll position.
+    var boughtRef = shopCardRefs[level-1];
+    if(boughtRef){
+      boughtRef.price = priceFor(level);
+      boughtRef.priceEl.textContent = "💰 " + fmt(boughtRef.price);
+    }
+    renderShopAffordability();
     updateHeader();
     save();
   }
