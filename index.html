@@ -3604,9 +3604,13 @@
       positionGhost(x,y);
     }
 
+    var hoverHighlightEls = [];
+
     function clearHoverHighlights(){
-      var els = document.querySelectorAll(".drop-ok,.drop-bad");
-      for(var k=0;k<els.length;k++) els[k].classList.remove("drop-ok","drop-bad");
+      for(var k=0;k<hoverHighlightEls.length;k++){
+        hoverHighlightEls[k].classList.remove("drop-ok","drop-bad");
+      }
+      hoverHighlightEls.length = 0;
     }
 
     function updateHoverHighlight(x,y){
@@ -3616,6 +3620,7 @@
       var trashEl = el.closest ? el.closest("#trashZone") : null;
       if(trashEl){
         trashEl.classList.add(canDeleteLevel(level) ? "drop-ok" : "drop-bad");
+        hoverHighlightEls.push(trashEl);
         return;
       }
       var cellEl = el.closest ? el.closest(".cell") : null;
@@ -3624,6 +3629,7 @@
         if(tIdx === idx) return;
         var tLevel = state.grid[tIdx];
         cellEl.classList.add((isCellFree(tIdx) || tLevel === level) ? "drop-ok" : "drop-bad");
+        hoverHighlightEls.push(cellEl);
       }
     }
 
@@ -3773,45 +3779,74 @@
     return levels;
   }
 
+  // Cards for currently-rendered, unlocked shop levels: {level, btn, price}.
+  // renderShopAffordability() (runs every tick) walks this instead of
+  // re-querying the DOM and recomputing shopLevelsToShow() 5x/sec.
+  var shopCardRefs = [];
+
+  function buildShopCard(level){
+    var unlocked = isUnlocked(level);
+    var card = document.createElement("div");
+    card.className = "shop-card" + (unlocked ? "" : " locked");
+
+    var canvas = document.createElement("canvas");
+    drawCookie(canvas, level);
+    card.appendChild(canvas);
+
+    if(unlocked){
+      var price = priceFor(level);
+      var priceEl = document.createElement("div");
+      priceEl.className = "shop-price";
+      priceEl.textContent = "💰 " + fmt(price);
+      card.appendChild(priceEl);
+
+      var btn = document.createElement("button");
+      btn.className = "buy-btn";
+      btn.textContent = t("buy_btn");
+      btn.disabled = !(state.infiniteMoney || state.money >= price);
+      btn.addEventListener("click", function(){ buyCookie(level); });
+      card.appendChild(btn);
+      shopCardRefs.push({ level: level, btn: btn, price: price });
+    }else{
+      var note = document.createElement("div");
+      note.className = "lock-note";
+      note.textContent = t("locked_note_prefix") + (level+2);
+      card.appendChild(note);
+    }
+
+    return card;
+  }
+
+  function scheduleShopChunk(fn){
+    if(typeof requestIdleCallback === "function") requestIdleCallback(fn, {timeout:100});
+    else setTimeout(fn, 0);
+  }
+
+  var SHOP_RENDER_BATCH = 8;
+  var shopRenderGen = 0;
+
+  // Building every card (each drawing its own canvas) in one go can take
+  // several real seconds once hundreds of levels are unlocked, freezing the
+  // tab. Render the first batch immediately, then continue in small chunks
+  // so the page stays responsive and paints progressively instead.
   function renderShop(){
     var levels = shopLevelsToShow();
     shopEl.innerHTML = "";
-    var fragment = document.createDocumentFragment();
-    levels.forEach(function(level){
-      var unlocked = isUnlocked(level);
-      var card = document.createElement("div");
-      card.className = "shop-card" + (unlocked ? "" : " locked");
+    shopCardRefs = [];
+    var gen = ++shopRenderGen;
+    var idx = 0;
 
-      var canvas = document.createElement("canvas");
-      drawCookie(canvas, level);
-      card.appendChild(canvas);
-
-      if(unlocked){
-        var price = priceFor(level);
-        var priceEl = document.createElement("div");
-        priceEl.className = "shop-price";
-        priceEl.textContent = "💰 " + fmt(price);
-        card.appendChild(priceEl);
-
-        var btn = document.createElement("button");
-        btn.className = "buy-btn";
-        btn.textContent = t("buy_btn");
-        var canAfford = state.infiniteMoney || state.money >= price;
-        btn.disabled = !canAfford;
-        btn.addEventListener("click", function(lv){
-          return function(){ buyCookie(lv); };
-        }(level));
-        card.appendChild(btn);
-      }else{
-        var note = document.createElement("div");
-        note.className = "lock-note";
-        note.textContent = t("locked_note_prefix") + (level+2);
-        card.appendChild(note);
+    function renderChunk(){
+      if(gen !== shopRenderGen) return; // superseded by a newer renderShop()
+      var fragment = document.createDocumentFragment();
+      var end = Math.min(idx + SHOP_RENDER_BATCH, levels.length);
+      for(; idx < end; idx++){
+        fragment.appendChild(buildShopCard(levels[idx]));
       }
-
-      fragment.appendChild(card);
-    });
-    shopEl.appendChild(fragment);
+      shopEl.appendChild(fragment);
+      if(idx < levels.length) scheduleShopChunk(renderChunk);
+    }
+    renderChunk();
   }
 
   function buyCookie(level){
@@ -3885,13 +3920,10 @@
   }
 
   function renderShopAffordability(){
-    var btns = shopEl.querySelectorAll(".buy-btn");
-    var levels = shopLevelsToShow().filter(isUnlocked);
-    btns.forEach(function(btn, i){
-      var level = levels[i];
-      if(level === undefined) return;
-      btn.disabled = !state.infiniteMoney && state.money < priceFor(level);
-    });
+    for(var i=0;i<shopCardRefs.length;i++){
+      var ref = shopCardRefs[i];
+      ref.btn.disabled = !state.infiniteMoney && state.money < ref.price;
+    }
   }
 
   var saveTimer = setInterval(save, 4000);
