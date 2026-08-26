@@ -466,13 +466,13 @@
   }
   .tabs{
     display:flex;
-    flex-wrap:wrap;
+    flex-wrap:nowrap;
     flex-shrink:0;
     gap:6px;
     margin-bottom:10px;
   }
   .tab-btn{
-    flex:1 1 30%;
+    flex:1 1 0;
     min-width:0;
     border:none;
     border-radius:11px;
@@ -1027,8 +1027,6 @@
     .board-wrap{flex:0 0 auto;width:520px;align-self:flex-start;max-height:100%;overflow-y:auto;}
     main.board-hidden .board-wrap{display:block;}
     .shop-wrap{flex:1;}
-    .tabs{flex-wrap:nowrap;}
-    .tab-btn{flex:1 1 0;}
     #shop{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));overflow:visible;padding:2px;margin:0;}
     .shop-card{flex:none;}
   }
@@ -1207,6 +1205,31 @@
   setAppHeight();
   window.addEventListener("resize", setAppHeight);
   window.addEventListener("orientationchange", function(){ setTimeout(setAppHeight, 60); });
+
+  // On phones the board (a full-width square) sits above the shop panel,
+  // so tabs nested at the top of that panel could end up pushed mostly
+  // off-screen. Move the tab bar to sit directly under the header instead,
+  // above the board, so it's always reachable; on wide/desktop layouts
+  // (board and panel side by side) put it back at the top of the panel
+  // column where there's no such squeeze.
+  var desktopMq = window.matchMedia("(min-width: 820px)");
+  function layoutTabs(){
+    var tabsEl = document.querySelector(".tabs");
+    var mainEl = document.getElementById("main");
+    var boardWrapEl = document.getElementById("boardWrap");
+    var shopWrapEl = document.querySelector(".shop-wrap");
+    if(!tabsEl || !mainEl || !boardWrapEl || !shopWrapEl) return;
+    if(desktopMq.matches){
+      if(tabsEl.parentElement !== shopWrapEl) shopWrapEl.insertBefore(tabsEl, shopWrapEl.firstChild);
+    }else{
+      if(tabsEl.parentElement !== mainEl || tabsEl.nextElementSibling !== boardWrapEl){
+        mainEl.insertBefore(tabsEl, boardWrapEl);
+      }
+    }
+  }
+  layoutTabs();
+  if(desktopMq.addEventListener) desktopMq.addEventListener("change", layoutTabs);
+  else if(desktopMq.addListener) desktopMq.addListener(layoutTabs);
 })();
 
 (function(){
