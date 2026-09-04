@@ -4011,10 +4011,14 @@
     var now = Date.now();
     if(!force && now - lastLbPush < LB_PUSH_MIN_INTERVAL) return;
     lastLbPush = now;
+    // Errors are logged (not just swallowed) because a rejected
+    // setLeaderboardScore call is otherwise indistinguishable from a
+    // successful one that just isn't showing up yet - check devtools
+    // console on Yandex Games if a leaderboard stays empty.
     try{
-      ysdkLeaderboards.setLeaderboardScore(LB_NAMES.balance, Math.max(0, Math.floor(state.money))).catch(function(){});
-      ysdkLeaderboards.setLeaderboardScore(LB_NAMES.income, Math.max(0, Math.floor(incomeRate()*3600))).catch(function(){});
-      ysdkLeaderboards.setLeaderboardScore(LB_NAMES.merges, Math.max(0, Math.floor(state.totalMerges||0))).catch(function(){});
+      ysdkLeaderboards.setLeaderboardScore(LB_NAMES.balance, Math.max(0, Math.floor(state.money))).catch(function(e){ console.error("leaderboard score push failed:", LB_NAMES.balance, e); });
+      ysdkLeaderboards.setLeaderboardScore(LB_NAMES.income, Math.max(0, Math.floor(incomeRate()*3600))).catch(function(e){ console.error("leaderboard score push failed:", LB_NAMES.income, e); });
+      ysdkLeaderboards.setLeaderboardScore(LB_NAMES.merges, Math.max(0, Math.floor(state.totalMerges||0))).catch(function(e){ console.error("leaderboard score push failed:", LB_NAMES.merges, e); });
     }catch(e){}
   }
 
@@ -4050,9 +4054,11 @@
     ysdkLeaderboards.getLeaderboardEntries(name, { quantityTop: 10, includeUser: true })
       .then(function(res){
         statusEl.textContent = "";
+        console.log("leaderboard entries for", name, ":", (res.entries||[]).length, res);
         renderLeaderboardEntries(res.entries||[], listEl);
       })
-      .catch(function(){
+      .catch(function(e){
+        console.error("leaderboard fetch failed:", name, e);
         statusEl.textContent = t("lb_load_error", {name: name});
         listEl.innerHTML = "";
       });
