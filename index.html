@@ -3987,10 +3987,10 @@
         sdk.getPayments({ signed: false }).then(function(payments){
           ysdkPayments = payments;
         }).catch(function(){});
-        return sdk.getLeaderboards();
-      }).then(function(lb){
-        ysdkLeaderboards = lb;
-        pushLeaderboardScores(true);
+        try{
+          ysdkLeaderboards = sdk.leaderboards;
+          pushLeaderboardScores(true);
+        }catch(e){}
       }).catch(function(){ /* not running inside Yandex Games */ });
     }catch(e){}
   }
