@@ -1049,7 +1049,6 @@
       <div id="board"></div>
       <div class="trash-zone" id="trashZone">
         <span class="trash-icon">🗑️</span>
-        <span id="trashHintText">Корзина — перетащите печенье или выберите его и нажмите. Топ-3 уровня защищены.</span>
       </div>
     </div>
     <div class="shop-wrap">
@@ -1063,7 +1062,6 @@
         <button class="tab-btn" id="tabBtnAch" data-tab="achievements" title="Достижения">🎖️</button>
       </div>
       <div class="tab-panel active" id="shopPanel">
-        <div class="shop-title" id="shopTitleEl">Магазин печенья</div>
         <div id="shop"></div>
         <div class="hint" id="shopHintEl">Перетащите печенье на такое же — чтобы объединить, на пустую клетку — чтобы переставить. Короткое нажатие тоже работает.</div>
       </div>
@@ -1084,7 +1082,6 @@
         <button class="spin-btn" id="wheelSpinBtn">Крутить!</button>
         <button class="ad-btn" id="wheelAdSpinBtn">🎬 Крутить за рекламу</button>
         <div class="wheel-status" id="wheelStatus"></div>
-        <div class="hint" id="wheelHintEl">Один бесплатный спин каждые 15 минут. Приз — деньги, печеньки или бесплатное событие.</div>
         <div class="promo-box">
           <input type="text" id="promoInput" placeholder="Промокод" maxlength="24">
           <button id="promoBtn">Применить</button>
@@ -1113,7 +1110,6 @@
       </div>
       <div class="tab-panel" id="leadersPanel">
         <div class="shop-title" id="leadersTitleEl">Топы игроков</div>
-        <div class="hint" id="leadersHintEl">Топы работают только внутри Яндекс Игр — там, где игра запущена через официальный SDK и игрок авторизован.</div>
         <div class="event-card">
           <div class="event-head"><span class="event-icon">💰</span><span id="leadersBalanceTitleEl">Топ по балансу</span></div>
           <div class="lb-status" id="lbStatusBalance">Загрузка...</div>
@@ -1276,10 +1272,8 @@
   var SUPPORTED_LANGS = { ru:1, en:1 };
   var LANG_STRINGS = {
     ru:{
-      trash_hint:"Корзина — перетащите печенье или выберите его и нажмите. Топ-3 уровня защищены.",
       currency_badge_title:"Печеньки — валюта для событий, откройте вкладку События",
       tab_shop:"Магазин", tab_events:"События", tab_wheel:"Колесо", tab_upgrades:"Улучшения", tab_leaders:"Топы", tab_bonus:"Бонусы", tab_achievements:"Достижения",
-      shop_title:"Магазин печенья",
       shop_hint:"Перетащите печенье на такое же — чтобы объединить, на пустую клетку — чтобы переставить. Короткое нажатие тоже работает.",
       buy_btn:"Купить",
       locked_note_prefix:"🔒 Откроется на уровне ",
@@ -1304,7 +1298,6 @@
       wheel_ready_status:"Спин готов!",
       wheel_next_spin_prefix:"Следующий бесплатный спин через ",
       wheel_next_free_prefix:"следующий бесплатный: ",
-      wheel_hint:"Бесплатный спин копится каждые 15 минут, пока вы в игре (не уходит при выходе из игры). Плюс до 5 спинов в день за рекламу. Приз — деньги, печеньки или бесплатное событие.",
       wheel_not_ready_toast:"Спин ещё не готов 🎡",
       wheel_ad_spin_limit_toast:"Дневной лимит спинов за рекламу исчерпан (5 в сутки) 🎬",
       wheel_ad_spin_limit_btn:"🎬 Лимит на сегодня исчерпан",
@@ -1347,9 +1340,8 @@
       cell_modal_close_btn:"Закрыть",
       toast_cell_upgraded:"🔧 Клетка улучшена! Множитель ×{x}",
       leaders_title:"Топы игроков",
-      leaders_hint:"Топы работают только внутри Яндекс Игр — там, где игра запущена через официальный SDK и игрок авторизован.",
       leaders_balance_title:"Топ по балансу",
-      leaders_income_title:"Топ по доходу в час",
+      leaders_income_title:"hors",
       leaders_merges_title:"Топ по объединениям печенья",
       lb_loading:"Загрузка...",
       lb_empty:"Пока никто не попал в топ",
@@ -1424,10 +1416,8 @@
       toast_achievement_claimed:"🎉 Получено: {reward} 🍪"
     },
     en:{
-      trash_hint:"Trash — drag a cookie here, or select it and tap. The top 3 levels are protected.",
       currency_badge_title:"Cookie Points — currency for events, open the Events tab",
       tab_shop:"Shop", tab_events:"Events", tab_wheel:"Wheel", tab_upgrades:"Upgrades", tab_leaders:"Ranks", tab_bonus:"Bonuses", tab_achievements:"Achievements",
-      shop_title:"Cookie Shop",
       shop_hint:"Drag a cookie onto a matching one to merge, or onto an empty cell to move it. A short tap works too.",
       buy_btn:"Buy",
       locked_note_prefix:"🔒 Unlocks at level ",
@@ -1452,7 +1442,6 @@
       wheel_ready_status:"Spin ready!",
       wheel_next_spin_prefix:"Next free spin in ",
       wheel_next_free_prefix:"next free: ",
-      wheel_hint:"A free spin builds up every 15 minutes while you're in the game (it doesn't accrue while you're away). Plus up to 5 spins a day by watching ads. Prizes: money, cookie points, or a free event.",
       wheel_not_ready_toast:"The spin isn't ready yet 🎡",
       wheel_ad_spin_limit_toast:"Daily ad-spin limit reached (5 per day) 🎬",
       wheel_ad_spin_limit_btn:"🎬 Daily limit reached",
@@ -1495,9 +1484,8 @@
       cell_modal_close_btn:"Close",
       toast_cell_upgraded:"🔧 Cell upgraded! Multiplier ×{x}",
       leaders_title:"Leaderboards",
-      leaders_hint:"Leaderboards only work inside Yandex Games, where the game runs through the official SDK and the player is signed in.",
       leaders_balance_title:"Top Balance",
-      leaders_income_title:"Top Income/hour",
+      leaders_income_title:"hors",
       leaders_merges_title:"Top Merges",
       lb_loading:"Loading...",
       lb_empty:"No one has made the leaderboard yet",
@@ -1615,18 +1603,17 @@
 
   function applyStaticI18n(){
     var map = {
-      trashHintText: "trash_hint",
       currencyBadge: "currency_badge_title:title",
       tabBtnShop: "tab_shop:title", tabBtnEvents: "tab_events:title", tabBtnWheel: "tab_wheel:title",
       tabBtnUpgrades: "tab_upgrades:title", tabBtnLeaders: "tab_leaders:title",
-      shopTitleEl: "shop_title", shopHintEl: "shop_hint",
-      wheelTitleEl: "wheel_title", wheelHintEl: "wheel_hint",
+      shopHintEl: "shop_hint",
+      wheelTitleEl: "wheel_title",
       promoInput: "promo_placeholder:placeholder", promoBtn: "promo_apply_btn",
       upgradesTitleEl: "upgrades_title",
       incomeUpgTitleEl: "income_upg_title", incomeUpgDescEl: "income_upg_desc",
       offlineUpgTitleEl: "offline_upg_title", offlineUpgDescEl: "offline_upg_desc",
       cellUpgTitleEl: "cell_upg_title", cellUpgDescEl: "cell_upg_desc",
-      leadersTitleEl: "leaders_title", leadersHintEl: "leaders_hint",
+      leadersTitleEl: "leaders_title",
       leadersBalanceTitleEl: "leaders_balance_title", leadersIncomeTitleEl: "leaders_income_title",
       leadersMergesTitleEl: "leaders_merges_title",
       cellModalTitleEl: "cell_modal_title", cellModalLevelLabelEl: "cell_modal_level",
@@ -2076,6 +2063,22 @@
 
   function fmtCount(n){
     return fmt(n).replace(/\.00(?=[A-Za-z]*$)/, "");
+  }
+
+  // Leaderboard scores: compact lowercase suffixes (1000 -> "1k", 1500 ->
+  // "1.5k", 1000000 -> "1m", ...) instead of fmt()'s 2-decimal "1.23K"
+  // style used for money elsewhere.
+  function fmtLbScore(n){
+    n = Math.max(0, Math.floor(n));
+    if(n < 1000) return String(n);
+    var tier = 0, v = n;
+    while(v >= 1000 && tier < 100){
+      v /= 1000;
+      tier++;
+    }
+    var suffix = tier < FIXED_SCALE_SUFFIXES.length ? FIXED_SCALE_SUFFIXES[tier].toLowerCase() : letterTier(tier - FIXED_SCALE_SUFFIXES.length);
+    var rounded = Math.round(v*10)/10;
+    return (rounded % 1 === 0 ? rounded.toFixed(0) : rounded.toFixed(1)) + suffix;
   }
 
   function setMaxLevel(newLevel){
@@ -4027,7 +4030,7 @@
       var isMe = ysdkPlayerId && entry.player && entry.player.uniqueID === ysdkPlayerId;
       row.className = "lb-row" + (isMe ? " me" : "");
       var name = (entry.player && entry.player.publicName) ? entry.player.publicName : t("lb_default_player_name");
-      var scoreText = entry.formattedScore || fmt(entry.score||0);
+      var scoreText = fmtLbScore(entry.score||0);
       row.innerHTML = "<span class=\"lb-rank\">#"+(entry.rank||"?")+"</span><span class=\"lb-name\"></span><span class=\"lb-score\"></span>";
       row.querySelector(".lb-name").textContent = name;
       row.querySelector(".lb-score").textContent = scoreText;
