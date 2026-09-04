@@ -4006,6 +4006,15 @@
     }catch(e){}
   }
 
+  // Yandex allows only one setLeaderboardScore call per second, apparently
+  // across ALL leaderboards for the session rather than per leaderboard
+  // name: firing all 3 back to back made only the first (balance) succeed,
+  // while income/merges were rejected every time with "The request to
+  // setLeaderboardScore can be sent no more than once per second" - so
+  // they never had one single score on record and always showed empty.
+  // Stagger them a beat over a second apart instead of firing at once.
+  var LB_PUSH_STAGGER = 1100;
+
   function pushLeaderboardScores(force){
     if(!ysdkLeaderboards) return;
     var now = Date.now();
@@ -4015,11 +4024,19 @@
     // setLeaderboardScore call is otherwise indistinguishable from a
     // successful one that just isn't showing up yet - check devtools
     // console on Yandex Games if a leaderboard stays empty.
-    try{
-      ysdkLeaderboards.setLeaderboardScore(LB_NAMES.balance, Math.max(0, Math.floor(state.money))).catch(function(e){ console.error("leaderboard score push failed:", LB_NAMES.balance, e); });
-      ysdkLeaderboards.setLeaderboardScore(LB_NAMES.income, Math.max(0, Math.floor(incomeRate()*3600))).catch(function(e){ console.error("leaderboard score push failed:", LB_NAMES.income, e); });
-      ysdkLeaderboards.setLeaderboardScore(LB_NAMES.merges, Math.max(0, Math.floor(state.totalMerges||0))).catch(function(e){ console.error("leaderboard score push failed:", LB_NAMES.merges, e); });
-    }catch(e){}
+    var jobs = [
+      [LB_NAMES.balance, Math.max(0, Math.floor(state.money))],
+      [LB_NAMES.income, Math.max(0, Math.floor(incomeRate()*3600))],
+      [LB_NAMES.merges, Math.max(0, Math.floor(state.totalMerges||0))]
+    ];
+    jobs.forEach(function(job, i){
+      setTimeout(function(){
+        if(!ysdkLeaderboards) return;
+        try{
+          ysdkLeaderboards.setLeaderboardScore(job[0], job[1]).catch(function(e){ console.error("leaderboard score push failed:", job[0], e); });
+        }catch(e){}
+      }, i * LB_PUSH_STAGGER);
+    });
   }
 
   function renderLeaderboardEntries(entries, listEl){
