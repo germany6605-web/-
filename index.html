@@ -3987,10 +3987,16 @@
         sdk.getPayments({ signed: false }).then(function(payments){
           ysdkPayments = payments;
         }).catch(function(){});
-        try{
-          ysdkLeaderboards = sdk.leaderboards;
-          pushLeaderboardScores(true);
-        }catch(e){}
+        // sdk.getLeaderboards() logs a "use ysdk.leaderboards instead"
+        // deprecation notice, but ysdk.leaderboards turned out to be a
+        // different-shaped object without getLeaderboardEntries (broke
+        // every leaderboard fetch with a hard crash). The deprecated
+        // method still works correctly, so stick with it until there's
+        // real documentation for the replacement's actual shape.
+        return sdk.getLeaderboards();
+      }).then(function(lb){
+        ysdkLeaderboards = lb;
+        pushLeaderboardScores(true);
       }).catch(function(){ /* not running inside Yandex Games */ });
     }catch(e){}
   }
