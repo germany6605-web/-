@@ -4021,25 +4021,49 @@
   // Stagger them a beat over a second apart instead of firing at once.
   var LB_PUSH_STAGGER = 1100;
 
+  // If a leaderboard's score keeps getting rejected by the server (e.g. a
+  // config mismatch in the Yandex console - a leaderboard set to "Time"
+  // format instead of "Numeric" will 400 on every plain-integer score),
+  // retrying it on every autosave forever just spams the console with the
+  // same error every few seconds. Stop retrying a given leaderboard after
+  // a few consecutive failures for this session; a fresh page load (a
+  // fresh person testing, or the console setting having been fixed) tries
+  // again from zero.
+  var LB_FAIL_LIMIT = 3;
+  var lbConsecutiveFails = {};
+  var lbGaveUp = {};
+
   function pushLeaderboardScores(force){
     if(!ysdkLeaderboards) return;
     var now = Date.now();
     if(!force && now - lastLbPush < LB_PUSH_MIN_INTERVAL) return;
     lastLbPush = now;
-    // Errors are logged (not just swallowed) because a rejected
-    // setLeaderboardScore call is otherwise indistinguishable from a
-    // successful one that just isn't showing up yet - check devtools
-    // console on Yandex Games if a leaderboard stays empty.
     var jobs = [
       [LB_NAMES.balance, Math.max(0, Math.floor(state.money))],
       [LB_NAMES.income, Math.max(0, Math.floor(incomeRate()*3600))],
       [LB_NAMES.merges, Math.max(0, Math.floor(state.totalMerges||0))]
     ];
     jobs.forEach(function(job, i){
+      var name = job[0], value = job[1];
+      if(lbGaveUp[name]) return;
       setTimeout(function(){
-        if(!ysdkLeaderboards) return;
+        if(!ysdkLeaderboards || lbGaveUp[name]) return;
         try{
-          ysdkLeaderboards.setLeaderboardScore(job[0], job[1]).catch(function(e){ console.error("leaderboard score push failed:", job[0], e); });
+          ysdkLeaderboards.setLeaderboardScore(name, value).then(function(){
+            lbConsecutiveFails[name] = 0;
+          }).catch(function(e){
+            // Errors are logged (not just swallowed) because a rejected
+            // setLeaderboardScore call is otherwise indistinguishable
+            // from a successful one that just isn't showing up yet -
+            // check devtools console on Yandex Games if a leaderboard
+            // stays empty.
+            console.error("leaderboard score push failed:", name, e);
+            lbConsecutiveFails[name] = (lbConsecutiveFails[name]||0) + 1;
+            if(lbConsecutiveFails[name] >= LB_FAIL_LIMIT){
+              lbGaveUp[name] = true;
+              console.error("leaderboard \"" + name + "\" failed " + LB_FAIL_LIMIT + " times in a row, giving up for this session - likely a leaderboard config mismatch in the Yandex console (e.g. wrong score type), not a client bug.");
+            }
+          });
         }catch(e){}
       }, i * LB_PUSH_STAGGER);
     });
