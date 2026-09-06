@@ -1951,6 +1951,14 @@
       state.maxIncomeRate = typeof data.maxIncomeRate === "number" ? data.maxIncomeRate : 0;
       state.achievementsUnlocked = (data.achievementsUnlocked && typeof data.achievementsUnlocked === "object") ? data.achievementsUnlocked : {};
       state.achievementsNotified = (data.achievementsNotified && typeof data.achievementsNotified === "object") ? data.achievementsNotified : {};
+      // Must be restored from the save, not left at the state object's
+      // Date.now() default - otherwise it reads as "now" right after every
+      // load, and pullCloudSave()'s "adopt whichever save is newer" check
+      // (which compares against this) would then see local as newer than
+      // literally any past cloud save, permanently defeating cross-device
+      // sync (each device would just keep overwriting the cloud with its
+      // own copy instead of ever pulling another device's progress in).
+      state.lastSeen = typeof data.lastSeen === "number" ? data.lastSeen : Date.now();
       applyOfflineEarnings(data.lastSeen);
     }catch(e){}
   }
