@@ -1898,12 +1898,26 @@
   updateLangUI();
 
   // ---------- persistence ----------
-  function save(){
+  function save(force){
     state.lastSeen = Date.now();
     try{
       localStorage.setItem(SAVE_KEY, JSON.stringify(state));
     }catch(e){}
     pushLeaderboardScores();
+    pushCloudSave(force);
+  }
+
+  function applyOfflineEarnings(prevLastSeen){
+    var elapsed = (Date.now() - (prevLastSeen || Date.now())) / 1000;
+    elapsed = Math.max(0, Math.min(elapsed, offlineCapSeconds()));
+    if(elapsed > 5){
+      var rate = incomeRate();
+      var earned = rate * elapsed;
+      if(earned > 0.005){
+        state.money += earned;
+        showToast(t("toast_offline_earnings", {amount: fmt(earned)}));
+      }
+    }
   }
 
   function load(){
@@ -1937,16 +1951,7 @@
       state.maxIncomeRate = typeof data.maxIncomeRate === "number" ? data.maxIncomeRate : 0;
       state.achievementsUnlocked = (data.achievementsUnlocked && typeof data.achievementsUnlocked === "object") ? data.achievementsUnlocked : {};
       state.achievementsNotified = (data.achievementsNotified && typeof data.achievementsNotified === "object") ? data.achievementsNotified : {};
-      var elapsed = (Date.now() - (data.lastSeen || Date.now())) / 1000;
-      elapsed = Math.max(0, Math.min(elapsed, offlineCapSeconds()));
-      if(elapsed > 5){
-        var rate = incomeRate();
-        var earned = rate * elapsed;
-        if(earned > 0.005){
-          state.money += earned;
-          showToast(t("toast_offline_earnings", {amount: fmt(earned)}));
-        }
-      }
+      applyOfflineEarnings(data.lastSeen);
     }catch(e){}
   }
 
@@ -3951,6 +3956,7 @@
   var ysdk = null;
   var ysdkLeaderboards = null;
   var ysdkPayments = null;
+  var ysdkPlayer = null;
   var ysdkPlayerId = null;
   var lastLbPush = 0;
   var LB_PUSH_MIN_INTERVAL = 3000;
@@ -3982,7 +3988,9 @@
         }catch(e){}
         try{ sdk.features && sdk.features.LoadingAPI && sdk.features.LoadingAPI.ready(); }catch(e){}
         sdk.getPlayer({ scopes: false }).then(function(player){
+          ysdkPlayer = player;
           try{ ysdkPlayerId = player.getUniqueID ? player.getUniqueID() : null; }catch(e){}
+          pullCloudSave();
         }).catch(function(){});
         sdk.getPayments({ signed: false }).then(function(payments){
           ysdkPayments = payments;
@@ -4009,6 +4017,148 @@
       s.onload = function(){ initYandexSDK(); };
       s.onerror = function(){ /* not available (blocked network, offline, not on Yandex Games) */ };
       document.head.appendChild(s);
+    }catch(e){}
+  }
+
+  // ---------- yandex games cloud save (player.setStats) ----------
+  // player.setStats/getStats only accept flat numeric key/value pairs (no
+  // strings or nested objects, unlike setData/getData), but almost all of
+  // this game's save is already numeric, so the board grid and per-cell
+  // upgrades are flattened into individual keys (grid0..gridN-1, cu0..cuN-1)
+  // and each achievement's claimed flag becomes its own 0/1 key (needed so
+  // a synced device can't re-claim an already-claimed reward). A few
+  // low-value fields are intentionally left local-only and not synced:
+  // dynamic per-level prices (state.prices), the current timed event and
+  // its ad cooldowns, promo code redemption history, and the transient
+  // on-board money bag - losing these on a fresh device costs the player
+  // nothing serious (worst case: prices reset to base, or a promo code
+  // could be re-typed).
+  var STAT_SCALAR_KEYS = [
+    "money","maxLevel","totalMerges","totalPurchases","eventCurrency",
+    "unlockAwarded","incomeUpgradeLevel","offlineCapLevel","maxIncomeRate",
+    "permanentX2","lastSeen","moneyBagNextAt",
+    "wheelBonusSpins","wheelNextSpinAt","wheelAdSpinsUsed","wheelAdSpinsResetAt"
+  ];
+  var STAT_GRID_KEYS = [];
+  var STAT_CU_KEYS = [];
+  for(var csi=0; csi<CELLS; csi++){
+    STAT_GRID_KEYS.push("grid"+csi);
+    STAT_CU_KEYS.push("cu"+csi);
+  }
+  var STAT_ACH_KEYS = ACHIEVEMENTS.map(function(a){ return "ach_"+a.id; });
+  var ALL_STAT_KEYS = STAT_SCALAR_KEYS.concat(STAT_GRID_KEYS, STAT_CU_KEYS, STAT_ACH_KEYS);
+
+  function flattenStateForStats(){
+    var out = {
+      money: state.money||0,
+      maxLevel: state.maxLevel||1,
+      totalMerges: state.totalMerges||0,
+      totalPurchases: state.totalPurchases||0,
+      eventCurrency: state.eventCurrency||0,
+      unlockAwarded: state.unlockAwarded||0,
+      incomeUpgradeLevel: state.incomeUpgradeLevel||0,
+      offlineCapLevel: state.offlineCapLevel||0,
+      maxIncomeRate: state.maxIncomeRate||0,
+      permanentX2: state.permanentX2 ? 1 : 0,
+      lastSeen: state.lastSeen||Date.now(),
+      moneyBagNextAt: state.moneyBagNextAt||Date.now(),
+      wheelBonusSpins: (state.wheel && state.wheel.bonusSpins)||0,
+      wheelNextSpinAt: (state.wheel && state.wheel.nextSpinAt)||Date.now(),
+      wheelAdSpinsUsed: (state.wheel && state.wheel.adSpinsUsed)||0,
+      wheelAdSpinsResetAt: (state.wheel && state.wheel.adSpinsResetAt)||Date.now()
+    };
+    for(var i=0;i<CELLS;i++){
+      out["grid"+i] = state.grid[i] || 0;
+      out["cu"+i] = state.cellUpgrades[i] || 0;
+    }
+    ACHIEVEMENTS.forEach(function(a){
+      out["ach_"+a.id] = state.achievementsUnlocked[a.id] ? 1 : 0;
+    });
+    return out;
+  }
+
+  function applyStatsToState(stats){
+    state.money = typeof stats.money === "number" ? stats.money : state.money;
+    state.maxLevel = Math.min(typeof stats.maxLevel === "number" ? stats.maxLevel : state.maxLevel, MAX_SANE_LEVEL);
+    state.totalMerges = typeof stats.totalMerges === "number" ? stats.totalMerges : state.totalMerges;
+    state.totalPurchases = typeof stats.totalPurchases === "number" ? stats.totalPurchases : state.totalPurchases;
+    state.eventCurrency = typeof stats.eventCurrency === "number" ? stats.eventCurrency : state.eventCurrency;
+    state.unlockAwarded = typeof stats.unlockAwarded === "number" ? stats.unlockAwarded : state.unlockAwarded;
+    state.incomeUpgradeLevel = typeof stats.incomeUpgradeLevel === "number" ? stats.incomeUpgradeLevel : state.incomeUpgradeLevel;
+    state.offlineCapLevel = typeof stats.offlineCapLevel === "number" ? stats.offlineCapLevel : state.offlineCapLevel;
+    state.maxIncomeRate = typeof stats.maxIncomeRate === "number" ? stats.maxIncomeRate : state.maxIncomeRate;
+    state.permanentX2 = !!stats.permanentX2;
+    state.moneyBagNextAt = typeof stats.moneyBagNextAt === "number" ? stats.moneyBagNextAt : state.moneyBagNextAt;
+    state.moneyBag = null;
+    if(!state.wheel || typeof state.wheel !== "object"){
+      state.wheel = { nextSpinAt: Date.now(), bonusSpins: 0, adSpinsUsed: 0, adSpinsResetAt: Date.now() + WHEEL_AD_SPIN_RESET_INTERVAL };
+    }
+    state.wheel.bonusSpins = typeof stats.wheelBonusSpins === "number" ? stats.wheelBonusSpins : state.wheel.bonusSpins;
+    state.wheel.nextSpinAt = typeof stats.wheelNextSpinAt === "number" ? stats.wheelNextSpinAt : state.wheel.nextSpinAt;
+    state.wheel.adSpinsUsed = typeof stats.wheelAdSpinsUsed === "number" ? stats.wheelAdSpinsUsed : state.wheel.adSpinsUsed;
+    state.wheel.adSpinsResetAt = typeof stats.wheelAdSpinsResetAt === "number" ? stats.wheelAdSpinsResetAt : state.wheel.adSpinsResetAt;
+    var newGrid = new Array(CELLS).fill(null);
+    for(var i=0;i<CELLS;i++){
+      var lv = stats["grid"+i];
+      newGrid[i] = (typeof lv === "number" && lv > 0) ? Math.min(lv, MAX_SANE_LEVEL) : null;
+    }
+    state.grid = newGrid;
+    var newCu = new Array(CELLS).fill(0);
+    for(var j=0;j<CELLS;j++){
+      newCu[j] = typeof stats["cu"+j] === "number" ? stats["cu"+j] : 0;
+    }
+    state.cellUpgrades = newCu;
+    ACHIEVEMENTS.forEach(function(a){
+      if(stats["ach_"+a.id]){
+        state.achievementsUnlocked[a.id] = true;
+        state.achievementsNotified[a.id] = true;
+      }
+    });
+    state.lastSeen = typeof stats.lastSeen === "number" ? stats.lastSeen : Date.now();
+  }
+
+  var CLOUD_PUSH_MIN_INTERVAL = 5000;
+  var lastCloudPush = 0;
+
+  function pushCloudSave(force){
+    if(!ysdkPlayer || typeof ysdkPlayer.setStats !== "function") return;
+    var now = Date.now();
+    if(!force && now - lastCloudPush < CLOUD_PUSH_MIN_INTERVAL) return;
+    lastCloudPush = now;
+    try{
+      ysdkPlayer.setStats(flattenStateForStats()).catch(function(e){
+        console.error("cloud save (setStats) failed:", e);
+      });
+    }catch(e){}
+  }
+
+  // Runs once after the player object becomes available. Cloud data only
+  // overwrites what's already loaded from localStorage when it's actually
+  // newer (by lastSeen) - so resuming on the same device right after
+  // playing on another one doesn't get clobbered by a stale cloud copy,
+  // and playing on a fresh device pulls that other device's progress in.
+  function pullCloudSave(){
+    if(!ysdkPlayer || typeof ysdkPlayer.getStats !== "function") return;
+    try{
+      ysdkPlayer.getStats(ALL_STAT_KEYS).then(function(stats){
+        if(stats && typeof stats.lastSeen === "number" && stats.lastSeen > (state.lastSeen||0)){
+          var cloudLastSeen = stats.lastSeen;
+          applyStatsToState(stats);
+          applyOfflineEarnings(cloudLastSeen);
+          checkAchievements();
+          renderBoard();
+          renderShop();
+          renderEvents();
+          updateHeader();
+          updateEventCurrencyDisplays();
+          updateWheelStatus();
+          updateCellUpgradeGrid();
+          renderAchievementsPanel();
+          save(true);
+        }else{
+          pushCloudSave(true);
+        }
+      }).catch(function(e){ console.error("cloud load (getStats) failed:", e); });
     }catch(e){}
   }
 
@@ -4146,9 +4296,9 @@
   });
   document.getElementById("currencyBadge").addEventListener("click", function(){ switchTab("events"); });
 
-  window.addEventListener("beforeunload", save);
+  window.addEventListener("beforeunload", function(){ save(true); });
   document.addEventListener("visibilitychange", function(){
-    if(document.hidden) save();
+    if(document.hidden) save(true);
   });
 
   // ---------- init ----------
