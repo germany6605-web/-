@@ -3990,8 +3990,12 @@
         sdk.getPlayer({ scopes: false }).then(function(player){
           ysdkPlayer = player;
           try{ ysdkPlayerId = player.getUniqueID ? player.getUniqueID() : null; }catch(e){}
+          console.log("cloud save: player ready, uid=", ysdkPlayerId,
+            "hasSetStats=", typeof player.setStats === "function",
+            "hasGetStats=", typeof player.getStats === "function",
+            "mode=", player.getMode ? player.getMode() : "?");
           pullCloudSave();
-        }).catch(function(){});
+        }).catch(function(e){ console.error("cloud save: getPlayer failed:", e); });
         sdk.getPayments({ signed: false }).then(function(payments){
           ysdkPayments = payments;
         }).catch(function(){});
@@ -4126,10 +4130,13 @@
     if(!force && now - lastCloudPush < CLOUD_PUSH_MIN_INTERVAL) return;
     lastCloudPush = now;
     try{
-      ysdkPlayer.setStats(flattenStateForStats()).catch(function(e){
+      var payload = flattenStateForStats();
+      ysdkPlayer.setStats(payload).then(function(){
+        console.log("cloud save: setStats OK,", Object.keys(payload).length, "keys, money=", payload.money);
+      }).catch(function(e){
         console.error("cloud save (setStats) failed:", e);
       });
-    }catch(e){}
+    }catch(e){ console.error("cloud save (setStats) threw:", e); }
   }
 
   // Runs once after the player object becomes available. Cloud data only
@@ -4141,7 +4148,9 @@
     if(!ysdkPlayer || typeof ysdkPlayer.getStats !== "function") return;
     try{
       ysdkPlayer.getStats(ALL_STAT_KEYS).then(function(stats){
+        console.log("cloud load: getStats OK,", stats ? Object.keys(stats).length : 0, "keys back, cloud.lastSeen=", stats && stats.lastSeen, "local.lastSeen=", state.lastSeen);
         if(stats && typeof stats.lastSeen === "number" && stats.lastSeen > (state.lastSeen||0)){
+          console.log("cloud load: adopting cloud save (newer than local)");
           var cloudLastSeen = stats.lastSeen;
           applyStatsToState(stats);
           applyOfflineEarnings(cloudLastSeen);
@@ -4156,10 +4165,11 @@
           renderAchievementsPanel();
           save(true);
         }else{
+          console.log("cloud load: local is newer or cloud is empty, pushing local up instead");
           pushCloudSave(true);
         }
       }).catch(function(e){ console.error("cloud load (getStats) failed:", e); });
-    }catch(e){}
+    }catch(e){ console.error("cloud load (getStats) threw:", e); }
   }
 
   // Yandex allows only one setLeaderboardScore call per second, apparently
