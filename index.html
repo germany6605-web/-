@@ -3471,8 +3471,17 @@
   // The merge board is a drag-and-drop surface, not text/content the
   // player would ever right-click on - a native context menu popping up
   // mid-drag is a usability bug on desktop, so suppress it here.
-  var boardWrapEl0 = document.getElementById("boardWrap");
-  if(boardWrapEl0) boardWrapEl0.addEventListener("contextmenu", function(e){ e.preventDefault(); });
+  // Scoped to the board only at first, but canvases everywhere in the game
+  // (shop cookie previews, wheel, achievements, IAP icons) trigger the same
+  // native "Save image as / Copy image" menu in Chrome, and modals (which
+  // sit outside #app in the DOM) can be reached too - cover the whole
+  // document instead, exempting real text inputs so right-click paste
+  // still works on the promo code field.
+  document.addEventListener("contextmenu", function(e){
+    var tag = e.target && e.target.tagName;
+    if(tag === "INPUT" || tag === "TEXTAREA") return;
+    e.preventDefault();
+  });
 
   function buildBoard(){
     boardEl.innerHTML = "";
