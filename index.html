@@ -4212,6 +4212,27 @@
     state.lastSeen = typeof stats.lastSeen === "number" ? stats.lastSeen : Date.now();
   }
 
+  // Yandex rate-limits write calls (setStats, setLeaderboardScore) to
+  // roughly one per second, shared across ALL of them rather than per
+  // call type or per leaderboard name - pushCloudSave() and
+  // pushLeaderboardScores() both get triggered from every save(), and any
+  // fixed delay chosen independently by each one eventually drifts back
+  // into a collision with the other (their own throttle windows aren't
+  // aligned, since one is gated by CLOUD_PUSH_MIN_INTERVAL and the other
+  // by LB_PUSH_MIN_INTERVAL). A single shared queue is the only way to
+  // actually guarantee every real network call - from either function -
+  // lands at least YSDK_CALL_GAP apart, regardless of which one enqueued
+  // it or when.
+  var YSDK_CALL_GAP = 1200;
+  var nextYsdkSlotAt = 0;
+
+  function scheduleYsdkCall(fn){
+    var now = Date.now();
+    var fireAt = Math.max(now, nextYsdkSlotAt);
+    nextYsdkSlotAt = fireAt + YSDK_CALL_GAP;
+    setTimeout(fn, fireAt - now);
+  }
+
   var CLOUD_PUSH_MIN_INTERVAL = 5000;
   var lastCloudPush = 0;
 
@@ -4220,14 +4241,17 @@
     var now = Date.now();
     if(!force && now - lastCloudPush < CLOUD_PUSH_MIN_INTERVAL) return;
     lastCloudPush = now;
-    try{
-      var payload = flattenStateForStats();
-      ysdkPlayer.setStats(payload).then(function(){
-        console.log("cloud save: setStats OK,", Object.keys(payload).length, "keys, money=", payload.money);
-      }).catch(function(e){
-        console.error("cloud save (setStats) failed:", e);
-      });
-    }catch(e){ console.error("cloud save (setStats) threw:", e); }
+    scheduleYsdkCall(function(){
+      if(!ysdkPlayer || typeof ysdkPlayer.setStats !== "function") return;
+      try{
+        var payload = flattenStateForStats();
+        ysdkPlayer.setStats(payload).then(function(){
+          console.log("cloud save: setStats OK,", Object.keys(payload).length, "keys, money=", payload.money);
+        }).catch(function(e){
+          console.error("cloud save (setStats) failed:", e);
+        });
+      }catch(e){ console.error("cloud save (setStats) threw:", e); }
+    });
   }
 
   // Runs once after the player object becomes available. Cloud data only
@@ -4269,8 +4293,9 @@
   // while income/merges were rejected every time with "The request to
   // setLeaderboardScore can be sent no more than once per second" - so
   // they never had one single score on record and always showed empty.
-  // Stagger them a beat over a second apart instead of firing at once.
-  var LB_PUSH_STAGGER = 1100;
+  // Each job goes through scheduleYsdkCall() (shared with pushCloudSave
+  // above) instead of its own independent stagger, so it can't drift back
+  // into colliding with a cloud save call scheduled around the same time.
 
   // If a leaderboard's score keeps getting rejected by the server (e.g. a
   // config mismatch in the Yandex console - a leaderboard set to "Time"
@@ -4294,10 +4319,10 @@
       [LB_NAMES.income, Math.max(0, Math.floor(incomeRate()*3600))],
       [LB_NAMES.merges, Math.max(0, Math.floor(state.totalMerges||0))]
     ];
-    jobs.forEach(function(job, i){
+    jobs.forEach(function(job){
       var name = job[0], value = job[1];
       if(lbGaveUp[name]) return;
-      setTimeout(function(){
+      scheduleYsdkCall(function(){
         if(!ysdkLeaderboards || lbGaveUp[name]) return;
         try{
           ysdkLeaderboards.setLeaderboardScore(name, value).then(function(){
@@ -4316,7 +4341,7 @@
             }
           });
         }catch(e){}
-      }, i * LB_PUSH_STAGGER);
+      });
     });
   }
 
