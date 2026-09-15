@@ -4017,6 +4017,26 @@
   var LB_PUSH_MIN_INTERVAL = 3000;
   var LB_NAMES = { balance: "balance", income: "ihors", merges: "merges" };
 
+  // Yandex leaderboards reject (400) scores outside the standard 32-bit
+  // signed int range (2,147,483,647), but this economy's money/income
+  // grow exponentially with no real ceiling - clamping just delays the
+  // same failure for anyone who keeps playing. Submitting log2(value)
+  // instead keeps every real value, however large, comfortably inside
+  // int32 forever (log2 of even absurdly large numbers stays tiny) while
+  // preserving exact rank order (log2 is monotonic - more real money
+  // always encodes to a bigger submitted score). The tradeoff is that the
+  // number stored on Yandex's side is no longer the literal value, so
+  // decodeLbScore() reconstructs an approximate original value purely for
+  // display in this game's own leaderboard UI (see renderLeaderboardEntries).
+  var LB_ENCODE_SCALE = 10000000;
+  function encodeLbScore(v){
+    v = Math.max(0, v);
+    return Math.max(0, Math.min(2147483647, Math.round(Math.log2(v+1) * LB_ENCODE_SCALE)));
+  }
+  function decodeLbScore(encoded){
+    return Math.max(0, Math.round(Math.pow(2, (encoded||0)/LB_ENCODE_SCALE) - 1));
+  }
+
   // Real-money purchases (see IAP_ITEMS below) require a matching catalog of
   // consumable products created in the Yandex Games developer console, each
   // with the exact technical id used here: bag10, bag20, income5m,
@@ -4319,19 +4339,10 @@
     var now = Date.now();
     if(!force && now - lastLbPush < LB_PUSH_MIN_INTERVAL) return;
     lastLbPush = now;
-    // Yandex leaderboards appear to reject (400, not a rate-limit error)
-    // scores above the standard 32-bit signed int range - this economy's
-    // money/income can grow into the tens of billions, way past that, once
-    // the leaderboard-collision timing bug (fixed separately) stopped being
-    // the thing masking it. Clamp what's SENT to the leaderboard; the
-    // player's real, unclamped values still show everywhere in the game's
-    // own UI (header, shop, etc) - only the leaderboard submission caps out.
-    var LB_MAX_SCORE = 2147483647;
-    function lbScore(v){ return Math.max(0, Math.min(LB_MAX_SCORE, Math.floor(v))); }
     var jobs = [
-      [LB_NAMES.balance, lbScore(state.money)],
-      [LB_NAMES.income, lbScore(incomeRate()*3600)],
-      [LB_NAMES.merges, lbScore(state.totalMerges||0)]
+      [LB_NAMES.balance, encodeLbScore(state.money)],
+      [LB_NAMES.income, encodeLbScore(incomeRate()*3600)],
+      [LB_NAMES.merges, encodeLbScore(state.totalMerges||0)]
     ];
     jobs.forEach(function(job){
       var name = job[0], value = job[1];
@@ -4371,7 +4382,7 @@
       var isMe = ysdkPlayerId && entry.player && entry.player.uniqueID === ysdkPlayerId;
       row.className = "lb-row" + (isMe ? " me" : "");
       var name = (entry.player && entry.player.publicName) ? entry.player.publicName : t("lb_default_player_name");
-      var scoreText = fmtLbScore(entry.score||0);
+      var scoreText = fmtLbScore(decodeLbScore(entry.score||0));
       row.innerHTML = "<span class=\"lb-rank\">#"+(entry.rank||"?")+"</span><span class=\"lb-name\"></span><span class=\"lb-score\"></span>";
       row.querySelector(".lb-name").textContent = name;
       row.querySelector(".lb-score").textContent = scoreText;
