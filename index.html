@@ -1582,6 +1582,15 @@
   function detectInitialLang(){
     var saved = loadSavedLang();
     if(saved) return saved;
+    // Yandex Games passes the intended UI language synchronously in the
+    // page URL (?lang=xx) well before the SDK script loads and resolves
+    // sdk.environment.i18n.lang - waiting for that async value caused a
+    // visible flash of the wrong language on every load. Prefer the URL
+    // param so the correct language is already showing on first paint.
+    try{
+      var urlLang = new URLSearchParams(location.search).get("lang");
+      if(urlLang && SUPPORTED_LANGS[urlLang.toLowerCase()]) return urlLang.toLowerCase();
+    }catch(e){}
     try{
       var nav = (navigator.language || (navigator.languages && navigator.languages[0]) || "ru").toLowerCase();
       if(nav.indexOf("en") === 0) return "en";
@@ -2122,23 +2131,34 @@
     if(isAdsAvailable()){
       adRewardPending = true;
       var rewarded = false;
+      // Fullscreen ads run outside our page's control, so game audio must be
+      // paused for their duration and only resumed once they close -
+      // otherwise the game's music/sfx keep playing under the ad video.
+      var wasRunning = !!(audioCtx && audioCtx.state === "running");
+      if(wasRunning) audioCtx.suspend().catch(function(){});
+      function resumeAudioAfterAd(){
+        if(wasRunning && audioCtx && audioCtx.state === "suspended") audioCtx.resume().catch(function(){});
+      }
       try{
         ysdk.adv.showRewardedVideo({
           callbacks: {
             onRewarded: function(){ rewarded = true; },
             onClose: function(){
               adRewardPending = false;
+              resumeAudioAfterAd();
               if(rewarded) onReward();
               else if(onError) onError();
             },
             onError: function(err){
               adRewardPending = false;
+              resumeAudioAfterAd();
               if(onError) onError(err);
             }
           }
         });
       }catch(e){
         adRewardPending = false;
+        resumeAudioAfterAd();
         if(onError) onError(e);
       }
     }else{
@@ -2998,6 +3018,11 @@
     showToast(t("toast_bag_granted", {n: placed}));
   }
 
+  // Placeholder prices shown only outside Yandex Games (dev/offline
+  // preview) or before the real catalog has loaded; iapCatalogPrices is
+  // populated from payments.getCatalog() once available and takes
+  // priority, since that's the platform's actual billed price.
+  var iapCatalogPrices = {};
   var IAP_ITEMS = [
     { id:"bag_ad", group:"bags", icon:"bag", kind:"ad", titleKey:"iap_bag5_title", action:function(){ grantCookieBag(5); } },
     { id:"bag10", group:"bags", icon:"bag", kind:"pay", price:"25 ₽", titleKey:"iap_bag10_title", action:function(){ grantCookieBag(10); } },
@@ -3082,7 +3107,7 @@
           btn.addEventListener("click", function(){ buyIapItem(item); });
         }else{
           btn.className = "buy-btn";
-          btn.textContent = item.price;
+          btn.textContent = iapCatalogPrices[item.id] || item.price;
           btn.addEventListener("click", function(){ buyIapItem(item); });
         }
         card.appendChild(btn);
@@ -3443,6 +3468,11 @@
   // ---------- board ----------
   var boardEl = document.getElementById("board");
   var cellEls = [];
+  // The merge board is a drag-and-drop surface, not text/content the
+  // player would ever right-click on - a native context menu popping up
+  // mid-drag is a usability bug on desktop, so suppress it here.
+  var boardWrapEl0 = document.getElementById("boardWrap");
+  if(boardWrapEl0) boardWrapEl0.addEventListener("contextmenu", function(e){ e.preventDefault(); });
 
   function buildBoard(){
     boardEl.innerHTML = "";
@@ -3560,6 +3590,10 @@
 
   function onCellPointerDown(e, idx){
     if(e.button !== undefined && e.button !== 0) return;
+    // Without this, dragging fast on desktop can trigger the browser's
+    // native text/element selection (blue highlight) starting from the
+    // cell's contents instead of only our own drag-ghost visual.
+    e.preventDefault();
     var level = state.grid[idx];
     if(!level){
       handleCellTap(idx);
@@ -3976,12 +4010,15 @@
 
   // Real-money purchases (see IAP_ITEMS below) require a matching catalog of
   // consumable products created in the Yandex Games developer console, each
-  // with the exact technical id used here and the price the shop text
-  // promises: bag10 (25₽), bag20 (40₽), income5m (10₽), income30m (50₽),
-  // income3h (200₽), income24h (850₽), cur5 (25₽), cur10 (40₽), cur50 (150₽),
-  // spins3 (25₽), spins10 (67₽), x2forever (399₽). Rewarded video ads need no
-  // console setup beyond the ads unit being enabled for the game. Outside
-  // Yandex Games both silently fall back to simulated flows (see
+  // with the exact technical id used here: bag10, bag20, income5m,
+  // income30m, income3h, income24h, cur5, cur10, cur50, spins3, spins10,
+  // x2forever. The RUB amounts on each IAP_ITEMS entry are only a
+  // dev/offline placeholder shown before the real catalog loads (or
+  // outside Yandex Games, where it never does) - the actual price players
+  // are charged always comes from payments.getCatalog() once available,
+  // see iapCatalogPrices below. Rewarded video ads need no console setup
+  // beyond the ads unit being enabled for the game. Outside Yandex Games
+  // both purchases and ads fall back to simulated flows (see
   // showRewardedAd / purchaseProduct above) so the feature stays testable.
   function initYandexSDK(){
     if(typeof YaGames === "undefined") return;
@@ -3999,7 +4036,13 @@
           }
         }catch(e){}
         try{ sdk.features && sdk.features.LoadingAPI && sdk.features.LoadingAPI.ready(); }catch(e){}
-        sdk.getPlayer({ scopes: false }).then(function(player){
+        // scopes:true asks the platform to authorize the real signed-in
+        // Yandex account (prompting once if needed) instead of an
+        // anonymous "lite" player. Cloud save (setStats/getStats) for a
+        // lite player is device-local only and never syncs across
+        // devices/browsers, which is exactly the "progress differs on
+        // another device under the same login" failure this fixes.
+        sdk.getPlayer({ scopes: true }).then(function(player){
           ysdkPlayer = player;
           try{ ysdkPlayerId = player.getUniqueID ? player.getUniqueID() : null; }catch(e){}
           console.log("cloud save: player ready, uid=", ysdkPlayerId,
@@ -4010,6 +4053,33 @@
         }).catch(function(e){ console.error("cloud save: getPlayer failed:", e); });
         sdk.getPayments({ signed: false }).then(function(payments){
           ysdkPayments = payments;
+          // Real catalog prices (set up in the developer console, billed in
+          // the platform's own currency) replace the placeholder RUB prices
+          // shown before the catalog loads - those placeholders never
+          // reflected what a player is actually charged.
+          try{
+            payments.getCatalog().then(function(catalog){
+              (catalog||[]).forEach(function(p){ iapCatalogPrices[p.id] = p.price; });
+              renderIapPanel();
+            }).catch(function(){});
+          }catch(e){}
+          // Any purchase left unconsumed from a previous session (e.g. the
+          // page closed before consumePurchase() finished) must be granted
+          // and consumed on load, or the player can never buy that item
+          // again and effectively loses a paid purchase.
+          try{
+            payments.getPurchases().then(function(purchases){
+              var granted = false;
+              (purchases||[]).forEach(function(purchase){
+                var item = IAP_ITEMS.filter(function(it){ return it.id === purchase.productID; })[0];
+                if(item){
+                  try{ item.action(); granted = true; }catch(e){}
+                }
+                payments.consumePurchase(purchase.purchaseToken).catch(function(){});
+              });
+              if(granted){ save(true); updateHeader(); renderIapPanel(); }
+            }).catch(function(){});
+          }catch(e){}
         }).catch(function(){});
         // sdk.getLeaderboards() logs a "use ysdk.leaderboards instead"
         // deprecation notice, but ysdk.leaderboards turned out to be a
@@ -4320,7 +4390,12 @@
 
   window.addEventListener("beforeunload", function(){ save(true); });
   document.addEventListener("visibilitychange", function(){
-    if(document.hidden) save(true);
+    if(document.hidden){
+      save(true);
+      if(audioCtx && audioCtx.state === "running") audioCtx.suspend().catch(function(){});
+    }else if(audioCtx && audioCtx.state === "suspended" && musicStarted){
+      audioCtx.resume().catch(function(){});
+    }
   });
 
   // ---------- init ----------
