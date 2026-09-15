@@ -4223,7 +4223,12 @@
   // actually guarantee every real network call - from either function -
   // lands at least YSDK_CALL_GAP apart, regardless of which one enqueued
   // it or when.
-  var YSDK_CALL_GAP = 1200;
+  // Yandex's own error text says "no more than once per second", but 1200ms
+  // still produced frequent rejections in real testing - padding well past
+  // the documented figure in case the platform's actual window (or its
+  // measurement point - request dispatch vs JS call time, which can differ
+  // under real network latency) is stricter than advertised.
+  var YSDK_CALL_GAP = 2000;
   var nextYsdkSlotAt = 0;
 
   function scheduleYsdkCall(fn){
