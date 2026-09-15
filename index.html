@@ -4319,10 +4319,19 @@
     var now = Date.now();
     if(!force && now - lastLbPush < LB_PUSH_MIN_INTERVAL) return;
     lastLbPush = now;
+    // Yandex leaderboards appear to reject (400, not a rate-limit error)
+    // scores above the standard 32-bit signed int range - this economy's
+    // money/income can grow into the tens of billions, way past that, once
+    // the leaderboard-collision timing bug (fixed separately) stopped being
+    // the thing masking it. Clamp what's SENT to the leaderboard; the
+    // player's real, unclamped values still show everywhere in the game's
+    // own UI (header, shop, etc) - only the leaderboard submission caps out.
+    var LB_MAX_SCORE = 2147483647;
+    function lbScore(v){ return Math.max(0, Math.min(LB_MAX_SCORE, Math.floor(v))); }
     var jobs = [
-      [LB_NAMES.balance, Math.max(0, Math.floor(state.money))],
-      [LB_NAMES.income, Math.max(0, Math.floor(incomeRate()*3600))],
-      [LB_NAMES.merges, Math.max(0, Math.floor(state.totalMerges||0))]
+      [LB_NAMES.balance, lbScore(state.money)],
+      [LB_NAMES.income, lbScore(incomeRate()*3600)],
+      [LB_NAMES.merges, lbScore(state.totalMerges||0)]
     ];
     jobs.forEach(function(job){
       var name = job[0], value = job[1];
