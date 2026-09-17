@@ -4314,12 +4314,21 @@
   // newer (by lastSeen) - so resuming on the same device right after
   // playing on another one doesn't get clobbered by a stale cloud copy,
   // and playing on a fresh device pulls that other device's progress in.
+  // Compares against initialLastSeen (a snapshot taken once at page load),
+  // NOT the live state.lastSeen - reaching the SDK, then the player, then
+  // this getStats call involves at least two real network round trips, and
+  // save() unconditionally stamps state.lastSeen = Date.now() on every
+  // autosave tick (every 2s). On a slower connection an autosave could
+  // easily fire before this promise resolves, making a completely fresh
+  // device's local state look "just modified" and always win the
+  // comparison - exactly the bug this snapshot avoids, regardless of how
+  // long the SDK round trip takes or how often autosave ticks meanwhile.
   function pullCloudSave(){
     if(!ysdkPlayer || typeof ysdkPlayer.getStats !== "function") return;
     try{
       ysdkPlayer.getStats(ALL_STAT_KEYS).then(function(stats){
-        console.log("cloud load: getStats OK,", stats ? Object.keys(stats).length : 0, "keys back, cloud.lastSeen=", stats && stats.lastSeen, "local.lastSeen=", state.lastSeen);
-        if(stats && typeof stats.lastSeen === "number" && stats.lastSeen > (state.lastSeen||0)){
+        console.log("cloud load: getStats OK,", stats ? Object.keys(stats).length : 0, "keys back, cloud.lastSeen=", stats && stats.lastSeen, "initial local.lastSeen=", initialLastSeen);
+        if(stats && typeof stats.lastSeen === "number" && stats.lastSeen > (initialLastSeen||0)){
           console.log("cloud load: adopting cloud save (newer than local)");
           var cloudLastSeen = stats.lastSeen;
           applyStatsToState(stats);
@@ -4490,6 +4499,10 @@
   // ---------- init ----------
   applyStaticI18n();
   load();
+  // Snapshot of what was actually on this device when the page opened, for
+  // pullCloudSave()'s newer-wins comparison (see there for why the live,
+  // ever-changing state.lastSeen can't be used for that instead).
+  var initialLastSeen = state.lastSeen;
   awardUnlockCurrency();
   state.maxIncomeRate = Math.max(state.maxIncomeRate||0, incomeRate());
   checkAchievements();
