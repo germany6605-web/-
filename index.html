@@ -1916,8 +1916,13 @@
     try{
       localStorage.setItem(SAVE_KEY, JSON.stringify(state));
     }catch(e){}
-    pushLeaderboardScores();
+    // Cloud save carries the player's actual progress (and is what the
+    // platform requires to work reliably for cross-device play), so it
+    // gets first claim on the shared Yandex call queue each cycle -
+    // leaderboard scores are enqueued after it and are fine trailing
+    // behind under load, since they're just a cosmetic ranking display.
     pushCloudSave(force);
+    pushLeaderboardScores();
   }
 
   function applyOfflineEarnings(prevLastSeen){
@@ -3999,7 +4004,10 @@
     }
   }
 
-  var saveTimer = setInterval(save, 4000);
+  // 2000ms so a save() attempt (and therefore a chance at a real cloud
+  // push) happens as often as CLOUD_PUSH_MIN_INTERVAL below allows, instead
+  // of the autosave tick itself being the bottleneck on freshness.
+  var saveTimer = setInterval(save, 2000);
   var tickTimer = setInterval(tick, TICK_MS);
 
   // ---------- yandex games leaderboards ----------
@@ -4014,7 +4022,14 @@
   var ysdkPlayer = null;
   var ysdkPlayerId = null;
   var lastLbPush = 0;
-  var LB_PUSH_MIN_INTERVAL = 3000;
+  // Cloud save (below) gets priority on the shared Yandex call queue and
+  // pushes roughly every CLOUD_PUSH_MIN_INTERVAL (2s) - 3 leaderboard jobs
+  // at the queue's 2s-per-call pace would need 6s just for themselves, so
+  // triggering a new leaderboard round faster than that would only grow an
+  // ever-larger backlog behind the cloud pushes without anything actually
+  // landing sooner. 9s keeps a full round (cloud + 3 leaderboards) safely
+  // inside the queue's real throughput.
+  var LB_PUSH_MIN_INTERVAL = 9000;
   var LB_NAMES = { balance: "balance", income: "ihors", merges: "merges" };
 
   // Yandex leaderboards reject (400) scores outside the standard 32-bit
@@ -4258,7 +4273,12 @@
     setTimeout(fn, fireAt - now);
   }
 
-  var CLOUD_PUSH_MIN_INTERVAL = 5000;
+  // Matches YSDK_CALL_GAP - cloud save goes first in the shared queue each
+  // cycle (see save()), so letting it retry this often means it genuinely
+  // gets pushed as close to every available queue slot as the platform's
+  // rate limit allows, instead of sitting idle between an unnecessarily
+  // long throttle window and the next autosave tick.
+  var CLOUD_PUSH_MIN_INTERVAL = 2000;
   var lastCloudPush = 0;
 
   function pushCloudSave(force){
