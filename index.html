@@ -1250,7 +1250,17 @@
     money: 20,
     maxLevel: 1,
     prices: {},
-    lastSeen: Date.now(),
+    // 0, not Date.now(): a device with no local save at all (load() bails
+    // out at its first line before ever touching this) is exactly the
+    // "progress should arrive here for the first time" case pullCloudSave()
+    // exists for. Defaulting to "now" made a brand new device's local state
+    // look newer than literally any past cloud save (real time only moves
+    // forward), so it always "won" the newer-wins comparison and kept its
+    // own empty save instead of ever adopting the real one - the opposite
+    // of a stale local save being (correctly) newer than a stale cloud one.
+    // save() overwrites this with the real current time on the very first
+    // actual save either way, so this only matters for this one comparison.
+    lastSeen: 0,
     eventCurrency: 0,
     unlockAwarded: 0,
     events: {},
