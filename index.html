@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#35261f">
+  <meta name="description" content="Orebound — a mining, trading and smelting incremental game.">
+  <title>Рудокоп</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath fill='%2311171c' d='M0 0h64v64H0z'/%3E%3Cpath fill='%2367e5ba' d='m32 6 20 14-7 30-13 9-13-9-7-30z'/%3E%3Cpath fill='%23258171' d='m32 6-7 27 7 26 13-9 7-30-20 13z'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="style.css?v=11.0.0">
+  <script defer src="core.js?v=11.0.0"></script>
+  <script defer src="platform.js?v=11.0.0"></script>
+  <script defer src="audio.js?v=11.0.0"></script>
+  <script defer src="i18n.js?v=11.0.0"></script>
+  <script defer src="scene.js?v=11.0.0"></script>
+  <script defer src="app.js?v=11.0.0"></script>
+</head>
+<body>
+  <div id="loading" class="loading"><div class="load-gem">◈</div><strong>РУДОКОП</strong><span>Загружаем шахту · Loading mine</span></div>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand"><span class="brand-symbol">◈</span><div><strong data-t="gameName">Рудокоп</strong></div></div>
+      <div class="header-actions">
+        <button class="icon-button header-label" data-open="leaderboard" data-title="leaderboard"><span data-icon="trophy"></span><span data-t="leaderboard">Рейтинг</span></button>
+        <button class="icon-button header-label" data-open="shop" data-title="shop"><span data-icon="bag"></span><span data-t="shop">Магазин</span></button>
+        <button class="icon-button" data-open="settings" data-title="settings"><span data-icon="settings"></span></button>
+      </div>
+    </header>
+    <main>
+      <section class="summary" aria-label="Statistics">
+        <div class="stat wallet"><span class="stat-icon gold" data-icon="coin"></span><div><span class="eyebrow" data-t="balance">ВАШ БАЛАНС</span><strong id="balance">0 <small>◉</small></strong></div></div>
+        <div class="stat"><span class="stat-icon mint" data-icon="gem"></span><div><span class="eyebrow" data-t="stock">НА СКЛАДЕ</span><strong id="stock">0 <small data-t="units">ед.</small></strong></div></div>
+        <div class="stat"><span class="stat-icon blue" data-icon="pick"></span><div><span class="eyebrow" data-t="perClick">ЗА ОДИН КЛИК</span><strong id="click-yield">1 <small data-t="oreUnit">руды</small></strong></div></div>
+        <div class="stat"><span class="stat-icon purple" data-icon="bolt"></span><div><span class="eyebrow" data-t="autoProduction">АВТОДОБЫЧА</span><strong id="production">0 <small data-t="oreSec">руды/с</small></strong></div></div>
+      </section>
+      <section class="top-rewards"><button class="primary" data-ad-reward="ore"></button><button class="primary" data-ad-reward="income"></button></section>
+      <section class="fortune-feature"><button class="fortune-art-button" data-open="wheel" data-title="fortuneTitle"><img src="assets/wheel-v6.png" alt="" width="160" height="160"></button><div class="fortune-copy"><h2 data-t="fortuneTitle"></h2><p id="spin-status"></p><strong id="income-buff"></strong></div><div class="fortune-feature-actions"><button class="primary" data-open="wheel" data-t="openWheel"></button></div></section>
+      <div class="game-grid">
+        <div class="main-column">
+          <section class="panel mine-panel">
+            <div class="panel-head"><div><h1 data-t="mine">Кристальная шахта</h1></div></div>
+            <div id="ore-tabs" class="ore-tabs" role="group" aria-label="Ore chances"></div>
+            <div class="mine-playfield"><aside id="active-boosts" class="active-boosts" aria-label="Бустеры" hidden></aside><div class="scene-wrap"><canvas id="mine-scene" width="900" height="440" aria-hidden="true"></canvas><button id="mine-target" class="mine-target" data-title="mineAction"><span class="sr-only" data-t="mineAction">Добывать руду</span></button><div class="rock-quote"><span class="quote-label" data-t="rockRate">Курс</span><strong><span id="rock-market-rate">3</span> <small>◉</small></strong><span class="quote-timer"><span data-icon="clock"></span><span id="rock-market-timer">30с</span></span></div></div>
+            </div><p class="tap-hint" data-t="tapRock"></p>
+            <div class="main-actions">
+              <button id="sell-everything" class="primary"><span data-icon="coin"></span><span data-t="sellEverything"></span><small id="sell-everything-value"></small></button>
+              <button id="sell-raw" class="primary"><span data-icon="gem"></span><span data-t="sellRaw"></span><small id="sell-raw-value"></small></button>
+              <button id="sell-refined" class="primary"><span data-icon="coin"></span><span data-t="sellRefined"></span><small id="sell-refined-value"></small></button>
+            </div>
+          </section>
+          <section class="session-rewards"><div class="session-rewards-copy"><h2 data-t="timeRewardsTitle"></h2><span id="time-reward-summary"></span></div><strong id="time-reward-count">0 / 16</strong><button class="primary" data-open="timeRewards" data-t="rewardOpen"></button><div class="session-track"><div id="time-reward-progress"></div></div></section>
+          <section class="panel market-panel">
+            <div class="panel-head"><div class="heading-icon"><span data-icon="chart"></span><h2 data-t="market">Рынок руды</h2></div><span class="market-timer"><span data-icon="clock"></span><span data-t="refreshIn">Новый курс через</span> <b id="market-timer">30с</b></span></div>
+            <div class="market-overview"><div><span class="eyebrow" data-t="exchangeRate">КУРС БИРЖИ</span><div class="rate"><strong id="market-rate">8</strong><span>◉ <span data-t="perOre">/ ед.</span></span><span id="rate-change" class="rate-change">—</span></div></div><svg class="chart" id="market-chart" viewBox="0 0 240 66" aria-hidden="true"></svg></div>
+            <details id="sale-details"><summary><span data-t="saleList"></span><span id="sale-toggle-label"></span></summary><div class="inventory-header"><span data-t="resource">РЕСУРС</span><span data-t="amount">КОЛИЧЕСТВО</span><span data-t="sale">ПРОДАЖА</span></div>
+            <div id="inventory"></div></details>
+            <div class="market-foot"><span data-icon="info"></span><span data-t="refinedNote">Слитки продаются на 20% дороже руды</span></div>
+          </section>
+        </div>
+        <aside class="side-column">
+          <section class="panel prospect-panel"><div class="panel-head"><div class="heading-icon"><span data-icon="gem"></span><h2 data-t="prospecting"></h2></div></div><p id="click-milestone" class="click-milestone"></p><div id="chance-list"></div></section><section class="panel workshop-panel">
+            <div class="panel-head"><div class="heading-icon"><span data-icon="upgrade"></span><h2 data-t="workshop">Мастерская</h2></div><span class="subtle" id="upgrade-count">0</span></div>
+            <div class="segmented"><button class="selected" data-tab="tools" data-t="equipment">Инструменты</button><button data-tab="furnace" data-t="furnace">Плавильня</button></div>
+            <div id="upgrade-list" class="upgrade-list"></div>
+          </section>
+          <section class="panel smelt-panel">
+            <div class="panel-head"><div class="heading-icon"><span class="orange" data-icon="fire"></span><h2 data-t="smelting">Переплавка</h2></div><span class="profit-tag">+20%</span></div>
+            <label class="smelt-choice" for="smelt-ore"><span data-t="smeltChoice"></span><select id="smelt-ore"></select></label><div class="smelt-visual"><div class="furnace-art" id="furnace-art"><div class="chimney"></div><div class="furnace-body"><span class="furnace-window">♨</span></div><div class="furnace-feet"></div></div><div><strong id="smelt-title">Печь готова</strong><span class="subtle" id="smelt-detail">1 руда → 1 слиток</span><span class="small-label" id="smelt-duration">8 с / партия</span></div></div>
+            <button id="smelt-button" class="primary"><span data-icon="fire"></span><span data-t="startSmelt"></span></button><div class="progress-track"><div id="smelt-progress"></div></div>
+            <div class="smelt-actions"><label class="check"><input type="checkbox" id="auto-smelt"><span data-t="repeatSmelt">Повторять плавку</span></label><span id="smelt-time" class="subtle">0 / 8с</span></div>
+
+          </section>
+          <div class="income-note"><span data-icon="bolt"></span><div><strong><span id="income">0</span> ◉/<span data-t="secondShort">с</span></strong><span data-t="incomeHint">Потенциальный доход от автодобычи</span></div></div>
+        </aside>
+      </div>
+    </main>
+    <footer><span class="save-status"><span data-icon="cloud"></span><span id="save-status" data-t="localSave">Сохранение на устройстве</span></span><span>РУДОКОП</span></footer>
+  </div>
+  <dialog id="modal"><div class="modal-top"><h2 id="modal-title"></h2><button class="icon-button close-modal" data-title="close"><span data-icon="close"></span></button></div><div id="modal-content"></div></dialog>
+  <div id="toasts" class="toasts" role="status" aria-live="polite"></div>
+  <div id="wheel-win" class="wheel-win" role="status" aria-live="polite" aria-atomic="true" hidden><span data-icon="trophy" aria-hidden="true"></span><strong id="wheel-win-message"></strong></div>
+  <script>window.addEventListener('error', function(e) { if (e.target && e.target.tagName === 'SCRIPT') { var el = document.getElementById('loading'); if (el) el.innerHTML = '<strong>Не удалось загрузить игру / Could not load the game</strong><span>Обновите страницу / Reload the page</span>'; } }, true);</script>
+</body>
+</html>
+
+
