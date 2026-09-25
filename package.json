@@ -1,0 +1,11 @@
+{
+  "name": "rudokop-vk-ok",
+  "version": "11.1.0",
+  "private": true,
+  "description": "Рудокоп — версия для ВКонтакте и Одноклассников",
+  "scripts": {
+    "start": "node server/server.js",
+    "build": "bash build.sh"
+  },
+  "engines": { "node": ">=18" }
+}
