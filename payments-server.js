@@ -1,25 +1,36 @@
-/* Рудокоп: сервер подтверждения платежей VK и Одноклассников + раздача файлов игры.
-   Без зависимостей, нужен только Node.js 18+.
+/* Рудокоп: сервер подтверждения платежей VK и Одноклассников + раздача index.html.
+   Без зависимостей, нужен только Node.js 18+. Цены берутся из index.html
+   (блок <script id="products">), поэтому храните файл рядом с index.html.
 
    Запуск:
-     VK_SECRET=... OK_SECRET=... PORT=8080 node server/server.js
+     VK_SECRET=... OK_SECRET=... PORT=8080 node payments-server.js
 
    Адреса для кабинетов разработчика:
      ВКонтакте → «Платежи» → «Адрес обратного вызова»:  https://ваш-домен/payments/vk
      Одноклассники → «Callback URL для платежей»:        https://ваш-домен/payments/ok
-   Игра доступна по адресу https://ваш-домен/ (index.html из корня репозитория). */
+   Игра доступна по адресу https://ваш-домен/ */
 'use strict';
 const http = require('http');
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
-const Products = require('../products.js');
+const vm = require('vm');
 
 const PORT = Number(process.env.PORT) || 8080;
 const VK_SECRET = process.env.VK_SECRET || '';   // «Защищённый ключ» приложения VK
 const OK_SECRET = process.env.OK_SECRET || '';   // «Секретный ключ приложения» OK
-const ROOT = path.resolve(__dirname, '..');
-const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.png': 'image/png', '.svg': 'image/svg+xml', '.json': 'application/json' };
+const INDEX = path.join(__dirname, 'index.html');
+
+// Каталог товаров — тот же код, что в игре (<script id="products"> в index.html).
+function loadProducts() {
+  const html = fs.readFileSync(INDEX, 'utf8');
+  const match = /<script id="products">([\s\S]*?)<\/script>/.exec(html);
+  if (!match) throw new Error('В index.html не найден блок <script id="products">');
+  const context = vm.createContext({});
+  vm.runInContext(match[1], context);
+  return context.OreProducts;
+}
+const Products = loadProducts();
 
 // Обработанные заказы, чтобы на повторное уведомление отвечать тем же результатом.
 // Для боевого сервера замените на базу данных.
@@ -79,13 +90,11 @@ function readBody(req) {
   });
 }
 
-function serveStatic(pathname, res) {
-  const file = path.normalize(path.join(ROOT, decodeURIComponent(pathname === '/' ? '/index.html' : pathname)));
-  const allowed = file.startsWith(ROOT + path.sep) && !file.startsWith(path.join(ROOT, 'server') + path.sep) && !path.basename(file).startsWith('.');
-  if (!allowed) { res.writeHead(404); res.end(); return; }
-  fs.readFile(file, (err, data) => {
-    if (err) { res.writeHead(404); res.end('Not found'); return; }
-    res.writeHead(200, { 'Content-Type': TYPES[path.extname(file)] || 'application/octet-stream' });
+function serveIndex(pathname, res) {
+  if (pathname !== '/' && pathname !== '/index.html') { res.writeHead(404); res.end('Not found'); return; }
+  fs.readFile(INDEX, (err, data) => {
+    if (err) { res.writeHead(500); res.end(); return; }
+    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
     res.end(data);
   });
 }
@@ -106,7 +115,7 @@ const server = http.createServer(async (req, res) => {
       res.end(out.body);
       return;
     }
-    serveStatic(url.pathname, res);
+    serveIndex(url.pathname, res);
   } catch (error) {
     res.writeHead(500);
     res.end();
